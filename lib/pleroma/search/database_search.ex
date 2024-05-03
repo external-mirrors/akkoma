@@ -78,30 +78,40 @@ defmodule Pleroma.Search.DatabaseSearch do
     )
   end
 
-  defp query_with(q, :gin, search_query) do
+  defp get_text_search_config() do
     %{rows: [[tsc]]} =
       Ecto.Adapters.SQL.query!(
         Pleroma.Repo,
         "select current_setting('default_text_search_config')::regconfig::oid;"
       )
 
+    tsc
+  end
+
+  defp query_with(q, :gin, search_query) do
+    tsc = get_text_search_config()
+
     from([a, o] in q,
       where:
         fragment(
-          "to_tsvector(?::oid::regconfig, ?->>'content') @@ websearch_to_tsquery(?)",
+          "to_tsvector(?::oid::regconfig, ?->>'content') @@ websearch_to_tsquery(?::oid::regconfig, ?)",
           ^tsc,
           o.data,
+          ^tsc,
           ^search_query
         )
     )
   end
 
   defp query_with(q, :rum, search_query) do
+    tsc = get_text_search_config()
+
     from([a, o] in q,
       where:
         fragment(
-          "? @@ websearch_to_tsquery(?)",
+          "? @@ websearch_to_tsquery(?::oid::regconfig, ?)",
           o.fts_content,
+          ^tsc,
           ^search_query
         ),
       order_by: [fragment("? <=> now()::date", o.inserted_at)]
