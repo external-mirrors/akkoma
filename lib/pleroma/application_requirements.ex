@@ -166,10 +166,10 @@ defmodule Pleroma.ApplicationRequirements do
     filter_commands_statuses = [
       check_filter(Pleroma.Upload.Filter.Exiftool.StripMetadata, "exiftool"),
       check_filter(Pleroma.Upload.Filter.Exiftool.ReadDescription, "exiftool"),
-      check_filter(Pleroma.Upload.Filter.Mogrify, "mogrify"),
-      check_filter(Pleroma.Upload.Filter.Mogrifun, "mogrify"),
-      check_filter(Pleroma.Upload.Filter.AnalyzeMetadata, "mogrify"),
-      check_filter(Pleroma.Upload.Filter.AnalyzeMetadata, "convert"),
+      check_filter(Pleroma.Upload.Filter.Mogrify, "magick"),
+      check_filter(Pleroma.Upload.Filter.Mogrifun, "magick"),
+      check_filter(Pleroma.Upload.Filter.AnalyzeMetadata, "magick"),
+      check_filter(Pleroma.Upload.Filter.AnalyzeMetadata, "magick"),
       check_filter(Pleroma.Upload.Filter.AnalyzeMetadata, "ffprobe")
     ]
 

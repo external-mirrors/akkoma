@@ -12,7 +12,7 @@ defmodule Pleroma.Helpers.MediaHelper do
   require Logger
 
   def missing_dependencies do
-    Enum.reduce([imagemagick: "convert", ffmpeg: "ffmpeg"], [], fn {sym, executable}, acc ->
+    Enum.reduce([imagemagick: "magick", ffmpeg: "ffmpeg"], [], fn {sym, executable}, acc ->
       if Pleroma.Utils.command_available?(executable) do
         acc
       else
@@ -22,7 +22,7 @@ defmodule Pleroma.Helpers.MediaHelper do
   end
 
   def image_resize(url, options) do
-    with executable when is_binary(executable) <- System.find_executable("convert"),
+    with executable when is_binary(executable) <- System.find_executable("magick"),
          {:ok, args} <- prepare_image_resize_args(options),
          {:ok, env} <- HTTP.get(url),
          {:ok, fifo_path} <- mkfifo() do
