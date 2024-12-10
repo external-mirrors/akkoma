@@ -668,7 +668,6 @@ defmodule Pleroma.Web.Router do
     post("/accounts", AccountController, :create)
 
     get("/instance", InstanceController, :show)
-    get("/instance/peers", InstanceController, :peers)
 
     get("/statuses", StatusController, :index)
     get("/statuses/:id", StatusController, :show)

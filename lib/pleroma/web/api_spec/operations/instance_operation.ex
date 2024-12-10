@@ -23,17 +23,6 @@ defmodule Pleroma.Web.ApiSpec.InstanceOperation do
     }
   end
 
-  def peers_operation do
-    %Operation{
-      tags: ["Instance"],
-      summary: "Retrieve list of known instances",
-      operationId: "InstanceController.peers",
-      responses: %{
-        200 => Operation.response("Array of domains", "application/json", array_of_domains())
-      }
-    }
-  end
-
   defp instance do
     %Schema{
       type: :object,

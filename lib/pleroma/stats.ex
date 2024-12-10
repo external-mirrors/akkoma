@@ -48,16 +48,7 @@ defmodule Pleroma.Stats do
     stats
   end
 
-  @doc "Returns list peers"
-  @spec get_peers() :: list(String.t())
-  def get_peers do
-    %{peers: peers} = GenServer.call(__MODULE__, :get_state)
-
-    peers
-  end
-
   @spec calculate_stat_data() :: %{
-          peers: list(),
           stats: %{
             domain_count: non_neg_integer(),
             status_count: non_neg_integer(),
@@ -93,7 +84,6 @@ defmodule Pleroma.Stats do
     remote_user_count = Repo.aggregate(remote_users_query, :count, :id)
 
     %{
-      peers: peers,
       stats: %{
         domain_count: domain_count,
         status_count: status_count || 0,
