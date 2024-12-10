@@ -10,7 +10,7 @@ defmodule Pleroma.Stats do
   alias Pleroma.CounterCache
   alias Pleroma.Repo
   alias Pleroma.User
-  alias Pleroma.Instance
+  alias Pleroma.Instances.Instance
 
   @interval :timer.seconds(300)
 
