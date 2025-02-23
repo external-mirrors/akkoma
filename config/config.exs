@@ -243,6 +243,7 @@ config :pleroma, :instance,
   safe_dm_mentions: false,
   healthcheck: false,
   remote_post_retention_days: 90,
+  remote_post_prune_limit: 1000,
   skip_thread_containment: true,
   limit_to_local_content: :unauthenticated,
   user_bio_length: 5000,
@@ -594,7 +595,19 @@ config :pleroma, Oban,
   crontab: [
     {"0 0 * * 0", Pleroma.Workers.Cron.DigestEmailsWorker},
     {"0 0 * * *", Pleroma.Workers.Cron.NewUsersDigestWorker},
-    {"0 3 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker}
+    {"* * * * *", Pleroma.Workers.Cron.PruneDatabaseWorker, args: %{task: :prune_deletes}},
+    {"* * * * *", Pleroma.Workers.Cron.PruneDatabaseWorker,
+     args: %{task: :prune_follow_requests}},
+    {"0 3 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker, args: %{task: :prune_undos}},
+    {"0 3 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker, args: %{task: :prune_updates}},
+    {"0 3 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker, args: %{task: :prune_removes}},
+    {"0 3 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker,
+     args: %{task: :prune_tombstoned_deliveries}},
+    {"0 3 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker, args: %{task: :prune_tombstones}},
+    {"30 3 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker,
+     args: %{task: :prune_objects_beyond_retention}},
+    {"0 4 * * *", Pleroma.Workers.Cron.PruneDatabaseWorker,
+     args: %{task: :prune_orphaned_activities}}
   ]
 
 config :pleroma, :workers,

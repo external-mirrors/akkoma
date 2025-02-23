@@ -827,6 +827,15 @@ config :pleroma, :config_description, [
         ]
       },
       %{
+        key: :remote_post_prune_limit,
+        type: :integer,
+        description:
+          "The maximum number of rows to prune in daily maintenance tasks. Turn this down if your task is taking too long",
+        suggestions: [
+          1_000
+        ]
+      },
+      %{
         key: :user_bio_length,
         type: :integer,
         description: "A user bio maximum length. Default: 5000.",

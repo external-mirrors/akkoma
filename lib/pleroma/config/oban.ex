@@ -7,6 +7,7 @@ defmodule Pleroma.Config.Oban do
 
   def warn do
     oban_config = Pleroma.Config.get(Oban)
+    IO.inspect(oban_config)
 
     crontab =
       [
@@ -17,7 +18,10 @@ defmodule Pleroma.Config.Oban do
       |> Enum.reduce(oban_config[:crontab], fn removed_worker, acc ->
         with acc when is_list(acc) <- acc,
              setting when is_tuple(setting) <-
-               Enum.find(acc, fn {_, worker} -> worker == removed_worker end) do
+               Enum.find(acc, fn
+                 {_, worker, _} -> worker == removed_worker
+                 {_, worker} -> worker == removed_worker
+               end) do
           """
           !!!OBAN CONFIG WARNING!!!
           You are using old workers in Oban crontab settings, which were removed.
