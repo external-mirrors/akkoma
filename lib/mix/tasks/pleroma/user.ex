@@ -568,10 +568,9 @@ defmodule Mix.Tasks.Pleroma.User do
         offset = index * 60 * 10
         days_offset = ttl * 24 * 60 * 60
         next_expiry = DateTime.utc_now() |> DateTime.add(days_offset + offset, :second)
-        cutoff = DateTime.utc_now() |> DateTime.add(days_offset, :second)
         posts
         |> Enum.each(fn post ->
-          if is_nil(Map.get(post.data, "expires_at")) || Map.get(post.data, "expires_at") > cutoff do
+          if is_nil(Map.get(post.data, "expires_at")) do
             # Set data->expires_at
             new_data = Map.put(post.data, "expires_at", next_expiry)
             post
