@@ -565,8 +565,9 @@ defmodule Mix.Tasks.Pleroma.User do
       |> Stream.with_index()
       |> Stream.each(fn {posts, index} ->
         # use index to determine the offset
-        next_expiry = DateTime.utc_now() |> DateTime.add(ttl * 24 * 60 * 60 + index * 60, :second)
-
+        offset = index * 60 * 10
+        days_offset = ttl * 24 * 60 * 60
+        next_expiry = DateTime.utc_now() |> DateTime.add(days_offset + offset, :second)
         posts
         |> Enum.each(fn post ->
 
