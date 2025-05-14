@@ -545,6 +545,52 @@ defmodule Mix.Tasks.Pleroma.User do
     shell_info(raw_id)
   end
 
+  def run(["backfill_expiry", username]) do
+    # If a user wants to put an expiry on their posts, it will not automatically
+    # be set on the posts they have already made. This task will set the expiry
+    # on all posts made by a user to the expiry they have set on their account.
+    # we should be careful to not set expiry too close together to avoid floods.
+    # hence -
+    # stream user posts
+    # for each post, check if the expiry is set
+    # if not, set it to the expiry of the user + current time + offset
+    start_pleroma()
+
+    with %User{status_ttl_days: ttl} = user <- User.get_cached_by_nickname(username),
+         false <- is_nil(ttl) do
+      IO.puts("#{username} has a status_ttl_days of #{ttl}")
+
+      Pleroma.Activity.Queries.by_actor(user.ap_id)
+      |> Pleroma.Repo.chunk_stream(50, :batches)
+      |> Stream.with_index()
+      |> Stream.each(fn {posts, index} ->
+        # use index to determine the offset
+        next_expiry = DateTime.utc_now() |> DateTime.add(ttl * 24 * 60 * 60 + index * 60, :second)
+
+        posts
+        |> Enum.each(fn post ->
+
+          if is_nil(Map.get(post.data, "expires_at")) do
+            # Set data->expires_at
+            new_data = Map.put(post.data, "expires_at", next_expiry)
+            post
+            |> Changeset.change(%{data: new_data})
+            |> Pleroma.Repo.update()
+
+            Pleroma.Workers.PurgeExpiredActivity.enqueue(%{
+              activity_id: post.id,
+              expires_at: next_expiry
+            })
+          end
+        end)
+      end)
+      |> Stream.run()
+    else
+      _ ->
+        shell_error("No local user #{username}")
+    end
+  end
+
   defp refetch_public_keys(query) do
     query
     |> Pleroma.Repo.chunk_stream(50, :batches)
