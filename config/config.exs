@@ -829,6 +829,16 @@ config :pleroma, :frontends,
       "build_url" => "https://akkoma-updates.s3-website.fr-par.scw.cloud/frontend/swagger-ui.zip",
       "build_dir" => "dist",
       "ref" => "stable"
+    },
+    # Third-party frontends
+    "pleroma-fe-vanilla" => %{
+      "name" => "pleroma-fe-vanilla",
+      "git" => "https://git.pleroma.social/pleroma/pleroma-fe/",
+      "build_url" =>
+        "https://git.pleroma.social/pleroma/pleroma-fe/-/jobs/artifacts/${ref}/download?job=build",
+      "ref" => "develop",
+      "build_dir" => "dist",
+      "bugtracker" => "https://git.pleroma.social/pleroma/pleroma-fe/-/issues"
     }
   }
 
