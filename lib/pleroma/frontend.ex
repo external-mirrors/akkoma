@@ -69,7 +69,7 @@ defmodule Pleroma.Frontend do
     end
   end
 
-  def unzip(zip, dest) do
+  defp unzip(zip, dest) do
     File.rm_rf!(dest)
     File.mkdir_p!(dest)
 
