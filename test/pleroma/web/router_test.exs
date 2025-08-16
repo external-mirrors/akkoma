@@ -1,9 +1,8 @@
 defmodule Pleroma.Web.RouterTest do
   use Pleroma.DataCase
-  use Mneme
 
   test "route prefix stability" do
-    auto_assert(
+    assert(
       [
         "api",
         "main",
@@ -32,7 +31,7 @@ defmodule Pleroma.Web.RouterTest do
         "test",
         "user_exists",
         "check_password"
-      ] <- Pleroma.Web.Router.get_api_routes()
+      ] == Pleroma.Web.Router.get_api_routes()
     )
   end
 end

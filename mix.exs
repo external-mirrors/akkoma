@@ -13,7 +13,7 @@ defmodule Pleroma.Mixfile do
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: ["coveralls.html": :test, "mneme.test": :test, "mneme.watch": :test],
+      preferred_cli_env: ["coveralls.html": :test],
       # Docs
       name: "Akkoma",
       homepage_url: "https://akkoma.dev/",
@@ -121,7 +121,7 @@ defmodule Pleroma.Mixfile do
       {:phoenix_ecto, "~> 4.6"},
       {:inet_cidr, "~> 1.0.0"},
       {:ecto_enum, "~> 1.4"},
-      {:ecto_sql, "~> 3.12.0"},
+      {:ecto_sql, "~> 3.13.2"},
       {:postgrex, "~> 0.20.0"},
       {:oban, "~> 2.19.0"},
       {:oban_web, "~> 2.11.0"},
@@ -209,8 +209,7 @@ defmodule Pleroma.Mixfile do
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
       {:elixir_xml_to_map, "~> 3.0", only: :test},
       {:mint, "~> 1.5.1", override: true},
-      {:nimble_pool, "~> 1.0", override: true},
-      {:mneme, "~> 0.10.2", only: [:dev, :test]}
+      {:nimble_pool, "~> 1.0", override: true}
     ] ++ oauth_deps()
   end
 
