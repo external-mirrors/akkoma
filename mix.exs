@@ -143,7 +143,7 @@ defmodule Pleroma.Mixfile do
       {:phoenix_html_helpers, "~> 1.0"},
       {:calendar, "~> 1.0"},
       {:cachex, "~> 4.1"},
-      {:tesla, "~> 1.7"},
+      {:tesla, "~> 1.16.0"},
       {:castore, "~> 1.0"},
       {:cowlib, "~> 2.12"},
       {:finch, "~> 0.20.0"},
