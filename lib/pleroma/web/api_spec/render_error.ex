@@ -228,6 +228,10 @@ defmodule Pleroma.Web.ApiSpec.RenderError do
     )
   end
 
+  defp message(%{reason: :custom, meta: meta}) do
+    meta.message
+  end
+
   defp safe_string(string) do
     to_string(string) |> String.slice(0..39)
   end
