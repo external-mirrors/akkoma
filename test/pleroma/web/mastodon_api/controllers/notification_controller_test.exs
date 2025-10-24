@@ -74,7 +74,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
 
     result =
       conn
-      |> get("/api/v1/notifications?include_types[]=pleroma:report")
+      |> get("/api/v1/notifications?types[]=pleroma:report")
       |> json_response_and_validate_schema(200)
 
     assert [_] = result

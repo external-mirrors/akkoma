@@ -193,6 +193,7 @@ Accepts additional parameters:
 
 - `exclude_visibilities`: will exclude the notifications for activities with the given visibilities. The parameter accepts an array of visibility types (`public`, `unlisted`, `private`, `direct`). Usage example: `GET /api/v1/notifications?exclude_visibilities[]=direct&exclude_visibilities[]=private`.
 - `include_types`: will include the notifications for activities with the given types. The parameter accepts an array of types (`mention`, `follow`, `reblog`, `favourite`, `move`, `pleroma:emoji_reaction`, `pleroma:report`). Usage example: `GET /api/v1/notifications?include_types[]=mention&include_types[]=reblog`.
+    **Deprecated:** replaced by `types` which is equivalent but (by now) also supported by vanilla Mastodon.
 
 ## DELETE `/api/v1/notifications/destroy_multiple`
 
