@@ -51,6 +51,13 @@ defmodule Pleroma.Web.ApiSpec.NotificationOperation do
             :include_types,
             :query,
             %Schema{type: :array, items: notification_type()},
+            "Deprecated, use `types` instead",
+            deprecated: true
+          ),
+          Operation.parameter(
+            :types,
+            :query,
+            %Schema{type: :array, items: notification_type()},
             "Include the notifications for activities with the given types"
           ),
           Operation.parameter(
