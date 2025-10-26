@@ -56,11 +56,15 @@ defmodule Pleroma.Web.OStatus.OStatusController do
   def activity(conn, _params) do
     with id <- Endpoint.url() <> conn.request_path,
          {_, %Activity{} = activity} <- {:activity, Activity.normalize(id)},
+         {_, "Create"} <- {:type, activity.data["type"]},
          {_, true} <- {:public?, Visibility.is_public?(activity)},
          {_, false} <- {:local_public?, Visibility.is_local_public?(activity)} do
       redirect(conn, to: "/notice/#{activity.id}")
     else
       reason when reason in [{:public?, false}, {:activity, nil}] ->
+        {:error, :not_found}
+
+      {:type, _} ->
         {:error, :not_found}
 
       e ->
