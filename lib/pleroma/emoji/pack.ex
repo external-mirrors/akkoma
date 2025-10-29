@@ -55,6 +55,7 @@ defmodule Pleroma.Emoji.Pack do
          dir <- path_join_name_safe(emoji_path(), name),
          :ok <- File.mkdir(dir) do
       save_pack(%__MODULE__{
+        name: name,
         path: dir,
         pack_file: Path.join(dir, "pack.json")
       })
