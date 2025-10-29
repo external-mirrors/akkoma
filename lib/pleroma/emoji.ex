@@ -25,6 +25,8 @@ defmodule Pleroma.Emoji do
 
   defstruct [:code, :file, :tags, :safe_code, :safe_file]
 
+  @type t :: %__MODULE__{}
+
   @doc "Build emoji struct"
   def build({code, file, tags}) do
     %__MODULE__{
@@ -49,8 +51,8 @@ defmodule Pleroma.Emoji do
     GenServer.call(__MODULE__, :reload)
   end
 
-  @doc "Returns the path of the emoji `name`."
-  @spec get(String.t()) :: String.t() | nil
+  @doc "Returns the emoji struct of the given `name` if it exists."
+  @spec get(String.t()) :: t() | nil
   def get(name) do
     name =
       if String.starts_with?(name, ":") do
@@ -62,7 +64,7 @@ defmodule Pleroma.Emoji do
       end
 
     case :ets.lookup(@ets, name) do
-      [{_, path}] -> path
+      [{_, emoji}] -> emoji
       _ -> nil
     end
   end
