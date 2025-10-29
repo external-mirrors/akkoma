@@ -49,6 +49,8 @@ defmodule Pleroma.Emoji.Pack do
     Path.join(dir, safe_path)
   end
 
+  defp tags(%__MODULE__{} = pack), do: ["pack:" <> pack.name]
+
   @spec create(String.t()) :: {:ok, t()} | {:error, File.posix()} | {:error, :empty_values}
   def create(name) do
     with :ok <- validate_not_empty([name]),
@@ -143,8 +145,6 @@ defmodule Pleroma.Emoji.Pack do
             {item, updated_pack}
           end)
 
-        Emoji.reload()
-
         {:ok, updated_pack}
       after
         File.rm_rf(tmp_dir)
@@ -170,16 +170,19 @@ defmodule Pleroma.Emoji.Pack do
     with :ok <- validate_not_empty([shortcode, filename]),
          :ok <- validate_emoji_not_exists(shortcode),
          {:ok, updated_pack} <- do_add_file(pack, shortcode, filename, file) do
-      Emoji.reload()
       {:ok, updated_pack}
     end
   end
 
   defp do_add_file(pack, shortcode, filename, file) do
-    with :ok <- save_file(file, pack, filename) do
-      pack
-      |> put_emoji(shortcode, filename)
-      |> save_pack()
+    with :ok <- save_file(file, pack, filename),
+         pack <- put_emoji(pack, shortcode, filename),
+         {:ok, pack} <- save_pack(pack) do
+      {shortcode, filename, tags(pack)}
+      |> Emoji.build()
+      |> Emoji.add_or_update()
+
+      {:ok, pack}
     end
   end
 
@@ -189,7 +192,7 @@ defmodule Pleroma.Emoji.Pack do
     with :ok <- validate_not_empty([shortcode]),
          :ok <- remove_file(pack, shortcode),
          {:ok, updated_pack} <- pack |> delete_emoji(shortcode) |> save_pack() do
-      Emoji.reload()
+      Emoji.delete(shortcode)
       {:ok, updated_pack}
     end
   end
@@ -206,7 +209,12 @@ defmodule Pleroma.Emoji.Pack do
            |> delete_emoji(shortcode)
            |> put_emoji(new_shortcode, new_filename)
            |> save_pack() do
-      Emoji.reload()
+      Emoji.delete(shortcode)
+
+      {new_shortcode, new_filename, tags(pack)}
+      |> Emoji.build()
+      |> Emoji.add_or_update()
+
       {:ok, updated_pack}
     end
   end

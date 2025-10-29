@@ -69,6 +69,18 @@ defmodule Pleroma.Emoji do
     end
   end
 
+  @doc "Updates or inserts new emoji (asynchronous)"
+  @spec add_or_update(t()) :: :ok
+  def add_or_update(%__MODULE__{} = emoji) do
+    GenServer.cast(__MODULE__, {:add, emoji})
+  end
+
+  @doc "Delete emoji with given shortcode if it exists (asynchronous)"
+  @spec delete(String.t()) :: :ok
+  def delete(code) do
+    GenServer.cast(__MODULE__, {:delete, code})
+  end
+
   @spec exist?(String.t()) :: boolean()
   def exist?(name), do: not is_nil(get(name))
 
@@ -88,6 +100,16 @@ defmodule Pleroma.Emoji do
   @doc false
   def handle_cast(:reload, state) do
     update_emojis(Loader.load())
+    {:noreply, state}
+  end
+
+  def handle_cast({:add, %__MODULE__{} = emoji}, state) do
+    :ets.insert(@ets, {emoji.code, emoji})
+    {:noreply, state}
+  end
+
+  def handle_cast({:delete, code}, state) do
+    :ets.delete(@ets, code)
     {:noreply, state}
   end
 
