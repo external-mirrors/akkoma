@@ -16,7 +16,7 @@ defmodule Pleroma.Emoji do
 
   @ets __MODULE__.Ets
   @ets_options [
-    :ordered_set,
+    :set,
     :protected,
     :named_table,
     {:read_concurrency, true}
