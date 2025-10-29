@@ -45,10 +45,10 @@ defmodule Pleroma.Emoji do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  @doc "Reloads the emojis from disk."
+  @doc "Reloads the emojis from disk (asynchronous)"
   @spec reload() :: :ok
   def reload do
-    GenServer.call(__MODULE__, :reload)
+    GenServer.cast(__MODULE__, :reload)
   end
 
   @doc "Returns the emoji struct of the given `name` if it exists."
@@ -111,12 +111,6 @@ defmodule Pleroma.Emoji do
   def handle_cast({:delete, code}, state) do
     :ets.delete(@ets, code)
     {:noreply, state}
-  end
-
-  @doc false
-  def handle_call(:reload, _from, state) do
-    update_emojis(Loader.load())
-    {:reply, :ok, state}
   end
 
   @doc false
