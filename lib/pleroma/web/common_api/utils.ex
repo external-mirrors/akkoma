@@ -118,30 +118,11 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     {mentions, []}
   end
 
-  def get_to_and_cc_for_visibility({:list, _}, _, _, mentions) do
-    {mentions, []}
-  end
-
   def get_addressed_users(_, to) when is_list(to) do
     User.get_ap_ids_by_nicknames(to)
   end
 
   def get_addressed_users(mentioned_users, _), do: mentioned_users
-
-  def maybe_add_list_data(activity_params, user, {:list, list_id}) do
-    case Pleroma.List.get(list_id, user) do
-      %Pleroma.List{} = list ->
-        activity_params
-        |> put_in([:additional, "bcc"], [list.ap_id])
-        |> put_in([:additional, "listMessage"], list.ap_id)
-        |> put_in([:object, "listMessage"], list.ap_id)
-
-      _ ->
-        activity_params
-    end
-  end
-
-  def maybe_add_list_data(activity_params, _, _), do: activity_params
 
   def make_poll_data(%{"poll" => %{"expires_in" => expires_in}} = data)
       when is_binary(expires_in) do

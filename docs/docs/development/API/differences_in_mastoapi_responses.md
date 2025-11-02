@@ -32,7 +32,7 @@ Home, public, hashtag & list timelines further accept:
 
 ## Statuses
 
-- `visibility`: has additional possible values `list` and `local` (for local-only statuses)
+- `visibility`: has additional possible value `local` (for local-only statuses)
 - `emoji_reactions`: additional field since Akkoma 3.2.0; identical to `pleroma/emoji_reactions`
 
 Has these additional fields under the `pleroma` object:

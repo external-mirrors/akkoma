@@ -553,10 +553,9 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
           nullable: true,
           anyOf: [
             VisibilityScope,
-            %Schema{type: :string, description: "`list:LIST_ID`", example: "LIST:123"}
+            %Schema{type: :string, description: "scope name", example: "unlisted"}
           ],
-          description:
-            "Visibility of the posted status. Besides standard MastoAPI values (`direct`, `private`, `unlisted` or `public`) it can be used to address a List by setting it to `list:LIST_ID`"
+          description: "Visibility of the posted status."
         },
         expires_in: %Schema{
           nullable: true,

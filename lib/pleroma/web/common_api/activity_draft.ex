@@ -298,7 +298,6 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
         object: draft.object,
         additional: additional
       }
-      |> Utils.maybe_add_list_data(draft.user, draft.visibility)
 
     %__MODULE__{draft | changes: changes}
   end

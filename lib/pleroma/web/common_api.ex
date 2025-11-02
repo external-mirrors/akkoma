@@ -300,11 +300,6 @@ defmodule Pleroma.Web.CommonAPI do
       when visibility in ~w{public local unlisted private direct},
       do: {visibility, get_replied_to_visibility(in_reply_to)}
 
-  def get_visibility(%{visibility: "list:" <> list_id}, in_reply_to, _) do
-    visibility = {:list, String.to_integer(list_id)}
-    {visibility, get_replied_to_visibility(in_reply_to)}
-  end
-
   def get_visibility(_, in_reply_to, _) when not is_nil(in_reply_to) do
     visibility = get_replied_to_visibility(in_reply_to)
     {visibility, visibility}

@@ -543,17 +543,6 @@ defmodule Pleroma.Web.CommonAPITest do
       refute user.ap_id in secret_answer.recipients
     end
 
-    test "it allows to address a list" do
-      user = insert(:user)
-      {:ok, list} = Pleroma.List.create("foo", user)
-
-      {:ok, activity} = CommonAPI.post(user, %{status: "foobar", visibility: "list:#{list.id}"})
-
-      assert activity.data["bcc"] == [list.ap_id]
-      assert activity.recipients == [list.ap_id, user.ap_id]
-      assert activity.data["listMessage"] == list.ap_id
-    end
-
     test "it adds the htmlMFM term to MFM posts and properly processes it" do
       user = insert(:user)
 
