@@ -5,14 +5,14 @@
 defmodule Pleroma.Web.GettextTest do
   use ExUnit.Case
 
-  require Pleroma.Web.Gettext
+  use Gettext, backend: Pleroma.Web.Gettext
   require Pleroma.Web.GettextCompanion
 
   describe "handle_missing_translation/5" do
     test "fallback to next locale if some translation is not available" do
       Pleroma.Web.GettextCompanion.with_locales ["x_unsupported", "en_test"] do
         assert "xxYour account is awaiting approvalxx" ==
-                 Pleroma.Web.Gettext.dpgettext(
+                 dpgettext(
                    "static_pages",
                    "approval pending email subject",
                    "Your account is awaiting approval"
@@ -23,7 +23,7 @@ defmodule Pleroma.Web.GettextTest do
     test "putting en locale at the front should not make gettext fallback unexpectedly" do
       Pleroma.Web.GettextCompanion.with_locales ["en", "en_test"] do
         assert "Your account is awaiting approval" ==
-                 Pleroma.Web.Gettext.dpgettext(
+                 dpgettext(
                    "static_pages",
                    "approval pending email subject",
                    "Your account is awaiting approval"
@@ -34,7 +34,7 @@ defmodule Pleroma.Web.GettextTest do
     test "duplicated locale in list should not result in infinite loops" do
       Pleroma.Web.GettextCompanion.with_locales ["x_unsupported", "x_unsupported", "en_test"] do
         assert "xxYour account is awaiting approvalxx" ==
-                 Pleroma.Web.Gettext.dpgettext(
+                 dpgettext(
                    "static_pages",
                    "approval pending email subject",
                    "Your account is awaiting approval"
@@ -45,7 +45,7 @@ defmodule Pleroma.Web.GettextTest do
     test "direct interpolation" do
       Pleroma.Web.GettextCompanion.with_locales ["en_test"] do
         assert "xxYour digest from some instancexx" ==
-                 Pleroma.Web.Gettext.dpgettext(
+                 dpgettext(
                    "static_pages",
                    "digest email subject",
                    "Your digest from %{instance_name}",
@@ -57,7 +57,7 @@ defmodule Pleroma.Web.GettextTest do
     test "fallback with interpolation" do
       Pleroma.Web.GettextCompanion.with_locales ["x_unsupported", "en_test"] do
         assert "xxYour digest from some instancexx" ==
-                 Pleroma.Web.Gettext.dpgettext(
+                 dpgettext(
                    "static_pages",
                    "digest email subject",
                    "Your digest from %{instance_name}",
@@ -69,7 +69,7 @@ defmodule Pleroma.Web.GettextTest do
     test "fallback to msgid" do
       Pleroma.Web.GettextCompanion.with_locales ["x_unsupported"] do
         assert "Your digest from some instance" ==
-                 Pleroma.Web.Gettext.dpgettext(
+                 dpgettext(
                    "static_pages",
                    "digest email subject",
                    "Your digest from %{instance_name}",
@@ -83,7 +83,7 @@ defmodule Pleroma.Web.GettextTest do
     test "direct interpolation" do
       Pleroma.Web.GettextCompanion.with_locales ["en_test"] do
         assert "xx1 New Followerxx" ==
-                 Pleroma.Web.Gettext.dpngettext(
+                 dpngettext(
                    "static_pages",
                    "new followers count header",
                    "%{count} New Follower",
@@ -93,7 +93,7 @@ defmodule Pleroma.Web.GettextTest do
                  )
 
         assert "xx5 New Followersxx" ==
-                 Pleroma.Web.Gettext.dpngettext(
+                 dpngettext(
                    "static_pages",
                    "new followers count header",
                    "%{count} New Follower",
@@ -107,7 +107,7 @@ defmodule Pleroma.Web.GettextTest do
     test "fallback with interpolation" do
       Pleroma.Web.GettextCompanion.with_locales ["x_unsupported", "en_test"] do
         assert "xx1 New Followerxx" ==
-                 Pleroma.Web.Gettext.dpngettext(
+                 dpngettext(
                    "static_pages",
                    "new followers count header",
                    "%{count} New Follower",
@@ -117,7 +117,7 @@ defmodule Pleroma.Web.GettextTest do
                  )
 
         assert "xx5 New Followersxx" ==
-                 Pleroma.Web.Gettext.dpngettext(
+                 dpngettext(
                    "static_pages",
                    "new followers count header",
                    "%{count} New Follower",
@@ -131,7 +131,7 @@ defmodule Pleroma.Web.GettextTest do
     test "fallback to msgid" do
       Pleroma.Web.GettextCompanion.with_locales ["x_unsupported"] do
         assert "1 New Follower" ==
-                 Pleroma.Web.Gettext.dpngettext(
+                 dpngettext(
                    "static_pages",
                    "new followers count header",
                    "%{count} New Follower",
@@ -141,7 +141,7 @@ defmodule Pleroma.Web.GettextTest do
                  )
 
         assert "5 New Followers" ==
-                 Pleroma.Web.Gettext.dpngettext(
+                 dpngettext(
                    "static_pages",
                    "new followers count header",
                    "%{count} New Follower",

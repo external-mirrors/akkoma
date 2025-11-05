@@ -37,7 +37,9 @@ defmodule Pleroma.Web do
 
       import Plug.Conn
 
-      import Pleroma.Web.Gettext
+      use Gettext,
+        backend: Pleroma.Web.Gettext
+
       import Pleroma.Web.TranslationHelpers
 
       unquote(verified_routes())
@@ -229,7 +231,9 @@ defmodule Pleroma.Web do
   def channel do
     quote do
       use Phoenix.Channel
-      import Pleroma.Web.Gettext
+
+      use Gettext,
+        backend: Pleroma.Web.Gettext
     end
   end
 
@@ -247,7 +251,10 @@ defmodule Pleroma.Web do
       import Phoenix.View
 
       import Pleroma.Web.ErrorHelpers
-      import Pleroma.Web.Gettext
+
+      use Gettext,
+        backend: Pleroma.Web.Gettext
+
       unquote(verified_routes())
     end
   end

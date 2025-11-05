@@ -5,7 +5,7 @@
 defmodule Pleroma.Web.OAuth.OAuthView do
   use Pleroma.Web, :view
   import Phoenix.HTML
-  alias Pleroma.Web.Gettext
+  use Gettext, backend: Pleroma.Web.Gettext
 
   alias Pleroma.Web.OAuth.Token.Utils
 

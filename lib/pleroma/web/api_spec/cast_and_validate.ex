@@ -19,7 +19,7 @@ defmodule Pleroma.Web.ApiSpec.CastAndValidate do
   alias OpenApiSpex.Plug.PutApiSpec
   alias Plug.Conn
 
-  import Pleroma.Web.Gettext
+  use Gettext, backend: Pleroma.Web.Gettext
 
   @impl Plug
   def init(opts) do
@@ -130,7 +130,7 @@ defmodule Pleroma.Web.ApiSpec.CastAndValidate do
       {:attempt, errors, _} ->
         Cast.error(
           %{path: ["/"], value: @max_retries, errors: errors},
-          {:custom, gettext("too many bad parameters.")}
+          {:custom, dgettext("errors", "too many bad parameters.")}
         )
     end
   end

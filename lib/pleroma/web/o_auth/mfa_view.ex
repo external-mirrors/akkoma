@@ -5,7 +5,7 @@
 defmodule Pleroma.Web.OAuth.MFAView do
   use Pleroma.Web, :view
   alias Pleroma.MFA
-  alias Pleroma.Web.Gettext
+  use Gettext, backend: Pleroma.Web.Gettext
 
   def render("mfa_response.json", %{token: token, user: user}) do
     %{

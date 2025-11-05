@@ -64,7 +64,6 @@ defmodule Pleroma.Web.GettextCompanion do
     |> Enum.member?(locale)
   end
 
-
   # used by macro
   def with_locales_func(locales, fun) do
     prev_locales = Process.get({Pleroma.Web.Gettext, :locales})

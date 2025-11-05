@@ -6,7 +6,8 @@ defmodule Pleroma.Web.EmailView do
   use Pleroma.Web, :view
   import Phoenix.HTML
   import PhoenixHTMLHelpers.Link
-  alias Pleroma.Web.Gettext
+
+  use Gettext, backend: Pleroma.Web.Gettext
 
   def avatar_url(user) do
     Pleroma.User.avatar_url(user)
