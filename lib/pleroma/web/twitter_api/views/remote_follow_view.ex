@@ -4,7 +4,6 @@
 
 defmodule Pleroma.Web.TwitterAPI.RemoteFollowView do
   use Pleroma.Web, :view
-  import Phoenix.HTML.Form
   alias Pleroma.Web.Gettext
 
   def avatar_url(user) do

@@ -4,7 +4,6 @@
 
 defmodule Pleroma.Web.OAuth.MFAView do
   use Pleroma.Web, :view
-  import Phoenix.HTML.Form
   alias Pleroma.MFA
   alias Pleroma.Web.Gettext
 

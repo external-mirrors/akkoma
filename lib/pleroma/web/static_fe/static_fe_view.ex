@@ -12,8 +12,6 @@ defmodule Pleroma.Web.StaticFE.StaticFEView do
   alias Pleroma.Web.MediaProxy
   alias Pleroma.Web.Metadata.Utils
 
-  use Phoenix.HTML
-
   @media_types ["image", "audio", "video"]
 
   def fetch_media_type(%{"mediaType" => mediaType}) do

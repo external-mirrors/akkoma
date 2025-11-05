@@ -40,7 +40,11 @@ defmodule Pleroma.Mixfile do
         ]
       ]
     ]
+    |> add_listeners(Mix.env())
   end
+
+  defp add_listeners(project, :dev), do: Keyword.put(project, :listeners, [Phoenix.CodeReloader])
+  defp add_listeners(project, _), do: project
 
   def put_otp_version(%{path: target_path} = release) do
     File.write!(
@@ -112,7 +116,7 @@ defmodule Pleroma.Mixfile do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.7.0"},
+      {:phoenix, "~> 1.8.0"},
       {:phoenix_view, "~> 2.0"},
       {:phoenix_live_dashboard, "~> 0.8.6"},
       {:tzdata, "~> 1.1.1"},
@@ -129,7 +133,8 @@ defmodule Pleroma.Mixfile do
       {:bcrypt_elixir, "~> 3.0.1"},
       {:fast_sanitize, "~> 0.2.3"},
       {:html_entities, "~> 0.5"},
-      {:phoenix_html, "~> 3.3"},
+      {:phoenix_html, "~> 4.0"},
+      {:phoenix_html_helpers, "~> 1.0"},
       {:calendar, "~> 1.0"},
       {:cachex, "~> 3.6"},
       {:tesla, "~> 1.7"},
