@@ -74,7 +74,7 @@ defmodule Pleroma.Application do
           Pleroma.Web.Telemetry
         ] ++
         elasticsearch_children() ++
-        task_children(@mix_env) ++
+        task_children() ++
         dont_run_in_test(@mix_env)
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
@@ -199,31 +199,29 @@ defmodule Pleroma.Application do
     ]
   end
 
-  @spec task_children(atom()) :: [map()]
+  @spec task_children() :: [map()]
+  defp task_children() do
+    always =
+      [
+        %{
+          id: :web_push_init,
+          start: {Task, :start_link, [&Pleroma.Web.Push.init/0]},
+          restart: :temporary
+        }
+      ]
 
-  defp task_children(:test) do
-    [
-      %{
-        id: :web_push_init,
-        start: {Task, :start_link, [&Pleroma.Web.Push.init/0]},
-        restart: :temporary
-      }
-    ]
-  end
-
-  defp task_children(_) do
-    [
-      %{
-        id: :web_push_init,
-        start: {Task, :start_link, [&Pleroma.Web.Push.init/0]},
-        restart: :temporary
-      },
-      %{
-        id: :internal_fetch_init,
-        start: {Task, :start_link, [&Pleroma.Web.ActivityPub.InternalFetchActor.init/0]},
-        restart: :temporary
-      }
-    ]
+    if @mix_env == :test do
+      always
+    else
+      [
+        %{
+          id: :internal_fetch_init,
+          start: {Task, :start_link, [&Pleroma.Web.ActivityPub.InternalFetchActor.init/0]},
+          restart: :temporary
+        }
+        | always
+      ]
+    end
   end
 
   @spec elasticsearch_children :: [Pleroma.Search.Elasticsearch.Cluster]
