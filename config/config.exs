@@ -51,6 +51,11 @@ config :pleroma, Pleroma.Repo,
   queue_target: 20_000,
   migration_lock: nil
 
+# password hash strength
+config :argon2_elixir,
+  t_cost: 8,
+  parallelism: 2
+
 config :pleroma, Pleroma.Captcha,
   enabled: true,
   seconds_valid: 300,
