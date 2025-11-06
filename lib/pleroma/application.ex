@@ -144,30 +144,84 @@ defmodule Pleroma.Application do
 
   defp cachex_children do
     [
-      build_cachex("used_captcha", ttl_interval: seconds_valid_interval()),
-      build_cachex("user", default_ttl: 25_000, ttl_interval: 1000, limit: 2500),
-      build_cachex("object", default_ttl: 25_000, ttl_interval: 1000, limit: 2500),
-      build_cachex("rich_media", default_ttl: :timer.minutes(120), limit: 5000),
-      build_cachex("scrubber", limit: 2500),
-      build_cachex("scrubber_management", limit: 2500),
-      build_cachex("idempotency", expiration: idempotency_expiration(), limit: 2500),
-      build_cachex("web_resp", limit: 2500),
-      build_cachex("emoji_packs", expiration: emoji_packs_expiration(), limit: 10),
-      build_cachex("failed_proxy_url", limit: 2500),
-      build_cachex("banned_urls", default_ttl: :timer.hours(24 * 30), limit: 5_000),
-      build_cachex("translations", default_ttl: :timer.hours(24 * 30), limit: 2500),
-      build_cachex("instances", default_ttl: :timer.hours(24), ttl_interval: 1000, limit: 2500),
-      build_cachex("rel_me", default_ttl: :timer.hours(24 * 30), limit: 300),
-      build_cachex("host_meta", default_ttl: :timer.minutes(120), limit: 5000),
-      build_cachex("http_backoff", default_ttl: :timer.hours(24 * 30), limit: 10000)
+      build_cachex(
+        "used_captcha",
+        expiration: expiration(interval: seconds_valid_interval())
+      ),
+      build_cachex(
+        "user",
+        expiration: expiration(default: 25_000, interval: 1000),
+        limit: 2500
+      ),
+      build_cachex(
+        "object",
+        expiration: expiration(default: 25_000, interval: 1000),
+        limit: 2500
+      ),
+      build_cachex(
+        "rich_media",
+        expiration: expiration(default: :timer.minutes(120)),
+        limit: 5000
+      ),
+      build_cachex(
+        "scrubber",
+        limit: 2500
+      ),
+      build_cachex(
+        "scrubber_management",
+        limit: 2500
+      ),
+      build_cachex(
+        "idempotency",
+        expiration:
+          expiration(default: :timer.seconds(6 * 60 * 60), interval: :timer.seconds(60)),
+        limit: 2500
+      ),
+      build_cachex(
+        "web_resp",
+        limit: 2500
+      ),
+      build_cachex(
+        "emoji_packs",
+        expiration: expiration(default: :timer.seconds(5 * 60), interval: :timer.seconds(60)),
+        limit: 10
+      ),
+      build_cachex(
+        "failed_proxy_url",
+        limit: 2500
+      ),
+      build_cachex(
+        "banned_urls",
+        expiration: expiration(default: :timer.hours(24 * 30)),
+        limit: 5_000
+      ),
+      build_cachex(
+        "translations",
+        expiration: expiration(default: :timer.hours(24 * 30)),
+        limit: 2500
+      ),
+      build_cachex(
+        "instances",
+        expiration: expiration(default: :timer.hours(24), interval: 1000),
+        limit: 2500
+      ),
+      build_cachex(
+        "rel_me",
+        expiration: expiration(default: :timer.hours(24 * 30)),
+        limit: 300
+      ),
+      build_cachex(
+        "host_meta",
+        expiration: expiration(default: :timer.minutes(120)),
+        limit: 5000
+      ),
+      build_cachex(
+        "http_backoff",
+        expiration: expiration(default: :timer.hours(24 * 30)),
+        limit: 10000
+      )
     ]
   end
-
-  defp emoji_packs_expiration,
-    do: expiration(default: :timer.seconds(5 * 60), interval: :timer.seconds(60))
-
-  defp idempotency_expiration,
-    do: expiration(default: :timer.seconds(6 * 60 * 60), interval: :timer.seconds(60))
 
   defp seconds_valid_interval,
     do: :timer.seconds(Config.get!([Pleroma.Captcha, :seconds_valid]))
