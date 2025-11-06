@@ -166,7 +166,7 @@ defmodule Pleroma.Mixfile do
        git: "https://akkoma.dev/AkkomaGang/http_signatures.git", branch: "main"},
       {:telemetry, "~> 1.2"},
       {:telemetry_poller, "~> 1.0"},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_metrics_prometheus_core, "~> 1.2.1"},
       {:poolboy, "~> 1.5"},
       {:recon, "~> 2.5"},
