@@ -219,7 +219,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
       |> Maps.put_if_present(:is_locked, params[:locked])
       # Note: param name is indeed :discoverable (not an error)
       |> Maps.put_if_present(:is_discoverable, params[:discoverable])
-      |> Maps.put_if_present(:language, Pleroma.Web.Gettext.normalize_locale(params[:language]))
+      |> Maps.put_if_present(:language, Pleroma.Web.GettextCompanion.normalize_locale(params[:language]))
       |> Maps.put_if_present(:status_ttl_days, params[:status_ttl_days], status_ttl_days_value)
       |> Maps.put_if_present(:accepts_direct_messages_from, params[:accepts_direct_messages_from])
       |> Maps.put_if_present(:permit_followback, params[:permit_followback])

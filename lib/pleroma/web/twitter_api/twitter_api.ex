@@ -24,7 +24,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPI do
       |> Map.put(:registration_reason, params[:reason])
       |> Map.put(
         :language,
-        Pleroma.Web.Gettext.normalize_locale(params[:language]) || fallback_language
+        Pleroma.Web.GettextCompanion.normalize_locale(params[:language]) || fallback_language
       )
 
     if Pleroma.Config.get([:instance, :registrations_open]) do
