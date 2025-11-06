@@ -531,7 +531,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
         value = translation_module.translate(text, source_language, target_language)
 
         with {:ok, _, _} <- value do
-          value
+          {:commit, value}
         else
           _ -> {:ignore, value}
         end

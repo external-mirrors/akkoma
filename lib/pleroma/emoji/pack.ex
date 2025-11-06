@@ -464,7 +464,7 @@ defmodule Pleroma.Emoji.Pack do
       # if pack.json MD5 changes, the cache is not valid anymore
       %{hash: hash, pack_data: result},
       # Add a minute to cache time for every file in the pack
-      ttl: overall_ttl
+      expire: overall_ttl
     )
 
     result

@@ -136,7 +136,7 @@ defmodule Pleroma.Mixfile do
       {:phoenix_html, "~> 4.0"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:calendar, "~> 1.0"},
-      {:cachex, "~> 3.6"},
+      {:cachex, "~> 4.1"},
       {:tesla, "~> 1.7"},
       {:castore, "~> 1.0"},
       {:cowlib, "~> 2.12"},

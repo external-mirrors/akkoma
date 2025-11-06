@@ -151,80 +151,83 @@ defmodule Pleroma.Application do
       build_cachex(
         "user",
         expiration: expiration(default: 25_000, interval: 1000),
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "object",
         expiration: expiration(default: 25_000, interval: 1000),
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "rich_media",
         expiration: expiration(default: :timer.minutes(120)),
-        limit: 5000
+        hooks: [cachex_sched_limit(5000)]
       ),
       build_cachex(
         "scrubber",
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "scrubber_management",
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "idempotency",
         expiration:
           expiration(default: :timer.seconds(6 * 60 * 60), interval: :timer.seconds(60)),
-        limit: 2500
+        hooks: [cachex_sched_limit(2500, [], frequency: :timer.minutes(1))]
       ),
       build_cachex(
         "web_resp",
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "emoji_packs",
         expiration: expiration(default: :timer.seconds(5 * 60), interval: :timer.seconds(60)),
-        limit: 10
+        hooks: [cachex_sched_limit(10)]
       ),
       build_cachex(
         "failed_proxy_url",
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "banned_urls",
         expiration: expiration(default: :timer.hours(24 * 30)),
-        limit: 5_000
+        hooks: [cachex_sched_limit(5_000, [], frequency: :timer.minutes(5))]
       ),
       build_cachex(
         "translations",
         expiration: expiration(default: :timer.hours(24 * 30)),
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "instances",
         expiration: expiration(default: :timer.hours(24), interval: 1000),
-        limit: 2500
+        hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "rel_me",
         expiration: expiration(default: :timer.hours(24 * 30)),
-        limit: 300
+        hooks: [cachex_sched_limit(300, [], frequency: :timer.minutes(1))]
       ),
       build_cachex(
         "host_meta",
         expiration: expiration(default: :timer.minutes(120)),
-        limit: 5000
+        hooks: [cachex_sched_limit(5000, [], frequency: :timer.minutes(1))]
       ),
       build_cachex(
         "http_backoff",
         expiration: expiration(default: :timer.hours(24 * 30)),
-        limit: 10000
+        hooks: [cachex_sched_limit(10_000, [], frequency: :timer.minutes(5))]
       )
     ]
   end
 
   defp seconds_valid_interval,
     do: :timer.seconds(Config.get!([Pleroma.Captcha, :seconds_valid]))
+
+  defp cachex_sched_limit(limit, prune_opts \\ [], sched_opts \\ []),
+    do: hook(module: Cachex.Limit.Scheduled, args: {limit, prune_opts, sched_opts})
 
   @spec build_cachex(String.t(), keyword()) :: map()
   def build_cachex(type, opts),
