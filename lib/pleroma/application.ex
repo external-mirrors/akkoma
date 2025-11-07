@@ -160,7 +160,7 @@ defmodule Pleroma.Application do
       ),
       build_cachex(
         "rich_media",
-        expiration: expiration(default: :timer.minutes(120)),
+        expiration: expiration(default: :timer.hours(2)),
         hooks: [cachex_sched_limit(5000)]
       ),
       build_cachex(
@@ -173,8 +173,7 @@ defmodule Pleroma.Application do
       ),
       build_cachex(
         "idempotency",
-        expiration:
-          expiration(default: :timer.seconds(6 * 60 * 60), interval: :timer.seconds(60)),
+        expiration: expiration(default: :timer.hours(6), interval: :timer.minutes(1)),
         hooks: [cachex_sched_limit(2500, [], frequency: :timer.minutes(1))]
       ),
       build_cachex(
@@ -183,7 +182,7 @@ defmodule Pleroma.Application do
       ),
       build_cachex(
         "emoji_packs",
-        expiration: expiration(default: :timer.seconds(5 * 60), interval: :timer.seconds(60)),
+        expiration: expiration(default: :timer.minutes(5), interval: :timer.minutes(1)),
         hooks: [cachex_sched_limit(10)]
       ),
       build_cachex(
