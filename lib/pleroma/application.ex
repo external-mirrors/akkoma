@@ -150,12 +150,12 @@ defmodule Pleroma.Application do
       ),
       build_cachex(
         "user",
-        expiration: expiration(default: 25_000, interval: 1000),
+        expiration: expiration(default: 3_000, interval: 1_000),
         hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
         "object",
-        expiration: expiration(default: 25_000, interval: 1000),
+        expiration: expiration(default: 3_000, interval: 1_000),
         hooks: [cachex_sched_limit(2500)]
       ),
       build_cachex(
