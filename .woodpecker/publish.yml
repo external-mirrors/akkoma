@@ -29,14 +29,14 @@ matrix:
     # Canonical arm64
     - ARCH: arm64
       SUFFIX:
-      RELEASER_TAG: arm64
+      RELEASER_TAG: :arm64
       IMG_VAR: debian-bookworm-20230612
       UBUNTU_EXPORT: YES
 
     # Canonical arm64-musl
     - ARCH: arm64
       SUFFIX: -musl
-      RELEASER_TAG: arm64
+      RELEASER_TAG: :arm64
       IMG_VAR: alpine-3.18.2
       SKIP_DEVELOP: YES
 
@@ -84,7 +84,7 @@ steps:
        zip akkoma-${ARCH}${SUFFIX}.zip -r release
 
   release:
-    image: akkoma/releaser
+    image: akkoma/releaser${RELEASER_TAG}
     environment:
       SCW_ACCESS_KEY:
         from_secret: SCW_ACCESS_KEY
