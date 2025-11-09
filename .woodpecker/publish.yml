@@ -97,7 +97,7 @@ steps:
       export DEST=scaleway:akkoma-updates/$${CI_COMMIT_TAG:-"$CI_COMMIT_BRANCH"}/$${SOURCE}
       /bin/sh /entrypoint.sh
 
-      if [ "${UBUNTU_EXPORT}" = "YES" ] ; do
+      if [ "${UBUNTU_EXPORT}" = "YES" ] ; then
         # Ubuntu jammy (currently compatible with our default debian builds)
         export DEST=scaleway:akkoma-updates/$${CI_COMMIT_TAG:-"$CI_COMMIT_BRANCH"}/akkoma-${ARCH}-ubuntu-jammy.zip
         /bin/sh /entrypoint.sh
