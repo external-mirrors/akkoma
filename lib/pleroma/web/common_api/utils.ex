@@ -9,7 +9,6 @@ defmodule Pleroma.Web.CommonAPI.Utils do
   alias Calendar.Strftime
   alias Pleroma.Activity
   alias Pleroma.Config
-  alias Pleroma.Conversation.Participation
   alias Pleroma.Formatter
   alias Pleroma.Object
   alias Pleroma.Repo
@@ -51,11 +50,6 @@ defmodule Pleroma.Web.CommonAPI.Utils do
   end
 
   @spec get_to_and_cc(ActivityDraft.t()) :: {list(String.t()), list(String.t())}
-
-  def get_to_and_cc(%{in_reply_to_conversation: %Participation{} = participation}) do
-    participation = Repo.preload(participation, :recipients)
-    {Enum.map(participation.recipients, & &1.ap_id), []}
-  end
 
   def get_to_and_cc(%{visibility: visibility} = draft) do
     # If the OP is a DM already, add the implicit actor
@@ -227,10 +221,6 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     else
       "text/plain"
     end
-  end
-
-  def make_context(%{in_reply_to_conversation: %Participation{} = participation}) do
-    Repo.preload(participation, :conversation).conversation.ap_id
   end
 
   def make_context(%{in_reply_to: %Activity{data: %{"context" => context}}}), do: context
