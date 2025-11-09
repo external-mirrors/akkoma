@@ -118,7 +118,7 @@ defmodule Pleroma.Web.OStatus.OStatusController do
          %{data: %{"attachment" => [%{"url" => [url | _]} | _]}} <- object,
          true <- String.starts_with?(url["mediaType"], ["audio", "video"]) do
       conn
-      |> put_layout(:metadata_player)
+      |> put_layout(html: {Pleroma.Web.LayoutView, :metadata_player})
       |> put_resp_header("x-frame-options", "ALLOW")
       |> put_resp_header(
         "content-security-policy",

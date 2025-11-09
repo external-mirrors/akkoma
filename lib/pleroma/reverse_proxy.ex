@@ -366,6 +366,6 @@ defmodule Pleroma.ReverseProxy do
         nil
       end
 
-    @cachex.put(:failed_proxy_url_cache, url, true, ttl: ttl)
+    @cachex.put(:failed_proxy_url_cache, url, true, expire: ttl)
   end
 end

@@ -270,13 +270,13 @@ defmodule Pleroma.User do
 
   def cached_blocked_users_ap_ids(user) do
     @cachex.fetch!(:user_cache, "blocked_users_ap_ids:#{user.ap_id}", fn _ ->
-      blocked_users_ap_ids(user)
+      {:commit, blocked_users_ap_ids(user)}
     end)
   end
 
   def cached_muted_users_ap_ids(user) do
     @cachex.fetch!(:user_cache, "muted_users_ap_ids:#{user.ap_id}", fn _ ->
-      muted_users_ap_ids(user)
+      {:commit, muted_users_ap_ids(user)}
     end)
   end
 
@@ -1162,7 +1162,7 @@ defmodule Pleroma.User do
   @spec get_cached_user_friends_ap_ids(User.t()) :: [String.t()]
   def get_cached_user_friends_ap_ids(user) do
     @cachex.fetch!(:user_cache, "friends_ap_ids:#{user.ap_id}", fn _ ->
-      get_user_friends_ap_ids(user)
+      {:commit, get_user_friends_ap_ids(user)}
     end)
   end
 
