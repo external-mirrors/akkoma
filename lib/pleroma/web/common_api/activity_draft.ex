@@ -10,7 +10,8 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
   alias Pleroma.Web.CommonAPI
   alias Pleroma.Web.CommonAPI.Utils
 
-  import Pleroma.Web.Gettext
+  use Gettext,
+    backend: Pleroma.Web.Gettext
 
   defstruct valid?: true,
             errors: [],
@@ -104,7 +105,26 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
   defp in_reply_to(%{params: %{in_reply_to_status_id: ""}} = draft), do: draft
 
   defp in_reply_to(%{params: %{in_reply_to_status_id: id}} = draft) when is_binary(id) do
-    %__MODULE__{draft | in_reply_to: Activity.get_by_id(id)}
+    # If a post was deleted all its activities (except the newly added Delete) are purged too,
+    # thus lookup by Create db ID will yield nil just as if it never existed in the first place.
+    # We allow replying to Announce here, due to an akkomafe quirk where if presented with a Announce id
+    # it will render it as if it was just the normal referenced post, but use the announce ID for all interaction.
+    # (XXX: fix this in akkoma-fe, then drop such workarounds here and in all other affected places)
+    with %Activity{} = activity <- Activity.get_by_id(id),
+         {_, type} when type in ["Create", "Announce"] <- {:type, activity.data["type"]} do
+      %__MODULE__{draft | in_reply_to: activity}
+    else
+      nil ->
+        add_error(draft, dgettext("errors", "Parent post does not exist or was deleted"))
+
+      {:type, type} ->
+        add_error(
+          draft,
+          dgettext("errors", "Can only reply to posts, not %{type} activities",
+            type: inspect(type)
+          )
+        )
+    end
   end
 
   defp in_reply_to(%{params: %{in_reply_to_status_id: %Activity{} = in_reply_to}} = draft) do

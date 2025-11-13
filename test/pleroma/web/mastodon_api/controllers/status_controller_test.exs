@@ -343,6 +343,42 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
       end)
     end
 
+    test "replying to a deleted post fails", %{conn: conn} do
+      user = insert(:user)
+
+      {:ok, activity} = CommonAPI.post(user, %{status: "test post"})
+      {:ok, _deletion_activity} = CommonAPI.delete(activity.id, user)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/statuses", %{
+          "status" => "test reply",
+          "in_reply_to_id" => to_string(activity.id)
+        })
+
+      assert %{"error" => "Parent post does not exist or was deleted"} =
+               json_response_and_validate_schema(conn, 422)
+    end
+
+    test "replying to a non-post activity fails", %{conn: conn} do
+      user = insert(:user)
+      other_user = insert(:user)
+
+      {:ok, _, _, follow_activity} = CommonAPI.follow(user, other_user)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/statuses", %{
+          "status" => "hiiii!",
+          "in_reply_to_id" => to_string(follow_activity.id)
+        })
+
+      assert %{"error" => "Can only reply to posts, not \"Follow\" activities"} =
+               json_response_and_validate_schema(conn, 422)
+    end
+
     test "posting a status with an invalid in_reply_to_id", %{conn: conn} do
       conn =
         conn
@@ -855,6 +891,18 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
 
     assert %{"id" => id} = json_response_and_validate_schema(conn, 200)
     assert id == to_string(activity.id)
+  end
+
+  test "rejects non-Create, non-Announce activity id" do
+    %{conn: conn} = oauth_access(["read:statuses"])
+    activity = insert(:note_activity)
+    like_user = insert(:user)
+
+    {:ok, like_activity} = CommonAPI.favorite(like_user, activity.id)
+
+    conn = get(conn, "/api/v1/statuses/#{like_activity.id}")
+
+    assert %{"error" => _} = json_response_and_validate_schema(conn, 404)
   end
 
   defp local_and_remote_activities do

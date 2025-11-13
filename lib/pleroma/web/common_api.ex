@@ -16,7 +16,9 @@ defmodule Pleroma.Web.CommonAPI do
   alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.CommonAPI.ActivityDraft
 
-  import Pleroma.Web.Gettext
+  use Gettext,
+    backend: Pleroma.Web.Gettext
+
   import Pleroma.Web.CommonAPI.Utils
 
   require Pleroma.Constants

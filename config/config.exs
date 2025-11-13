@@ -51,6 +51,11 @@ config :pleroma, Pleroma.Repo,
   queue_target: 20_000,
   migration_lock: nil
 
+# password hash strength
+config :argon2_elixir,
+  t_cost: 8,
+  parallelism: 2
+
 config :pleroma, Pleroma.Captcha,
   enabled: true,
   seconds_valid: 300,
@@ -184,7 +189,7 @@ config :pleroma, :http,
   pool_timeout: :timer.seconds(60),
   receive_timeout: :timer.seconds(15),
   proxy_url: nil,
-  protocols: [:http2, :http1],
+  protocols: [:http1],
   user_agent: :default,
   pool_size: 10,
   adapter: []
