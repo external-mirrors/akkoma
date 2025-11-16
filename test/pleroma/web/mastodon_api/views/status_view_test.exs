@@ -667,6 +667,60 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     assert resp[:pleroma][:mime_type] == "application/octet-stream"
   end
 
+  test "attachment alt text can use the summary attribute" do
+    # federated like this by e.g. GtS
+    alt_text = "Two sloths hanging from the same branch. It’s sunny."
+
+    attachment_ap = %{
+      "blurhash" => "L38}3{XS9EInNZtSxvxbH=ngocWT",
+      "mediaType" => "image/png",
+      "summary" => alt_text,
+      "type" => "Image",
+      "url" => [
+        %{
+          "type" => "Link",
+          "href" =>
+            "https://gts.exampleorg/fileserver/016VVVVV/attachment/original/01JSXXYZZ.png",
+          "mediaType" => "image/png"
+        }
+      ]
+    }
+
+    resp = StatusView.render("attachment.json", %{attachment: attachment_ap})
+
+    api_spec = Pleroma.Web.ApiSpec.spec()
+    assert_schema(resp, "Attachment", api_spec)
+
+    assert resp[:description] == alt_text
+  end
+
+  test "attachment alt text prefers the summary attribute when name is also present" do
+    alt_text = "Two sloths hanging from the same branch. It’s sunny."
+
+    attachment_ap = %{
+      "blurhash" => "L38}3{XS9EInNZtSxvxbH=ngocWT",
+      "mediaType" => "image/png",
+      "name" => "two_sloths.png",
+      "summary" => alt_text,
+      "type" => "Image",
+      "url" => [
+        %{
+          "type" => "Link",
+          "href" =>
+            "https://gts.exampleorg/fileserver/016VVVVV/attachment/original/01JSXXYZZ.png",
+          "mediaType" => "image/png"
+        }
+      ]
+    }
+
+    resp = StatusView.render("attachment.json", %{attachment: attachment_ap})
+
+    api_spec = Pleroma.Web.ApiSpec.spec()
+    assert_schema(resp, "Attachment", api_spec)
+
+    assert resp[:description] == alt_text
+  end
+
   test "put the url advertised in the Activity in to the url attribute" do
     Pleroma.Config.put([:instance, :limit_to_local_content], false)
     id = "https://wedistribute.org/wp-json/pterotype/v1/object/85810"

@@ -610,7 +610,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
       preview_url: href_preview,
       text_url: href,
       type: type,
-      description: attachment["name"],
+      description: attachment["summary"] || attachment["name"],
       pleroma: %{mime_type: media_type},
       blurhash: attachment["blurhash"]
     }
