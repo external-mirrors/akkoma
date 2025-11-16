@@ -30,6 +30,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
   # will always 404 when supplied to API endpoints
   @ghost_flake_id "_"
 
+  @valid_attach_types ["image", "audio", "video"]
+
   defp fetch_rich_media_for_activities(activities) do
     Enum.each(activities, fn activity ->
       Card.get_by_activity(activity)
@@ -581,13 +583,14 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
     href_preview = attachment_url["href"] |> MediaProxy.preview_url()
     meta = render("attachment_meta.json", %{attachment: attachment})
 
+    # try to deduce type from full MIME, but if inconclusive (and since full type not set
+    # by all remote servers) try to fallback to generic type
+    generic_type = String.downcase(attachment["type"] || "")
+
     type =
-      cond do
-        String.contains?(media_type, "image") -> "image"
-        String.contains?(media_type, "video") -> "video"
-        String.contains?(media_type, "audio") -> "audio"
-        true -> "unknown"
-      end
+      Enum.find(@valid_attach_types, fn type -> String.contains?(media_type, type) end) ||
+        (generic_type in @valid_attach_types && generic_type) ||
+        "unknown"
 
     attachment_id =
       with {_, ap_id} when is_binary(ap_id) <- {:ap_id, attachment["id"]},

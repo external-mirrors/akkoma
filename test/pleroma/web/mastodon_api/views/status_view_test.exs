@@ -640,6 +640,33 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     assert_schema(result, "Attachment", api_spec)
   end
 
+  test "attachment type will fallback to generic type if inconclusive full media type" do
+    # e.g. used by Bridgy
+    attachment_ap = %{
+      "name" => "very cool image",
+      "type" => "Image",
+      # transformed into array of objects with duped mediaType by transmogrifier
+      "url" => [
+        %{
+          "type" => "Link",
+          "href" =>
+            "https://bsky.network.example.org/xrpc/com.atproto.sync.getBlob?did=did:plc:xx2w6vfvn7AAAAAAA5tlosyx&cid=bafanala",
+          "mediaType" => "application/octet-stream"
+        }
+      ],
+      # inserted by transmogrifier:
+      "mediaType" => "application/octet-stream"
+    }
+
+    resp = StatusView.render("attachment.json", %{attachment: attachment_ap})
+
+    api_spec = Pleroma.Web.ApiSpec.spec()
+    assert_schema(resp, "Attachment", api_spec)
+
+    assert resp[:type] == "image"
+    assert resp[:pleroma][:mime_type] == "application/octet-stream"
+  end
+
   test "put the url advertised in the Activity in to the url attribute" do
     Pleroma.Config.put([:instance, :limit_to_local_content], false)
     id = "https://wedistribute.org/wp-json/pterotype/v1/object/85810"
