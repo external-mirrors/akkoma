@@ -4,7 +4,6 @@
 
 defmodule Pleroma.Web.CommonAPI do
   alias Pleroma.Activity
-  alias Pleroma.Conversation.Participation
   alias Pleroma.Object
   alias Pleroma.ThreadMute
   alias Pleroma.User
@@ -294,23 +293,16 @@ defmodule Pleroma.Web.CommonAPI do
 
   def announce_visibility(object, _), do: Visibility.get_visibility(object)
 
-  def get_visibility(_, _, %Participation{}), do: {"direct", "direct"}
-
-  def get_visibility(%{visibility: visibility}, in_reply_to, _)
+  def get_visibility(%{visibility: visibility}, in_reply_to)
       when visibility in ~w{public local unlisted private direct},
       do: {visibility, get_replied_to_visibility(in_reply_to)}
 
-  def get_visibility(%{visibility: "list:" <> list_id}, in_reply_to, _) do
-    visibility = {:list, String.to_integer(list_id)}
-    {visibility, get_replied_to_visibility(in_reply_to)}
-  end
-
-  def get_visibility(_, in_reply_to, _) when not is_nil(in_reply_to) do
+  def get_visibility(_, in_reply_to) when not is_nil(in_reply_to) do
     visibility = get_replied_to_visibility(in_reply_to)
     {visibility, visibility}
   end
 
-  def get_visibility(_, in_reply_to, _), do: {"public", get_replied_to_visibility(in_reply_to)}
+  def get_visibility(_, nil), do: {"public", nil}
 
   def get_replied_to_visibility(nil), do: nil
 

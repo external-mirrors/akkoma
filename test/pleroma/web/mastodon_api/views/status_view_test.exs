@@ -942,18 +942,6 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     assert_schema(result, "Status", Pleroma.Web.ApiSpec.spec())
   end
 
-  test "visibility/list" do
-    user = insert(:user)
-
-    {:ok, list} = Pleroma.List.create("foo", user)
-
-    {:ok, activity} = CommonAPI.post(user, %{status: "foobar", visibility: "list:#{list.id}"})
-
-    status = StatusView.render("show.json", activity: activity)
-
-    assert status.visibility == "list"
-  end
-
   test "has a field for parent visibility" do
     user = insert(:user)
     poster = insert(:user)

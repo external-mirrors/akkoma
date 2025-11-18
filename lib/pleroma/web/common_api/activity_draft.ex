@@ -4,7 +4,6 @@
 
 defmodule Pleroma.Web.CommonAPI.ActivityDraft do
   alias Pleroma.Activity
-  alias Pleroma.Conversation.Participation
   alias Pleroma.Object
   alias Pleroma.Web.ActivityPub.Builder
   alias Pleroma.Web.CommonAPI
@@ -22,7 +21,6 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
             full_payload: nil,
             attachments: [],
             in_reply_to: nil,
-            in_reply_to_conversation: nil,
             language: nil,
             content_map: %{},
             quote_id: nil,
@@ -56,7 +54,6 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
     |> expires_at()
     |> poll()
     |> with_valid(&in_reply_to/1)
-    |> with_valid(&in_reply_to_conversation/1)
     |> with_valid(&visibility/1)
     |> with_valid(&quote_id/1)
     |> content()
@@ -133,11 +130,6 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
 
   defp in_reply_to(draft), do: draft
 
-  defp in_reply_to_conversation(draft) do
-    in_reply_to_conversation = Participation.get(draft.params[:in_reply_to_conversation_id])
-    %__MODULE__{draft | in_reply_to_conversation: in_reply_to_conversation}
-  end
-
   defp quote_id(%{params: %{quote_id: ""}} = draft), do: draft
 
   defp quote_id(%{params: %{quote_id: id}} = draft) when is_binary(id) do
@@ -175,7 +167,7 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
   end
 
   defp visibility(%{params: params} = draft) do
-    case CommonAPI.get_visibility(params, draft.in_reply_to, draft.in_reply_to_conversation) do
+    case CommonAPI.get_visibility(params, draft.in_reply_to) do
       {visibility, "direct"} when visibility != "direct" ->
         add_error(draft, dgettext("errors", "The message visibility must be direct"))
 
@@ -298,7 +290,6 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
         object: draft.object,
         additional: additional
       }
-      |> Utils.maybe_add_list_data(draft.user, draft.visibility)
 
     %__MODULE__{draft | changes: changes}
   end
