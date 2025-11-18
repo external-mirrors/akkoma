@@ -161,7 +161,7 @@ defmodule Pleroma.Mixfile do
       {:floki, "~> 0.34"},
       {:timex, "~> 3.7"},
       {:ueberauth, "~> 0.10.7"},
-      {:linkify, "~> 0.5.3"},
+      {:linkify, git: "https://akkoma.dev/AkkomaGang/linkify.git", branch: "main"},
       {:http_signatures,
        git: "https://akkoma.dev/AkkomaGang/http_signatures.git", branch: "main"},
       {:telemetry, "~> 1.2"},
