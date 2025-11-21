@@ -6,6 +6,7 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
   alias Pleroma.Activity
   alias Pleroma.Object
   alias Pleroma.Web.ActivityPub.Builder
+  alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.CommonAPI
   alias Pleroma.Web.CommonAPI.Utils
 
@@ -108,11 +109,15 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
     # it will render it as if it was just the normal referenced post, but use the announce ID for all interaction.
     # (XXX: fix this in akkoma-fe, then drop such workarounds here and in all other affected places)
     with %Activity{} = activity <- Activity.get_by_id(id),
+         true <- Visibility.visible_for_user?(activity, draft.user),
          {_, type} when type in ["Create", "Announce"] <- {:type, activity.data["type"]} do
       %__MODULE__{draft | in_reply_to: activity}
     else
       nil ->
         add_error(draft, dgettext("errors", "Parent post does not exist or was deleted"))
+
+      false ->
+        add_error(draft, dgettext("errors", "Must be able to access post to interact with it"))
 
       {:type, type} ->
         add_error(
