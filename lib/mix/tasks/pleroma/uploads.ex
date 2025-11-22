@@ -105,8 +105,8 @@ defmodule Mix.Tasks.Pleroma.Uploads do
   def run(["rewrite_media_domain", from_url, to_url | args]) do
     dry_run = Enum.member?(args, "--dry-run")
     start_pleroma()
-    IO.puts("Rewriting media domain from #{from_url} to #{to_url}")
-    IO.puts("Dry run: #{dry_run}")
+    shell_info("Rewriting media domain from #{from_url} to #{to_url}")
+    shell_info("Dry run: #{dry_run}")
     # actually selecting based on the attachment URL is stupidly difficult due to it being
     # stored as a JSONB array in the `data` field... the easier way to do this is just to iterate though
     # local posts
@@ -129,28 +129,28 @@ defmodule Mix.Tasks.Pleroma.Uploads do
       chunk
       |> Enum.each(fn object ->
         new_data =
-          rewrite_url_object(Map.get(object, :data), from_url, to_url)
+          rewrite_url_object(Map.get(object, :id), Map.get(object, :data), from_url, to_url)
 
         if dry_run do
-          IO.puts(
+          shell_info(
             "Dry run: would update object #{object.id} to new media domain (#{inspect(new_data)})"
           )
         else
           Pleroma.Repo.update!(Ecto.Changeset.change(object, data: new_data))
-          IO.puts("Updated object #{object.id} to new media domain")
+          shell_info("Updated object #{object.id} to new media domain")
         end
       end)
     end)
     |> Stream.run()
   end
 
-  defp rewrite_url(url, from_url, to_url) do
+  defp rewrite_url(id, url, from_url, to_url) do
     new_uri = String.replace(url, from_url, to_url)
     check = URI.parse(new_uri)
 
     case check do
       %URI{scheme: nil, host: nil} ->
-        raise("Invalid URL after rewriting: #{new_uri}")
+        raise("Invalid URL after rewriting: #{new_uri} (object ID: #{id})")
 
       _ ->
         new_uri
@@ -158,24 +158,25 @@ defmodule Mix.Tasks.Pleroma.Uploads do
   end
 
   # The base object - we're looking for this, it has the actual url
-  defp rewrite_url_object(%{"type" => "Link", "href" => href} = link, from_url, to_url) do
-    Map.put(link, "href", rewrite_url(href, from_url, to_url))
+  defp rewrite_url_object(id, %{"type" => "Link", "href" => href} = link, from_url, to_url) do
+    Map.put(link, "href", rewrite_url(id, href, from_url, to_url))
   end
 
-  defp rewrite_url_object(%{"type" => "Document", "url" => urls} = object, from_url, to_url) do
+  defp rewrite_url_object(id, %{"type" => "Document", "url" => urls} = object, from_url, to_url) do
     # Document will contain url field, which will be an array of links
     Map.put(
       object,
       "url",
       Enum.map(
         urls,
-        fn url -> rewrite_url_object(url, from_url, to_url) end
+        fn url -> rewrite_url_object(id, url, from_url, to_url) end
       )
     )
   end
 
   defp rewrite_url_object(
-         %{"type" => type, "attachment" => attachments} = object,
+         id,
+         %{"type" => _type, "attachment" => attachments} = object,
          from_url,
          to_url
        ) do
@@ -183,16 +184,19 @@ defmodule Mix.Tasks.Pleroma.Uploads do
     Map.put(
       object,
       "attachment",
-      Enum.map(attachments, fn attachment -> rewrite_url_object(attachment, from_url, to_url) end)
+      Enum.map(attachments, fn attachment ->
+        rewrite_url_object(id, attachment, from_url, to_url)
+      end)
     )
   end
 
   defp rewrite_url_object(
+         _id,
          object,
          _,
          _
        ) do
-    IO.puts(inspect(object))
+    shell_info(inspect(object))
     raise("Unhandled object format!")
   end
 end
