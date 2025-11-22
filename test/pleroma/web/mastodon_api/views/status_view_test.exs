@@ -326,7 +326,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
         pinned_at: nil
       },
       akkoma: %{
-        source: HTML.filter_tags(object_data["content"])
+        source: HTML.filter_tags(object_data["content"]),
+        in_reply_to_apid: nil,
+        quote_apid: nil
       },
       quote_id: nil,
       quote: nil
@@ -417,6 +419,17 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     assert status.in_reply_to_id == to_string(note.id)
   end
 
+  test "a reply to an unavailable post" do
+    note = insert(:note, data: %{"inReplyTo" => "https://example.org/404"})
+    activity = insert(:note_activity, note: note)
+
+    status = StatusView.render("show.json", %{activity: activity})
+
+    assert status.in_reply_to_id == "_"
+    assert status.in_reply_to_account_id == "_"
+    assert status.akkoma.in_reply_to_apid == "https://example.org/404"
+  end
+
   test "a quote" do
     note = insert(:note_activity)
     user = insert(:user)
@@ -433,12 +446,14 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
   end
 
   test "a quote that we can't resolve" do
-    note = insert(:note_activity, quoteUri: "oopsie")
+    note = insert(:note, data: %{"quoteUri" => "oopsie"})
+    activity = insert(:note_activity, note: note)
 
-    status = StatusView.render("show.json", %{activity: note})
+    status = StatusView.render("show.json", %{activity: activity})
 
-    assert is_nil(status.quote_id)
     assert is_nil(status.quote)
+    assert status.quote_id == "_"
+    assert status.akkoma.quote_apid == "oopsie"
   end
 
   test "a quote from a user we block" do
@@ -623,6 +638,87 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
 
     assert %{id: "2"} = result
     assert_schema(result, "Attachment", api_spec)
+  end
+
+  test "attachment type will fallback to generic type if inconclusive full media type" do
+    # e.g. used by Bridgy
+    attachment_ap = %{
+      "name" => "very cool image",
+      "type" => "Image",
+      # transformed into array of objects with duped mediaType by transmogrifier
+      "url" => [
+        %{
+          "type" => "Link",
+          "href" =>
+            "https://bsky.network.example.org/xrpc/com.atproto.sync.getBlob?did=did:plc:xx2w6vfvn7AAAAAAA5tlosyx&cid=bafanala",
+          "mediaType" => "application/octet-stream"
+        }
+      ],
+      # inserted by transmogrifier:
+      "mediaType" => "application/octet-stream"
+    }
+
+    resp = StatusView.render("attachment.json", %{attachment: attachment_ap})
+
+    api_spec = Pleroma.Web.ApiSpec.spec()
+    assert_schema(resp, "Attachment", api_spec)
+
+    assert resp[:type] == "image"
+    assert resp[:pleroma][:mime_type] == "application/octet-stream"
+  end
+
+  test "attachment alt text can use the summary attribute" do
+    # federated like this by e.g. GtS
+    alt_text = "Two sloths hanging from the same branch. It’s sunny."
+
+    attachment_ap = %{
+      "blurhash" => "L38}3{XS9EInNZtSxvxbH=ngocWT",
+      "mediaType" => "image/png",
+      "summary" => alt_text,
+      "type" => "Image",
+      "url" => [
+        %{
+          "type" => "Link",
+          "href" =>
+            "https://gts.exampleorg/fileserver/016VVVVV/attachment/original/01JSXXYZZ.png",
+          "mediaType" => "image/png"
+        }
+      ]
+    }
+
+    resp = StatusView.render("attachment.json", %{attachment: attachment_ap})
+
+    api_spec = Pleroma.Web.ApiSpec.spec()
+    assert_schema(resp, "Attachment", api_spec)
+
+    assert resp[:description] == alt_text
+  end
+
+  test "attachment alt text prefers the summary attribute when name is also present" do
+    alt_text = "Two sloths hanging from the same branch. It’s sunny."
+
+    attachment_ap = %{
+      "blurhash" => "L38}3{XS9EInNZtSxvxbH=ngocWT",
+      "mediaType" => "image/png",
+      "name" => "two_sloths.png",
+      "summary" => alt_text,
+      "type" => "Image",
+      "url" => [
+        %{
+          "type" => "Link",
+          "href" =>
+            "https://gts.exampleorg/fileserver/016VVVVV/attachment/original/01JSXXYZZ.png",
+          "mediaType" => "image/png"
+        }
+      ]
+    }
+
+    resp = StatusView.render("attachment.json", %{attachment: attachment_ap})
+
+    api_spec = Pleroma.Web.ApiSpec.spec()
+    assert_schema(resp, "Attachment", api_spec)
+
+    assert resp[:description] == alt_text
   end
 
   test "put the url advertised in the Activity in to the url attribute" do
@@ -844,18 +940,6 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     assert result[:account][:pleroma][:relationship] == %{}
     assert result[:reblog][:account][:pleroma][:relationship] == %{}
     assert_schema(result, "Status", Pleroma.Web.ApiSpec.spec())
-  end
-
-  test "visibility/list" do
-    user = insert(:user)
-
-    {:ok, list} = Pleroma.List.create("foo", user)
-
-    {:ok, activity} = CommonAPI.post(user, %{status: "foobar", visibility: "list:#{list.id}"})
-
-    status = StatusView.render("show.json", activity: activity)
-
-    assert status.visibility == "list"
   end
 
   test "has a field for parent visibility" do

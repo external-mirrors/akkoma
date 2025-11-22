@@ -5,10 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
+### REMOVED
+
+### Added
+- status responses include two new fields for ActivityPub cross-referencing: `akkoma.quote_apid` and `akkoma.in_reply_to_apid`
+
+### Fixed
+- replies and quotes to unresolvable posts now fill out IDs for replied to
+  status, user or quoted status with a 404-ing ID to make them recognisable as
+  replies/quotes instead of pretending they’re root posts
+
+### Changed
+
+
+## 2025.10
 
 ### REMOVED
 - Dropped `accepts_chat_messages` column from users table in database;
   it has been unused for almost 3 years
+- Healthcheck responses no longer contain job queue data;
+  it was useless anyway due to lacking any temporal information about failures
+  and more complete data can be obtained from Prometheus metrics.
 
 ### Added
 - We mark our MFM posts as FEP-c16b compliant, and retain remote HTML representations for incoming posts marked as FEP-c16b-compliant. (Safety scrubbers are still applied)
@@ -24,6 +41,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   new setting `:pleroma, :instance, :short_description` is also preferred for nodeinfo use
 - Note AP objects now expose full `replies` collections and those collections can be accessed on their own;
   previously only self-replies were inlined as an anonymous collection into the Note object
+- Added a reference Grafana dashboard and improved documentation for Prometheus metrics
+- New mix task `clean_inlined_replies` to delete some unused data from objects
+- New mix task `resync_inlined_caches` to retroactively fix various issues with e.g. boosts, emoji reacts and likes
+- It is now possible to allow outgoing requests to use HTTP2 via config option,
+  but due to bugs in the relevant backend this is not the default nor recommended.
+- Prometheus metrics now expose count of scheduled and pending jobs per queue
 
 ### Fixed
 - Internal actors no longer pretend to have unresolvable follow(er|ing) collections
@@ -37,10 +60,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - remote signing keys are no longer refreshed multiple times per incoming request
 - fix digest emails never being sent and clogging the job queue even if not enabled
 - `api/v1/instance`’s `uri` field now correctly shows the bare WebFinger domain
-- fixed bug leading to `content` and thw `contentMap` entry of the primary language to sometimes diverge
+- fixed bug leading to `content` and the `contentMap` entry of the primary language to sometimes diverge
 - reloading emoji with a broken `pack.json` file being on disk no longer crashes the whole server
 - fixed blocked servers being able to access local objects when authorized fetch isn’t enabled
   even when the remote server identifies itselfs
+- fixed handling of inlined "featured" collections
+- fixed user endpoint serving invalid ActivityPub for minimal, authfetch-fallback responses
+- remote emoji reacts from IceShrimp.NET instances are now handled consistently and always merged with identical other emoji reactions
+- ActivityPub requests signatures are now renewed when following redirects making sure path and host actually match the final URL
+- private replies no longer increase the publicly visible reply counter
+- unblock activities are no longer federated when block federation is disabled (the default)
+- fix like activity database IDs rendering as misattributed posts
 
 ### Changed
 - Internal and relay actors are now again represented with type "Application"
@@ -57,6 +87,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   more time to come back up when e.g. processing repeats of a post not yet locally known
 - `/api/v1/statuses/:id/reblog` now honours all possible visibilities except `list` and `conversation`
   instead of mapping them down to a boolean private/public
+- we no longer repeatedly try to deliver to explicitly deleted inboxes
+- Config option `Pleroma.Web.MediaProxy.Invalidation.Http, :options` and
+  the `:http` subkey of `:media_proxy, :proxy_opts` now only accept
+  adapter-related settings inside the `:adapter` subkey, no longer on the top-level
+- follow requests are now ordered reverse chronologically
 
 
 ## 2025.03

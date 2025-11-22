@@ -339,6 +339,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
           }
           |> Maps.put_if_present("mediaType", media_type)
           |> Maps.put_if_present("name", data["name"])
+          |> Maps.put_if_present("summary", data["summary"])
           |> Maps.put_if_present("blurhash", data["blurhash"])
         else
           nil
@@ -805,16 +806,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
       _ -> obj_data
     end
   end
-
-  def replies(%{"replies" => %{"first" => %{"items" => items}}}) when not is_nil(items) do
-    items
-  end
-
-  def replies(%{"replies" => %{"items" => items}}) when not is_nil(items) do
-    items
-  end
-
-  def replies(_), do: []
 
   # Prepares the object of an outgoing create activity.
   def prepare_object(object) do

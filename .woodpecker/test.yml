@@ -1,9 +1,5 @@
-labels:
-  platform: linux/amd64
-
 when:
-  event:
-    - pull_request
+  - event: pull_request
 
 matrix:
   # test the lowest and highest versions
@@ -11,16 +7,18 @@ matrix:
     - ELIXIR_VERSION: 1.14
       OTP_VERSION: 25
       LINT: NO
+      PLATFORM: linux/amd64
     - ELIXIR_VERSION: 1.18
       OTP_VERSION: 27
       LINT: YES
+      PLATFORM: linux/arm64
+
+labels:
+  platform: ${PLATFORM}
 
 services:
   postgres:
     image: postgres:15
-    when:
-      event:
-        - pull_request
     environment:
       POSTGRES_DB: pleroma_test_${ELIXIR_VERSION}_${OTP_VERSION}
       POSTGRES_USER: postgres
@@ -37,6 +35,7 @@ steps:
       DB_HOST: postgres
       LINT: ${LINT}
     commands:
+      - sh -c 'uname -a && cat /etc/os-release || :'
       - mix local.hex --force
       - mix local.rebar --force
       - mix deps.get

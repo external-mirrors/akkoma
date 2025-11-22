@@ -433,7 +433,7 @@ Response:
 * On success: URL of the unfollowed relay
 
 ```json
-{"https://example.com/relay"}
+"https://example.com/relay"
 ```
 
 ## `POST /api/v1/pleroma/admin/users/invite_token`
@@ -1173,20 +1173,23 @@ Loads JSON generated from `config/descriptions.exs`.
 - Response:
 
 ```json
-[
-  {
-    "id": 1234,
-    "data": {
-      "actor": {
-        "id": 1,
-        "nickname": "lain"
+{
+  "items": [
+    {
+      "id": 1234,
+      "data": {
+        "actor": {
+          "id": 1,
+          "nickname": "lain"
+        },
+        "action": "relay_follow"
       },
-      "action": "relay_follow"
-    },
-    "time": 1502812026, // timestamp
-    "message": "[2017-08-15 15:47:06] @nick0 followed relay: https://example.org/relay" // log message
-  }
-]
+      "time": 1502812026, // timestamp
+      "message": "[2017-08-15 15:47:06] @nick0 followed relay: https://example.org/relay" // log message
+    }
+  ],
+  "total": 1
+}
 ```
 
 ## `POST /api/v1/pleroma/admin/reload_emoji`
@@ -1215,24 +1218,10 @@ Loads JSON generated from `config/descriptions.exs`.
 
 ## `GET /api/v1/pleroma/admin/stats`
 
-### Stats
+**DEPRECATED; DO NOT USE**!!
 
-- Query Params:
-  - *optional* `instance`: **string** instance hostname (without protocol) to get stats for
-- Example: `https://mypleroma.org/api/v1/pleroma/admin/stats?instance=lain.com`
-
-- Response:
-
-```json
-{
-  "status_visibility": {
-    "direct": 739,
-    "private": 9,
-    "public": 17,
-    "unlisted": 14
-  }
-}
-```
+Returned information is only stubbed out.
+The endpoint will be removed entirely in an upcoming release.
 
 ## `GET /api/v1/pleroma/admin/oauth_app`
 
