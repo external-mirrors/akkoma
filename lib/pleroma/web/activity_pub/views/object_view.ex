@@ -9,6 +9,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectView do
   alias Pleroma.Web.ActivityPub.CollectionViewHelper
   alias Pleroma.Web.ControllerHelper
   alias Pleroma.Web.ActivityPub.Transmogrifier
+  alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.ActivityPub.ActivityPub
 
   def render("object.json", %{object: %Object{} = object}) do
@@ -32,7 +33,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectView do
 
   def render("object.json", %{object: %Activity{} = activity}) do
     base = Pleroma.Web.ActivityPub.Utils.make_json_ld_header()
-    object_id = Object.normalize(activity, id_only: true)
+    object_id = object_id_from_activity(activity)
 
     additional =
       Transmogrifier.prepare_object(activity.data)
@@ -102,6 +103,9 @@ defmodule Pleroma.Web.ActivityPub.ObjectView do
       Map.merge(col_ap, Pleroma.Web.ActivityPub.Utils.make_json_ld_header())
     end
   end
+
+  defp object_id_from_activity(%Activity{object: %Object{data: %{"id" => obj_id}}}), do: obj_id
+  defp object_id_from_activity(%Activity{data: %{"object" => ap_object_ref}), do: Utils.get_ap_id(ap_object_ref)
 
   defp map_reply_collection_items(items), do: Enum.map(items, fn %{ap_id: ap_id} -> ap_id end)
 
