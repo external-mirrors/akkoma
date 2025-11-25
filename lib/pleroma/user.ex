@@ -91,6 +91,9 @@ defmodule Pleroma.User do
 
   @cachex Pleroma.Config.get([:cachex, :provider], Cachex)
 
+  # hide sensitive data from logs
+  @derive {Inspect, except: [:password, :password_hash, :email]}
+
   schema "users" do
     field(:bio, :string, default: "")
     field(:raw_bio, :string)
