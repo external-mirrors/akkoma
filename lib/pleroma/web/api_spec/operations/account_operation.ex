@@ -139,12 +139,6 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
           Operation.parameter(:exclude_reblogs, :query, BooleanLike, "Exclude reblogs"),
           Operation.parameter(:exclude_replies, :query, BooleanLike, "Exclude replies"),
           Operation.parameter(
-            :exclude_visibilities,
-            :query,
-            %Schema{type: :array, items: VisibilityScope},
-            "Exclude visibilities"
-          ),
-          Operation.parameter(
             :with_muted,
             :query,
             BooleanLike,
