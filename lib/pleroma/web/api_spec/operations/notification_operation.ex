@@ -10,7 +10,6 @@ defmodule Pleroma.Web.ApiSpec.NotificationOperation do
   alias Pleroma.Web.ApiSpec.Schemas.ApiError
   alias Pleroma.Web.ApiSpec.Schemas.BooleanLike
   alias Pleroma.Web.ApiSpec.Schemas.Status
-  alias Pleroma.Web.ApiSpec.Schemas.VisibilityScope
 
   import Pleroma.Web.ApiSpec.Helpers
 
@@ -40,12 +39,6 @@ defmodule Pleroma.Web.ApiSpec.NotificationOperation do
             :query,
             %Schema{type: :string},
             "Return only notifications received from this account"
-          ),
-          Operation.parameter(
-            :exclude_visibilities,
-            :query,
-            %Schema{type: :array, items: VisibilityScope},
-            "Exclude the notifications for activities with the given visibilities"
           ),
           Operation.parameter(
             :include_types,
