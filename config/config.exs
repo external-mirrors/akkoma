@@ -839,6 +839,14 @@ config :pleroma, :frontends,
       "ref" => "develop",
       "build_dir" => "dist",
       "bugtracker" => "https://git.pleroma.social/pleroma/pleroma-fe/-/issues"
+    },
+    "pl-fe" => %{
+      "name" => "pl-fe",
+      "git" => "https://codeberg.org/mkljczk/pl-fe",
+      "build_url" => "https://pl.mkljczk.pl/pl-fe.zip",
+      "ref" => "develop",
+      "build_dir" => ".",
+      "bugtracker" => "https://codeberg.org/mkljczk/pl-fe/issues"
     }
   }
 
