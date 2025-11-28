@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 ### REMOVED
+- DEPRECATE `/api/v1/timelines/direct`.  
+    Technically this was already deprecated, given we extend mastodon 2.7.2 API
+    and Mastodon already deprecated it in 2.6.0 before removing it in 3.0.0.
+    But now we have concrete plans to remove this endpoint in a coming release.
+    The few remaining useres should switch to the conversations API.
 - DEPRECATE `config :pleroma, :instance, skip_thread_containment: false`.
   It is due to be removed in one of the next releases if no strong arguments for keeping it are brought up.
   It is already semi-broken for large threads and conflicts with pending optimisation and cleanup work.
