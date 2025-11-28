@@ -1,6 +1,8 @@
 defmodule Pleroma.Akkoma.Translators.ArgosTranslate do
   @behaviour Pleroma.Akkoma.Translator
 
+  @name "Argos Translate"
+
   alias Pleroma.Config
 
   defp argos_translate do
@@ -106,4 +108,7 @@ defmodule Pleroma.Akkoma.Translators.ArgosTranslate do
       {response, _} -> {:error, "ArgosTranslate failed to translate (#{response})"}
     end
   end
+
+  @impl Pleroma.Akkoma.Translator
+  def name, do: @name
 end

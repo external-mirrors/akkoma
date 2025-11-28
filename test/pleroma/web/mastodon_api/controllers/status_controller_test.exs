@@ -2672,7 +2672,43 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
              } = response
     end
 
-    test "should return text and detected language", %{conn: conn} do
+    test "should return text, detected language and provider name", %{conn: conn} do
+      clear_config([:deepl, :tier], :free)
+
+      Tesla.Mock.mock_global(fn
+        %{method: :post, url: "https://api-free.deepl.com/v2/translate"} ->
+          %Tesla.Env{
+            status: 200,
+            body:
+              Jason.encode!(%{
+                translations: [
+                  %{
+                    "text" => "Tell me, for whom do you fight?",
+                    "detected_source_language" => "ja"
+                  }
+                ]
+              })
+          }
+      end)
+
+      user = insert(:user)
+      {:ok, to_translate} = CommonAPI.post(user, %{status: "何のために闘う?"})
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/statuses/#{to_translate.id}/translate", %{
+          lang: "en"
+        })
+
+      response = json_response_and_validate_schema(conn, 200)
+
+      assert response["content"] == "Tell me, for whom do you fight?"
+      assert response["detected_source_language"] == "ja"
+      assert response["provider"] == "DeepL"
+    end
+
+    test "legacy endpoint should return text and detected language", %{conn: conn} do
       clear_config([:deepl, :tier], :free)
 
       Tesla.Mock.mock_global(fn

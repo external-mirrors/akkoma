@@ -5,4 +5,5 @@ defmodule Pleroma.Akkoma.Translator do
               {:ok, [%{name: String.t(), code: String.t()}],
                [%{name: String.t(), code: String.t()}]}
               | {:error, any()}
+  @callback name() :: String.t()
 end
