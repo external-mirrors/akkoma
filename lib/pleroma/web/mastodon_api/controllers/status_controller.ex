@@ -490,6 +490,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
         |> ActivityPub.fetch_activities_for_context(%{
           blocking_user: user,
           user: user,
+          with_muted: true,
           exclude_id: activity.id
         })
         |> Enum.filter(fn activity -> Visibility.visible_for_user?(activity, user) end)

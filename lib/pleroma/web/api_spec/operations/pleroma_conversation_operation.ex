@@ -5,6 +5,7 @@
 defmodule Pleroma.Web.ApiSpec.PleromaConversationOperation do
   alias OpenApiSpex.Operation
   alias OpenApiSpex.Schema
+  alias Pleroma.Web.ApiSpec.Schemas.BooleanLike
   alias Pleroma.Web.ApiSpec.Schemas.Conversation
   alias Pleroma.Web.ApiSpec.Schemas.FlakeID
   alias Pleroma.Web.ApiSpec.StatusOperation
@@ -42,7 +43,8 @@ defmodule Pleroma.Web.ApiSpec.PleromaConversationOperation do
         Operation.parameter(:id, :path, :string, "Conversation ID",
           example: "123",
           required: true
-        )
+        ),
+        Operation.parameter(:with_muted, :query, BooleanLike, "Include activities by muted users")
         | pagination_params()
       ],
       security: [%{"oAuth" => ["read:statuses"]}],

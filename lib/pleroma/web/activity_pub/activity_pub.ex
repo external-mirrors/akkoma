@@ -482,9 +482,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     from(activity in Activity)
     |> maybe_preload_objects(opts)
     |> maybe_preload_bookmarks(opts)
-    |> maybe_set_thread_muted_field(opts)
     |> restrict_blocked(opts)
     |> restrict_blockers_visibility(opts)
+    |> restrict_muted_users(opts)
     |> restrict_recipients(recipients, opts[:user])
     |> restrict_filtered(opts)
     |> where(
@@ -1096,24 +1096,35 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_reblogs(query, _), do: query
 
-  defp restrict_muted(query, %{with_muted: true}), do: query
+  defp restrict_muted(query, opts) do
+    query
+    |> restrict_muted_users(opts)
+    |> restrict_muted_threads(opts)
+  end
 
-  defp restrict_muted(query, %{muting_user: %User{} = user} = opts) do
+  defp restrict_muted_users(query, %{with_muted: true}), do: query
+
+  defp restrict_muted_users(query, %{muting_user: %User{} = user} = opts) do
     mutes = opts[:muted_users_ap_ids] || User.muted_users_ap_ids(user)
 
-    query =
-      from([activity] in query,
-        where: fragment("not (? = ANY(?))", activity.actor, ^mutes),
-        where:
-          fragment(
-            "not (?->'to' \\?| ?) or ? = ?",
-            activity.data,
-            ^mutes,
-            activity.actor,
-            ^user.ap_id
-          )
-      )
+    from([activity] in query,
+      where: fragment("not (? = ANY(?))", activity.actor, ^mutes),
+      where:
+        fragment(
+          "not (?->'to' \\?| ?) or ? = ?",
+          activity.data,
+          ^mutes,
+          activity.actor,
+          ^user.ap_id
+        )
+    )
+  end
 
+  defp restrict_muted_users(query, _), do: query
+
+  defp restrict_muted_threads(query, %{with_muted: true}), do: query
+
+  defp restrict_muted_threads(query, %{muting_user: %User{} = _user} = opts) do
     unless opts[:skip_preload] do
       from([thread_mute: tm] in query, where: is_nil(tm.user_id))
     else
@@ -1121,7 +1132,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     end
   end
 
-  defp restrict_muted(query, _), do: query
+  defp restrict_muted_threads(query, _), do: query
 
   defp restrict_blocked(query, %{blocking_user: %User{} = user} = opts) do
     blocked_ap_ids = opts[:blocked_users_ap_ids] || User.blocked_users_ap_ids(user)
