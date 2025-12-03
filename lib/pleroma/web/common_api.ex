@@ -485,7 +485,8 @@ defmodule Pleroma.Web.CommonAPI do
   def report(user, data) do
     with {:ok, account} <- get_reported_account(data.account_id),
          {:ok, {content_html, _, _}} <- make_report_content_html(data[:comment]),
-         {:ok, statuses} <- get_report_statuses(account, data) do
+         {:ok, statuses} <- get_report_statuses(account, data),
+         {_, true} <- {:visibility, check_statuses_visibility(user, statuses)} do
       ActivityPub.flag(%{
         context: Utils.generate_context_id(),
         actor: user,
@@ -494,8 +495,26 @@ defmodule Pleroma.Web.CommonAPI do
         content: content_html,
         forward: Map.get(data, :forward, false)
       })
+    else
+      {:visibility, _} ->
+        {:error, :visibility}
+
+      error ->
+        error
     end
   end
+
+  defp check_statuses_visibility(user, statuses) when is_list(statuses) do
+    visibility = for status <- statuses, do: Visibility.visible_for_user?(status, user)
+
+    case Enum.all?(visibility) do
+      true -> true
+      _ -> false
+    end
+  end
+
+  # There are no statuses associated with the report, pass!
+  defp check_statuses_visibility(_, status) when status == nil, do: true
 
   defp get_reported_account(account_id) do
     case User.get_cached_by_id(account_id) do
