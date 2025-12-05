@@ -5,7 +5,7 @@ defmodule Pleroma.Mixfile do
     [
       app: :pleroma,
       version: version("3.17.0"),
-      elixir: "~> 1.14.1 or ~> 1.15",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       xref: [exclude: [:eldap]],
