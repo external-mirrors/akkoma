@@ -134,7 +134,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
   """
   # Creates a scheduled status when `scheduled_at` param is present and it's far enough
   def create(
-        %{
+        %Plug.Conn{
           assigns: %{user: user},
           body_params: %{status: _, scheduled_at: scheduled_at} = params
         } = conn,
@@ -202,7 +202,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
     end
   end
 
-  def create(%{assigns: %{user: _user}, body_params: %{media_ids: _} = params} = conn, _) do
+  def create(%Plug.Conn{assigns: %{user: _user}, body_params: %{media_ids: _} = params} = conn, _) do
     params = Map.put(params, :status, "")
     create(%Plug.Conn{conn | body_params: params}, %{})
   end
