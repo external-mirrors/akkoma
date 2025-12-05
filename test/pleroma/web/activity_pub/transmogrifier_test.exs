@@ -451,6 +451,7 @@ defmodule Pleroma.Web.ActivityPub.TransmogrifierTest do
       assert is_nil(modified["object"]["announcements"])
       assert is_nil(modified["object"]["announcement_count"])
       assert is_nil(modified["object"]["generator"])
+      assert is_nil(modified["object"]["voters"])
     end
 
     test "it strips internal fields of article" do
