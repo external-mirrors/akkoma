@@ -13,7 +13,6 @@ defmodule Pleroma.Mixfile do
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: ["coveralls.html": :test, "mneme.test": :test, "mneme.watch": :test],
       # Docs
       name: "Akkoma",
       homepage_url: "https://akkoma.dev/",
@@ -41,6 +40,12 @@ defmodule Pleroma.Mixfile do
       ]
     ]
     |> add_listeners(Mix.env())
+  end
+
+  def cli() do
+    [
+      preferred_cli_env: ["coveralls.html": :test, "mneme.test": :test, "mneme.watch": :test]
+    ]
   end
 
   defp add_listeners(project, :dev), do: Keyword.put(project, :listeners, [Phoenix.CodeReloader])
