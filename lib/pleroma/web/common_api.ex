@@ -425,6 +425,7 @@ defmodule Pleroma.Web.CommonAPI do
   @spec unpin(String.t(), User.t()) :: {:ok, User.t()} | {:error, term()}
   def unpin(id, user) do
     with %Activity{} = activity <- create_activity_by_id(id),
+         true <- activity_belongs_to_actor(activity, user.ap_id),
          {:ok, unpin_data, _} <- Builder.unpin(user, activity.object),
          {:ok, _unpin, _} <-
            Pipeline.common_pipeline(unpin_data,
@@ -440,7 +441,8 @@ defmodule Pleroma.Web.CommonAPI do
   def add_mute(user, activity, params \\ %{}) do
     expires_in = Map.get(params, :expires_in, 0)
 
-    with {:ok, _} <- ThreadMute.add_mute(user.id, activity.data["context"]),
+    with true <- Visibility.visible_for_user?(activity, user),
+         {:ok, _} <- ThreadMute.add_mute(user.id, activity.data["context"]),
          _ <- Pleroma.Notification.mark_context_as_read(user, activity.data["context"]) do
       if expires_in > 0 do
         Pleroma.Workers.MuteExpireWorker.enqueue(
@@ -453,12 +455,17 @@ defmodule Pleroma.Web.CommonAPI do
       {:ok, activity}
     else
       {:error, _} -> {:error, dgettext("errors", "conversation is already muted")}
+      false -> {:error, :visibility_error}
     end
   end
 
   def remove_mute(%User{} = user, %Activity{} = activity) do
-    ThreadMute.remove_mute(user.id, activity.data["context"])
-    {:ok, activity}
+    if Visibility.visible_for_user?(activity, user) do
+      ThreadMute.remove_mute(user.id, activity.data["context"])
+      {:ok, activity}
+    else
+      {:error, :visibility_error}
+    end
   end
 
   def remove_mute(user_id, activity_id) do
