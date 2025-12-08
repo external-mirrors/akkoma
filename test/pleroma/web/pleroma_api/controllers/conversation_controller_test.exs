@@ -12,6 +12,11 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
 
   import Pleroma.Factory
 
+  defp user_participations(user) do
+    Participation.for_user_with_pagination(user)
+    |> Pleroma.Pagination.unwrap()
+  end
+
   test "/api/v1/pleroma/conversations/:id" do
     user = insert(:user)
     %{user: other_user, conn: conn} = oauth_access(["read:statuses"])
@@ -19,7 +24,7 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
     {:ok, _activity} =
       CommonAPI.post(user, %{status: "Hi @#{other_user.nickname}!", visibility: "direct"})
 
-    [participation] = Participation.for_user(other_user)
+    [participation] = user_participations(other_user)
 
     result =
       conn
@@ -40,7 +45,7 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
     {:ok, activity} =
       CommonAPI.post(user, %{status: "Hi @#{other_user.nickname}!", visibility: "direct"})
 
-    [participation] = Participation.for_user(other_user)
+    [participation] = user_participations(other_user)
 
     {:ok, activity_two} =
       CommonAPI.post(other_user, %{
@@ -82,7 +87,7 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
 
     {:ok, _activity} = CommonAPI.post(user, %{status: "Hi", visibility: "direct"})
 
-    [participation] = Participation.for_user(user)
+    [participation] = user_participations(user)
 
     participation = Repo.preload(participation, :recipients)
 
@@ -97,7 +102,7 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
 
     assert result["id"] == participation.id |> to_string
 
-    [participation] = Participation.for_user(user)
+    [participation] = user_participations(user)
     participation = Repo.preload(participation, :recipients)
 
     assert refresh_record(user) in participation.recipients
@@ -137,7 +142,7 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
     {:ok, _activity} =
       CommonAPI.post(user, %{status: "Hi @#{other_user.nickname}", visibility: "direct"})
 
-    [participation2, participation1] = Participation.for_user(other_user)
+    [participation2, participation1] = user_participations(other_user)
     assert Participation.get(participation2.id).read == false
     assert Participation.get(participation1.id).read == false
     assert Participation.unread_count(other_user) == 2
@@ -147,7 +152,7 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
       |> post("/api/v1/pleroma/conversations/read", %{})
       |> json_response_and_validate_schema(200)
 
-    [participation2, participation1] = Participation.for_user(other_user)
+    [participation2, participation1] = user_participations(other_user)
     assert Participation.get(participation2.id).read == true
     assert Participation.get(participation1.id).read == true
     assert Participation.unread_count(other_user) == 0

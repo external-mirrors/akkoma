@@ -12,9 +12,12 @@ defmodule Pleroma.Conversation.Participation do
   import Ecto.Changeset
   import Ecto.Query
 
+  @type t() :: %__MODULE__{}
+
   schema "conversation_participations" do
     belongs_to(:user, User, type: FlakeId.Ecto.CompatType)
     belongs_to(:conversation, Conversation)
+    field(:last_bump, FlakeId.Ecto.CompatType)
     field(:read, :boolean, default: false)
     field(:last_activity_id, FlakeId.Ecto.CompatType, virtual: true)
 
@@ -26,22 +29,24 @@ defmodule Pleroma.Conversation.Participation do
 
   defp creation_cng(struct, params) do
     struct
-    |> cast(params, [:user_id, :conversation_id, :read])
-    |> validate_required([:user_id, :conversation_id])
+    |> cast(params, [:user_id, :conversation_id, :last_bump, :read])
+    |> validate_required([:user_id, :conversation_id, :last_bump])
   end
 
-  def create_for_user_and_conversation(user, conversation, opts \\ []) do
+  def create_or_bump(user, conversation, status_id, opts \\ []) do
     read = !!opts[:read]
     invisible_conversation = !!opts[:invisible_conversation]
 
     update_on_conflict =
       if(invisible_conversation, do: [], else: [read: read])
       |> Keyword.put(:updated_at, NaiveDateTime.utc_now())
+      |> Keyword.put(:last_bump, status_id)
 
     %__MODULE__{}
     |> creation_cng(%{
       user_id: user.id,
       conversation_id: conversation.id,
+      last_bump: status_id,
       read: invisible_conversation || read
     })
     |> Repo.insert(
@@ -106,14 +111,61 @@ defmodule Pleroma.Conversation.Participation do
     |> Repo.update()
   end
 
-  def for_user(user, params \\ %{}) do
+  # "unfiltered" version only meant for tests
+  def for_user_with_pagination_unfiltered(user, params \\ %{}) do
     from(p in __MODULE__,
       where: p.user_id == ^user.id,
-      order_by: [desc: p.updated_at],
       preload: [conversation: [:users]]
     )
     |> restrict_recipients(user, params)
-    |> Pleroma.Pagination.fetch_paginated(params)
+    |> select([p], %{id: p.last_bump, entry: p})
+    |> Pleroma.Pagination.fetch_paginated(Map.put(params, :pagination_field, :last_bump))
+  end
+
+  def for_user_with_pagination(user, params \\ %{}) do
+    for_user_with_pagination_unfiltered(user, params)
+    |> Enum.map(fn %{id: id, entry: p} -> %{id: id, entry: load_last_activity_id(p)} end)
+    |> Enum.filter(fn %{entry: p} -> p.last_activity_id end)
+  end
+
+  defp load_last_activity_id(%__MODULE__{} = participation) do
+    %{
+      participation
+      | last_activity_id: last_activity_id(participation)
+    }
+  end
+
+  @spec last_activity_id(t(), User.t() | nil) :: Flake.t()
+  def last_activity_id(participation, user \\ nil)
+
+  def last_activity_id(
+        %__MODULE__{conversation: %Conversation{}} = participation,
+        user
+      ) do
+    user =
+      if user && user.id == participation.user_id do
+        user
+      else
+        case participation.user do
+          %User{} -> participation.user
+          _ -> User.get_cached_by_id(participation.user_id)
+        end
+      end
+
+    ActivityPub.fetch_latest_direct_activity_id_for_context(
+      participation.conversation.ap_id,
+      %{
+        user: user,
+        blocking_user: user
+      }
+    )
+  end
+
+  def last_activity_id(%__MODULE__{} = participation, user) do
+    case Repo.preload(participation, :conversation) do
+      %{conversation: %Conversation{}} = p -> last_activity_id(p, user)
+      _ -> nil
+    end
   end
 
   defp restrict_recipients(query, user, %{recipients: user_ids}) do
@@ -144,26 +196,6 @@ defmodule Pleroma.Conversation.Participation do
       where: p.conversation_id == ^conversation.id
     )
     |> Repo.one()
-  end
-
-  def for_user_with_last_activity_id(user, params \\ %{}) do
-    for_user(user, params)
-    |> Enum.map(fn participation ->
-      activity_id =
-        ActivityPub.fetch_latest_direct_activity_id_for_context(
-          participation.conversation.ap_id,
-          %{
-            user: user,
-            blocking_user: user
-          }
-        )
-
-      %{
-        participation
-        | last_activity_id: activity_id
-      }
-    end)
-    |> Enum.reject(&is_nil(&1.last_activity_id))
   end
 
   def get(_, _ \\ [])

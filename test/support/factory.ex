@@ -20,15 +20,20 @@ defmodule Pleroma.Factory do
             ]
             |> Enum.map(&File.read!/1)
 
-  def participation_factory do
+  def participation_factory(attrs \\ %{}) do
     conversation = insert(:conversation)
-    user = insert(:user)
+    user = attrs[:user] || insert(:user)
+    activity = insert(:direct_note_activity, %{user: user, context: conversation.ap_id})
+
+    attrs = Map.drop(attrs, [:user])
 
     %Pleroma.Conversation.Participation{
       conversation: conversation,
       user: user,
+      last_bump: activity.id,
       read: false
     }
+    |> Map.merge(attrs)
   end
 
   def conversation_factory(attrs \\ %{}) do

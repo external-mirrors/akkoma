@@ -1064,7 +1064,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
       |> assign(:user, user)
       |> get("/api/v1/statuses/#{activity.id}")
 
-    [participation] = Participation.for_user(user)
+    [%{entry: participation}] = Participation.for_user_with_pagination(user)
 
     res = json_response_and_validate_schema(conn, 200)
     assert res["pleroma"]["direct_conversation_id"] == participation.id

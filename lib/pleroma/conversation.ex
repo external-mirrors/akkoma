@@ -73,7 +73,7 @@ defmodule Pleroma.Conversation do
           opts = Keyword.put(opts, :invisible_conversation, invisible_conversation)
 
           {:ok, participation} =
-            Participation.create_for_user_and_conversation(user, conversation, opts)
+            Participation.create_or_bump(user, conversation, activity.id, opts)
 
           maybe_create_recipientships(participation, activity)
           participation

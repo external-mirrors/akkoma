@@ -5,11 +5,21 @@
 defmodule Pleroma.Conversation.ParticipationTest do
   use Pleroma.DataCase, async: true
   import Pleroma.Factory
-  alias Pleroma.Conversation
   alias Pleroma.Conversation.Participation
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.CommonAPI
+
+  defp user_participations(user, opts \\ %{}) do
+    Participation.for_user_with_pagination(user, opts)
+    |> Pleroma.Pagination.unwrap()
+  end
+
+  defp user_participations_raw(user, opts \\ %{}) do
+    Participation.for_user_with_pagination_unfiltered(user, opts)
+    |> Pleroma.Pagination.unwrap()
+  end
 
   test "getting a participation will also preload things" do
     user = insert(:user)
@@ -18,7 +28,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
     {:ok, _activity} =
       CommonAPI.post(user, %{status: "Hey @#{other_user.nickname}.", visibility: "direct"})
 
-    [participation] = Participation.for_user(user)
+    [participation] = user_participations(user)
 
     participation = Participation.get(participation.id, preload: [:conversation])
 
@@ -35,8 +45,8 @@ defmodule Pleroma.Conversation.ParticipationTest do
     user = User.get_cached_by_id(user.id)
     other_user = User.get_cached_by_id(other_user.id)
 
-    [%{read: true}] = Participation.for_user(user)
-    [%{read: false}] = Participation.for_user(other_user)
+    [%{read: true}] = user_participations(user)
+    [%{read: false}] = user_participations(other_user)
     assert Participation.unread_count(user) == 0
     assert Participation.unread_count(other_user) == 1
 
@@ -50,8 +60,8 @@ defmodule Pleroma.Conversation.ParticipationTest do
     user = User.get_cached_by_id(user.id)
     other_user = User.get_cached_by_id(other_user.id)
 
-    [%{read: false}] = Participation.for_user(user)
-    [%{read: true}] = Participation.for_user(other_user)
+    [%{read: false}] = user_participations(user)
+    [%{read: true}] = user_participations(other_user)
 
     assert Participation.unread_count(user) == 1
     assert Participation.unread_count(other_user) == 0
@@ -67,7 +77,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
 
     user = User.get_cached_by_id(user.id)
     other_user = User.get_cached_by_id(other_user.id)
-    [participation] = Participation.for_user(user)
+    [participation] = user_participations(user)
     participation = Pleroma.Repo.preload(participation, :recipients)
 
     assert length(participation.recipients) == 2
@@ -83,7 +93,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
         visibility: "direct"
       })
 
-    [participation] = Participation.for_user(user)
+    [participation] = user_participations(user)
     participation = Pleroma.Repo.preload(participation, :recipients)
 
     assert length(participation.recipients) == 2
@@ -93,29 +103,51 @@ defmodule Pleroma.Conversation.ParticipationTest do
     user = insert(:user)
     conversation = insert(:conversation)
 
+    %Pleroma.Activity{id: status_id} =
+      insert(:direct_note_activity, %{user: user, context: conversation.ap_id})
+
     {:ok, %Participation{} = participation} =
-      Participation.create_for_user_and_conversation(user, conversation)
+      Participation.create_or_bump(user, conversation, status_id)
 
     {:ok, participation} = time_travel(participation, -2)
 
+    p1_lai = Participation.last_activity_id(participation)
+
     assert participation.user_id == user.id
     assert participation.conversation_id == conversation.id
+    assert p1_lai == status_id
 
     # Creating again returns the same participation
     {:ok, %Participation{} = participation_two} =
-      Participation.create_for_user_and_conversation(user, conversation)
+      Participation.create_or_bump(user, conversation, status_id)
 
     assert participation.id == participation_two.id
     refute participation.updated_at == participation_two.updated_at
+    assert p1_lai = Participation.last_activity_id(participation_two)
+
+    # Creating again with differnt status updates existing participation
+    %Pleroma.Activity{id: new_status_id} =
+      insert(:direct_note_activity, %{user: user, context: conversation.ap_id})
+
+    {:ok, %Participation{} = participation_three} =
+      Participation.create_or_bump(user, conversation, new_status_id)
+
+    p3_lai = Participation.last_activity_id(participation_three)
+
+    assert participation.id == participation_two.id
+    refute participation.updated_at == participation_three.updated_at
+    refute p1_lai == p3_lai
+    assert p3_lai == new_status_id
   end
 
   test "recreating an existing participations sets it to unread" do
     participation = insert(:participation, %{read: true})
 
     {:ok, participation} =
-      Participation.create_for_user_and_conversation(
+      Participation.create_or_bump(
         participation.user,
-        participation.conversation
+        participation.conversation,
+        participation.last_bump
       )
 
     refute participation.read
@@ -150,7 +182,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
     assert Participation.get(participation3.id).read == false
   end
 
-  test "gets all the participations for a user, ordered by updated at descending" do
+  test "gets all the participations for a user, ordered by last bump descending" do
     user = insert(:user)
     {:ok, activity_one} = CommonAPI.post(user, %{status: "x", visibility: "direct"})
     {:ok, activity_two} = CommonAPI.post(user, %{status: "x", visibility: "direct"})
@@ -162,18 +194,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
         in_reply_to_status_id: activity_one.id
       })
 
-    # Offset participations because the accuracy of updated_at is down to a second
-
-    for {activity, offset} <- [{activity_two, 1}, {activity_three, 2}] do
-      conversation = Conversation.get_for_ap_id(activity.data["context"])
-      participation = Participation.for_user_and_conversation(user, conversation)
-      updated_at = NaiveDateTime.add(Map.get(participation, :updated_at), offset)
-
-      Ecto.Changeset.change(participation, %{updated_at: updated_at})
-      |> Repo.update!()
-    end
-
-    assert [participation_one, participation_two] = Participation.for_user(user)
+    assert [participation_one, participation_two] = user_participations(user)
 
     object2 = Pleroma.Object.normalize(activity_two, fetch: false)
     object3 = Pleroma.Object.normalize(activity_three, fetch: false)
@@ -185,28 +206,29 @@ defmodule Pleroma.Conversation.ParticipationTest do
     assert participation_one.conversation.users == [user]
 
     # Pagination
-    assert [participation_one] = Participation.for_user(user, %{"limit" => 1})
+    assert [%{id: pid, entry: participation_one}] =
+             Participation.for_user_with_pagination(user, %{limit: 1})
 
     assert participation_one.conversation.ap_id == object3.data["context"]
+    assert pid == Participation.last_activity_id(participation_one)
 
-    # With last_activity_id
-    assert [participation_one] =
-             Participation.for_user_with_last_activity_id(user, %{"limit" => 1})
+    # Check last_status id
+    assert [participation_one] = user_participations(user, %{limit: 1})
 
-    assert participation_one.last_activity_id == activity_three.id
+    assert Participation.last_activity_id(participation_one) == activity_three.id
   end
 
-  test "Doesn't die when the conversation gets empty" do
+  test "Doesn't show empty conversations" do
     user = insert(:user)
 
     {:ok, activity} = CommonAPI.post(user, %{status: ".", visibility: "direct"})
-    [participation] = Participation.for_user_with_last_activity_id(user)
+    [participation] = user_participations(user)
 
-    assert participation.last_activity_id == activity.id
+    assert Participation.last_activity_id(participation) == activity.id
 
     {:ok, _} = CommonAPI.delete(activity.id, user)
 
-    [] = Participation.for_user_with_last_activity_id(user)
+    [] = user_participations(user)
   end
 
   test "it sets recipients, always keeping the owner of the participation even when not explicitly set" do
@@ -214,7 +236,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
     other_user = insert(:user)
 
     {:ok, _activity} = CommonAPI.post(user, %{status: ".", visibility: "direct"})
-    [participation] = Participation.for_user_with_last_activity_id(user)
+    [participation] = user_participations(user)
 
     participation = Repo.preload(participation, :recipients)
     user = User.get_cached_by_id(user.id)
@@ -227,6 +249,86 @@ defmodule Pleroma.Conversation.ParticipationTest do
     assert participation.recipients |> length() == 2
     assert user in participation.recipients
     assert other_user in participation.recipients
+  end
+
+  test "updates last_bump when posting" do
+    actor = insert(:user, local: true)
+    other = insert(:user)
+
+    {:ok, create1} =
+      CommonAPI.post(actor, %{status: "hi @#{other.nickname}", visibility: "direct"})
+
+    [participation] = user_participations(actor)
+    assert participation.last_bump == create1.id
+
+    {:ok, create2} =
+      CommonAPI.post(actor, %{
+        status: "@#{other.nickname} how are you doing?",
+        visibility: "direct",
+        in_reply_to_status_id: create1.id
+      })
+
+    [participation] = user_participations(actor)
+    assert participation.last_bump == create2.id
+  end
+
+  test "does not update last_bump when user cannot see new post" do
+    u1 = insert(:user, local: true)
+    u2 = insert(:user, local: true)
+    u3 = insert(:user, local: true)
+    u4 = insert(:user)
+
+    to_full = [u1.nickname, u2.nickname, u3.nickname, u4.nickname]
+    to_subs = [u1.nickname, u2.nickname, u4.nickname]
+
+    {:ok, activity_op} =
+      CommonAPI.post(u1, %{status: "blaa blih blub", visibility: "direct", to: to_full})
+
+    assert Visibility.visible_for_user?(activity_op, u1)
+    assert Visibility.visible_for_user?(activity_op, u2)
+    assert Visibility.visible_for_user?(activity_op, u3)
+    assert Visibility.visible_for_user?(activity_op, u4)
+
+    [p1] = user_participations(u1)
+    [p2] = user_participations(u2)
+    [p3] = user_participations(u3)
+
+    assert p1.user_id == u1.id
+    assert p1.last_bump == activity_op.id
+
+    assert p2.user_id == u2.id
+    assert p2.last_bump == p1.last_bump
+
+    assert p3.user_id == u3.id
+    assert p3.last_bump == p1.last_bump
+
+    {:ok, activity_subset} =
+      CommonAPI.post(u2, %{
+        status: "waff?",
+        visibility: "direct",
+        to: to_subs,
+        in_reply_to_status_id: activity_op.id
+      })
+
+    assert Visibility.visible_for_user?(activity_subset, u1)
+    assert Visibility.visible_for_user?(activity_subset, u2)
+    refute Visibility.visible_for_user?(activity_subset, u3)
+    assert Visibility.visible_for_user?(activity_subset, u4)
+
+    [p1] = user_participations(u1)
+    [p2] = user_participations(u2)
+    [p3] = user_participations(u3)
+
+    assert p1.user_id == u1.id
+    assert p1.last_bump == activity_subset.id
+
+    assert p2.user_id == u2.id
+    assert p2.last_bump == p1.last_bump
+
+    assert p3.user_id == u3.id
+    assert p3.last_bump == activity_op.id
+
+    refute p3.last_bump == p1.last_bump
   end
 
   describe "blocking" do
@@ -260,24 +362,27 @@ defmodule Pleroma.Conversation.ParticipationTest do
         })
 
       assert [%{read: false}, %{read: false}, %{read: false}, %{read: false}] =
-               Participation.for_user(blocker)
+               user_participations_raw(blocker)
 
+      assert length(user_participations(blocker)) == 4
       assert Participation.unread_count(blocker) == 4
 
       {:ok, _user_relationship} = User.block(blocker, blocked)
 
       # The conversations with the blocked user are marked as read
       assert [%{read: true}, %{read: true}, %{read: true}, %{read: false}] =
-               Participation.for_user(blocker)
+               user_participations_raw(blocker)
 
+      # and they are filtered from API responses
+      assert length(user_participations(blocker)) == 1
       assert Participation.unread_count(blocker) == 1
 
       # The conversation is not marked as read for the blocked user
-      assert [_, _, %{read: false}] = Participation.for_user(blocked)
+      assert [_, _, %{read: false}] = user_participations(blocked)
       assert Participation.unread_count(blocker) == 1
 
       # The conversation is not marked as read for the third user
-      assert [%{read: false}, _, _] = Participation.for_user(third_user)
+      assert [%{read: false}, _, _] = user_participations(third_user)
       assert Participation.unread_count(third_user) == 1
     end
 
@@ -295,7 +400,8 @@ defmodule Pleroma.Conversation.ParticipationTest do
           visibility: "direct"
         })
 
-      assert [%{read: true}] = Participation.for_user(blocker)
+      assert [%{read: true}] = user_participations_raw(blocker)
+      assert [] == user_participations(blocker)
       assert Participation.unread_count(blocker) == 0
 
       # When the blocked user is a recipient
@@ -305,10 +411,11 @@ defmodule Pleroma.Conversation.ParticipationTest do
           visibility: "direct"
         })
 
-      assert [%{read: true}, %{read: true}] = Participation.for_user(blocker)
+      assert [%{read: true}, %{read: true}] = user_participations_raw(blocker)
+      assert [] == user_participations(blocker)
       assert Participation.unread_count(blocker) == 0
 
-      assert [%{read: false}, _] = Participation.for_user(blocked)
+      assert [%{read: false}, _] = user_participations(blocked)
       assert Participation.unread_count(blocked) == 1
     end
 
@@ -324,7 +431,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
         })
 
       {:ok, _user_relationship} = User.block(blocker, blocked)
-      assert [%{read: true}] = Participation.for_user(blocker)
+      assert [%{read: true}] = user_participations(blocker)
 
       assert Participation.unread_count(blocker) == 0
 
@@ -336,7 +443,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
           in_reply_to_id: direct1.id
         })
 
-      assert [%{read: true}] = Participation.for_user(blocker)
+      assert [%{read: true}] = user_participations(blocker)
 
       assert Participation.unread_count(blocker) == 0
 
@@ -348,11 +455,11 @@ defmodule Pleroma.Conversation.ParticipationTest do
           in_reply_to_id: direct2.id
         })
 
-      assert [%{read: true}] = Participation.for_user(blocker)
+      assert [%{read: true}] = user_participations(blocker)
       assert Participation.unread_count(blocker) == 0
 
       # Marked as unread for the blocked user
-      assert [%{read: false}] = Participation.for_user(blocked)
+      assert [%{read: false}] = user_participations(blocked)
 
       assert Participation.unread_count(blocked) == 1
     end
@@ -365,8 +472,8 @@ defmodule Pleroma.Conversation.ParticipationTest do
     {:ok, _activity} =
       CommonAPI.post(user, %{status: "Hey @#{other_user.nickname}.", visibility: "direct"})
 
-    assert [participation] = Participation.for_user(other_user)
+    assert [participation] = user_participations(other_user)
     assert {:ok, _} = Participation.delete(participation)
-    assert [] == Participation.for_user(other_user)
+    assert [] == user_participations(other_user)
   end
 end

@@ -154,7 +154,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     user = insert(:user)
 
     {:ok, activity} = CommonAPI.post(user, %{status: "Hey @shp!", visibility: "direct"})
-    [participation] = Participation.for_user(user)
+    [%{entry: participation}] = Participation.for_user_with_pagination(user)
 
     status =
       StatusView.render("show.json",
@@ -174,7 +174,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     user = insert(:user)
 
     {:ok, activity} = CommonAPI.post(user, %{status: "Hey @shp!", visibility: "direct"})
-    [participation] = Participation.for_user(user)
+    [%{entry: participation}] = Participation.for_user_with_pagination(user)
 
     status =
       StatusView.render("show.json",
