@@ -1,8 +1,6 @@
 defmodule Pleroma.Akkoma.Translators.ArgosTranslate do
   @behaviour Pleroma.Akkoma.Translator
 
-  @name "Argos Translate"
-
   alias Pleroma.Config
 
   defp argos_translate do
@@ -110,5 +108,5 @@ defmodule Pleroma.Akkoma.Translators.ArgosTranslate do
   end
 
   @impl Pleroma.Akkoma.Translator
-  def name, do: @name
+  def name, do: "Argos Translate"
 end

@@ -1,8 +1,6 @@
 defmodule Pleroma.Akkoma.Translators.LibreTranslate do
   @behaviour Pleroma.Akkoma.Translator
 
-  @name LibreTranslate
-
   alias Pleroma.Config
   alias Pleroma.HTTP
   require Logger
@@ -83,5 +81,5 @@ defmodule Pleroma.Akkoma.Translators.LibreTranslate do
   end
 
   @impl Pleroma.Akkoma.Translator
-  def name, do: @name
+  def name, do: "LibreTranslate"
 end

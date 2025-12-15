@@ -1,8 +1,6 @@
 defmodule Pleroma.Akkoma.Translators.DeepL do
   @behaviour Pleroma.Akkoma.Translator
 
-  @name "DeepL"
-
   alias Pleroma.HTTP
   alias Pleroma.Config
   require Logger
@@ -101,5 +99,5 @@ defmodule Pleroma.Akkoma.Translators.DeepL do
   end
 
   @impl Pleroma.Akkoma.Translator
-  def name, do: @name
+  def name, do: "DeepL"
 end
