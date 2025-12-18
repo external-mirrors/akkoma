@@ -65,7 +65,8 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
       responses: %{
         200 => Operation.response("Account", "application/json", Account),
         403 => Operation.response("Error", "application/json", ApiError),
-        413 => Operation.response("Error", "application/json", ApiError)
+        413 => Operation.response("Error", "application/json", ApiError),
+        422 => Operation.response("Error", "application/json", ApiError)
       }
     }
   end
@@ -616,11 +617,21 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
           description: "Avatar image encoded using multipart/form-data",
           format: :binary
         },
+        avatar_description: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Sets description (alt text) of the user’s avatar image."
+        },
         header: %Schema{
           type: :string,
           nullable: true,
           description: "Header image encoded using multipart/form-data",
           format: :binary
+        },
+        header_description: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Sets description (alt text) of the user’s header image."
         },
         locked: %Schema{
           allOf: [BooleanLike],
@@ -709,6 +720,11 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
           nullable: true,
           description: "Sets the background image of the user.",
           format: :binary
+        },
+        pleroma_background_image_description: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Sets description (alt text) of the user’s background image."
         },
         discoverable: %Schema{
           allOf: [BooleanLike],

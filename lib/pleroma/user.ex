@@ -398,6 +398,12 @@ defmodule Pleroma.User do
     end
   end
 
+  def image_description(image, default \\ "")
+
+  def image_description(%{"summary" => summary}, _default), do: summary
+  def image_description(%{"name" => name}, _default), do: name
+  def image_description(_, default), do: default
+
   # Should probably be renamed or removed
   @spec ap_id(User.t()) :: String.t()
   def ap_id(%User{nickname: nickname}), do: "#{Endpoint.url()}/users/#{nickname}"
@@ -566,9 +572,9 @@ defmodule Pleroma.User do
     |> put_fields()
     |> put_emoji()
     |> put_change_if_present(:bio, &{:ok, parse_bio(&1, struct)})
-    |> put_change_if_present(:avatar, &put_upload(&1, :avatar))
-    |> put_change_if_present(:banner, &put_upload(&1, :banner))
-    |> put_change_if_present(:background, &put_upload(&1, :background))
+    |> put_media_update(params, :avatar, :avatar_description)
+    |> put_media_update(params, :banner, :header_description)
+    |> put_media_update(params, :background, :background_description)
     |> put_change_if_present(
       :pleroma_settings_store,
       &{:ok, Map.merge(struct.pleroma_settings_store, &1)}
@@ -636,9 +642,37 @@ defmodule Pleroma.User do
          {:ok, new_value} <- value_function.(value) do
       put_change(changeset, map_field, new_value)
     else
+      _ -> changeset
+    end
+  end
+
+  defp validate_image_description(changeset, key, description) do
+    description_limit = Config.get([:instance, :description_limit])
+
+    if is_binary(description) and String.length(description) > description_limit do
+      add_error(changeset, key, "#{key} is too long")
+    else
+      changeset
+    end
+  end
+
+  defp put_new_media(changeset, media_key, new_image, new_description) do
+    # copy old description if necessary
+    description =
+      if is_binary(new_description) do
+        new_description
+      else
+        old_image = Map.get(changeset.data, media_key)
+        image_description(old_image, nil)
+      end
+
+    with %Plug.Upload{} <- new_image,
+         {:ok, object} <- ActivityPub.upload(new_image, type: media_key, description: description) do
+      put_change(changeset, media_key, object.data)
+    else
       {:error, :file_too_large} ->
-        Ecto.Changeset.validate_change(changeset, map_field, fn map_field, _value ->
-          [{map_field, "file is too large"}]
+        Ecto.Changeset.validate_change(changeset, media_key, fn media_key, _value ->
+          [{media_key, "file is too large"}]
         end)
 
       _ ->
@@ -646,10 +680,45 @@ defmodule Pleroma.User do
     end
   end
 
-  defp put_upload(value, type) do
-    with %Plug.Upload{} <- value,
-         {:ok, object} <- ActivityPub.upload(value, type: type) do
-      {:ok, object.data}
+  defp maybe_update_image_description(changeset, image_field, desc_key, description)
+       when is_binary(description) do
+    with {:existing_image, %{"id" => id}} <-
+           {:existing_image, Map.get(changeset.data, image_field)},
+         {:object, %Object{} = object} <- {:object, Object.get_by_ap_id(id)},
+         {:ok, object} <- Object.update_data(object, %{"name" => description}) do
+      put_change(changeset, image_field, object.data)
+    else
+      {:existing_image, _} ->
+        if description != "" do
+          add_error(
+            changeset,
+            desc_key,
+            "#{desc_key} needs #{image_field} to be set before or simultaneously"
+          )
+        else
+          changeset
+        end
+
+      _ ->
+        changeset
+    end
+  end
+
+  defp maybe_update_image_description(changeset, _, _, _), do: changeset
+
+  defp put_media_update(changeset, params, media_key, description_key) do
+    # We store description and image (url) in a shared JSON blob, but the API
+    # allows both to be updated independently (in Mastodon descriptions can also
+    # exist without image, but we cannot easily do this)
+    description_param = Map.get(params, description_key)
+    changeset = validate_image_description(changeset, description_key, description_param)
+
+    case fetch_change(changeset, media_key) do
+      {:ok, new_image} ->
+        put_new_media(changeset, media_key, new_image, description_param)
+
+      _ ->
+        maybe_update_image_description(changeset, media_key, description_key, description_param)
     end
   end
 

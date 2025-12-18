@@ -251,6 +251,7 @@ Additional parameters can be added to the JSON body/Form data:
 - `allow_following_move` - if true, allows automatically follow moved following accounts
 - `also_known_as` - array of ActivityPub IDs, needed for following move
 - `pleroma_background_image` - sets the background image of the user. Can be set to "" (an empty string) to reset.
+- `pleroma_background_image_description` - sets plaintext alt text for the background image of the user. Can be set to "" (an empty string) to delete.
 - `discoverable` - if true, external services (search bots) etc. are allowed to index / list the account (regardless of this setting, user will still appear in regular search results).
 - `actor_type` - the type of this account.
 - `language` - user's preferred language for receiving emails (digest, confirmation, etc.)
