@@ -2070,7 +2070,7 @@ defmodule Pleroma.User do
     |> set_cache()
   end
 
-  defdelegate public_key(user), to: SigningKey
+  defdelegate public_key(user), to: SigningKey, as: :public_key_pem
 
   @doc "Gets or fetch a user by uri or nickname."
   @spec get_or_fetch(String.t()) :: {:ok, User.t()} | {:error, String.t()}
