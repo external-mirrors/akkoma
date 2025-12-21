@@ -59,6 +59,9 @@ defmodule Pleroma.Web.ApiSpec.PleromaConversationOperation do
   end
 
   def update_operation do
+    recipients_description =
+      "A list of ids of users that should receive posts to this conversation. This will replace the current list of recipients, so submit the full list. The owner of owner of the conversation will always be part of the set of recipients, though."
+
     %Operation{
       tags: ["Conversations"],
       summary: "Update conversation",
@@ -72,10 +75,21 @@ defmodule Pleroma.Web.ApiSpec.PleromaConversationOperation do
           :recipients,
           :query,
           %Schema{type: :array, items: FlakeID},
-          "A list of ids of users that should receive posts to this conversation. This will replace the current list of recipients, so submit the full list. The owner of owner of the conversation will always be part of the set of recipients, though.",
-          required: true
+          recipients_description
         )
       ],
+      requestBody:
+        request_body("Parameters", %Schema{
+          type: :object,
+          properties: %{
+            recipients: %Schema{
+              type: :array,
+              items: FlakeID,
+              nullable: false,
+              description: recipients_description
+            }
+          }
+        }),
       security: [%{"oAuth" => ["write:conversations"]}],
       operationId: "PleromaAPI.ConversationController.update",
       responses: %{

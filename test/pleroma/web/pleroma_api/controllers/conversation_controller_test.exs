@@ -76,7 +76,7 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
              |> json_response_and_validate_schema(:ok)
   end
 
-  test "PATCH /api/v1/pleroma/conversations/:id" do
+  defp patch_test(api_req) do
     %{user: user, conn: conn} = oauth_access(["write:conversations"])
     other_user = insert(:user)
 
@@ -90,11 +90,9 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
     assert [user] == participation.recipients
     assert other_user not in participation.recipients
 
-    query = "recipients[]=#{user.id}&recipients[]=#{other_user.id}"
-
     result =
       conn
-      |> patch("/api/v1/pleroma/conversations/#{participation.id}?#{query}")
+      |> api_req.(participation.id, [user, other_user])
       |> json_response_and_validate_schema(200)
 
     assert result["id"] == participation.id |> to_string
@@ -104,6 +102,29 @@ defmodule Pleroma.Web.PleromaAPI.ConversationControllerTest do
 
     assert refresh_record(user) in participation.recipients
     assert other_user in participation.recipients
+  end
+
+  test "PATCH /api/v1/pleroma/conversations/:id with query params" do
+    patch_test(fn conn, cid, new_users ->
+      query =
+        new_users
+        |> Enum.map(&"recipients[]=#{&1.id}")
+        |> Enum.join("&")
+
+      patch(conn, "/api/v1/pleroma/conversations/#{cid}?#{query}")
+    end)
+  end
+
+  test "PATCH /api/v1/pleroma/conversations/:id with JSON body" do
+    patch_test(fn conn, cid, new_users ->
+      payload = %{
+        recipients: Enum.map(new_users, & &1.id)
+      }
+
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> patch("/api/v1/pleroma/conversations/#{cid}", payload)
+    end)
   end
 
   test "POST /api/v1/pleroma/conversations/read" do
