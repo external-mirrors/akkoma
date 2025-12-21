@@ -13,6 +13,7 @@ defmodule Pleroma.Mixfile do
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
+      test_ignore_filters: [~r/_helper.exs$/, ~r/^test\/fixtures\//, ~r/^test\/credo\//],
       # Docs
       name: "Akkoma",
       homepage_url: "https://akkoma.dev/",

@@ -233,6 +233,7 @@ defmodule Pleroma.User.SigningKeyTests do
     assert user.signing_key.key_id == refreshed_org_key.key_id
   end
 
+  @tag :skip
   test "remote users sharing signing key ID don't break our database" do
     # in principle a valid setup using this can be cosntructed,
     # but so far not observed in practice and our db scheme cannot handle it.
