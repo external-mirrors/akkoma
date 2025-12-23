@@ -505,12 +505,7 @@ defmodule Pleroma.Web.CommonAPI do
   end
 
   defp check_statuses_visibility(user, statuses) when is_list(statuses) do
-    visibility = for status <- statuses, do: Visibility.visible_for_user?(status, user)
-
-    case Enum.all?(visibility) do
-      true -> true
-      _ -> false
-    end
+    Enum.all?(statuses, fn status -> Visibility.visible_for_user?(status, user) end)
   end
 
   # There are no statuses associated with the report, pass!
