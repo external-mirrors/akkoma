@@ -880,7 +880,9 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   end
 
   def prepare_outgoing(%{"type" => "Update", "object" => %{}} = data) do
-    raise "Requested to serve an Update for non-updateable object type:  #{inspect(data)}"
+    err_msg = "Requested to serve an Update for non-updateable object type:  #{inspect(data)}"
+    Logger.error(err_msg)
+    raise err_msg
   end
 
   def prepare_outgoing(%{"type" => "Announce", "actor" => ap_id, "object" => object_id} = data) do
