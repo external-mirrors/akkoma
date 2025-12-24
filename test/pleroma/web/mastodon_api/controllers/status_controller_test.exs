@@ -1867,6 +1867,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
 
     test "cannot unmute not visible conversation", %{user: user} do
       {:ok, activity} = CommonAPI.post(user, %{status: "Invisible!", visibility: "private"})
+      {:ok, _} = Pleroma.ThreadMute.add_mute(user.id, activity.data["context"])
+
       %{conn: conn} = oauth_access(["write:mutes"])
 
       assert conn
