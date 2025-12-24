@@ -244,7 +244,19 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
             example: %{
               "error" => "Record not found"
             }
-          })
+          }),
+        422 =>
+          Operation.response(
+            "Unprocessable Entity",
+            "application/json",
+            %Schema{
+              allOf: [ApiError],
+              title: "Unprocessable Entity",
+              example: %{
+                "error" => "Someone else's status cannot be unpinned"
+              }
+            }
+          )
       }
     }
   end
@@ -258,7 +270,8 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
       operationId: "StatusController.bookmark",
       parameters: [id_param()],
       responses: %{
-        200 => status_response()
+        200 => status_response(),
+        404 => Operation.response("Not found", "application/json", ApiError)
       }
     }
   end
@@ -272,7 +285,8 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
       operationId: "StatusController.unbookmark",
       parameters: [id_param()],
       responses: %{
-        200 => status_response()
+        200 => status_response(),
+        404 => Operation.response("Not found", "application/json", ApiError)
       }
     }
   end
@@ -307,7 +321,17 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
       ],
       responses: %{
         200 => status_response(),
-        400 => Operation.response("Error", "application/json", ApiError)
+        400 => Operation.response("Error", "application/json", ApiError),
+        404 =>
+          Operation.response(
+            "Unprocessable Entity",
+            "application/json",
+            %Schema{
+              allOf: [ApiError],
+              title: "Error",
+              example: %{"error" => "Record not found"}
+            }
+          )
       }
     }
   end
@@ -323,7 +347,17 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
       parameters: [id_param()],
       responses: %{
         200 => status_response(),
-        400 => Operation.response("Error", "application/json", ApiError)
+        400 => Operation.response("Error", "application/json", ApiError),
+        404 =>
+          Operation.response(
+            "Error",
+            "application/json",
+            %Schema{
+              allOf: [ApiError],
+              title: "Error",
+              example: %{"error" => "Record not found"}
+            }
+          )
       }
     }
   end
