@@ -1734,6 +1734,55 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
              json_response_and_validate_schema(bookmarks, 200)
   end
 
+  test "cannot bookmark invisible post" do
+    user = insert(:user)
+    %{conn: conn, user: stranger} = oauth_access(["write:bookmarks"])
+    {:ok, activity} = CommonAPI.post(user, %{status: "mocha", visibility: "private"})
+
+    refute Pleroma.Web.ActivityPub.Visibility.visible_for_user?(activity, stranger)
+
+    resp1 =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/api/v1/statuses/#{activity.id}/bookmark")
+
+    assert json_response_and_validate_schema(resp1, 404) == %{"error" => "Record not found"}
+
+    resp2 =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/api/v1/statuses/#{activity.id}/unbookmark")
+
+    assert json_response_and_validate_schema(resp2, 404) == %{"error" => "Record not found"}
+  end
+
+  test "unbookmarking invisible post does not reutrn post data but cleans up bookmark" do
+    other = insert(:user)
+    %{conn: conn, user: actor} = oauth_access(["write:bookmarks"])
+
+    {:ok, _, _, _} = CommonAPI.follow(actor, other)
+    {:ok, note_activity} = CommonAPI.post(other, %{status: "秘密", visibility: "private"})
+
+    assert Visibility.visible_for_user?(note_activity, actor)
+    assert Visibility.is_private?(note_activity)
+
+    {:ok, _bookmark} = Pleroma.Bookmark.create(actor.id, note_activity.id)
+    assert match?(%Pleroma.Bookmark{}, Pleroma.Bookmark.get(actor.id, note_activity.id))
+
+    {:ok, _} = CommonAPI.unfollow(actor, other)
+
+    refute Visibility.visible_for_user?(note_activity, actor)
+    assert match?(%Pleroma.Bookmark{}, Pleroma.Bookmark.get(actor.id, note_activity.id))
+
+    resp =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/api/v1/statuses/#{note_activity.id}/unbookmark")
+
+    assert json_response_and_validate_schema(resp, 404) == %{"error" => "Record not found"}
+    assert Pleroma.Bookmark.get(actor.id, note_activity.id) == nil
+  end
+
   describe "conversation muting" do
     setup do: oauth_access(["write:mutes"])
 

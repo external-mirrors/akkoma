@@ -370,6 +370,12 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
          true <- Visibility.visible_for_user?(activity, user),
          {:ok, _bookmark} <- Bookmark.create(user.id, activity.id) do
       try_render(conn, "show.json", activity: activity, for: user, as: :activity)
+    else
+      none when none in [nil, false] ->
+        {:error, :not_found, "Record not found"}
+
+      error ->
+        error
     end
   end
 
@@ -377,9 +383,18 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
   def unbookmark(%{assigns: %{user: user}} = conn, %{id: id}) do
     with %Activity{} = activity <- Activity.get_by_id_with_object(id),
          %User{} = user <- User.get_cached_by_nickname(user.nickname),
-         true <- Visibility.visible_for_user?(activity, user),
-         {:ok, _bookmark} <- Bookmark.destroy(user.id, activity.id) do
+         # order matters: if a user bookmarked a post but later lost access rights via unfollow
+         # we want to allow cleaning up the now useless entry (if it was still cached locally)
+         # but never return a success response which contains the current status content
+         :ok <- Bookmark.destroy(user.id, activity.id),
+         true <- Visibility.visible_for_user?(activity, user) do
       try_render(conn, "show.json", activity: activity, for: user, as: :activity)
+    else
+      none when none in [nil, false] ->
+        {:error, :not_found, "Record not found"}
+
+      error ->
+        error
     end
   end
 

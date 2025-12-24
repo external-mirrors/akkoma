@@ -270,7 +270,8 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
       operationId: "StatusController.bookmark",
       parameters: [id_param()],
       responses: %{
-        200 => status_response()
+        200 => status_response(),
+        404 => Operation.response("Not found", "application/json", ApiError)
       }
     }
   end
@@ -284,7 +285,8 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
       operationId: "StatusController.unbookmark",
       parameters: [id_param()],
       responses: %{
-        200 => status_response()
+        200 => status_response(),
+        404 => Operation.response("Not found", "application/json", ApiError)
       }
     }
   end
