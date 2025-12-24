@@ -112,6 +112,9 @@ defmodule Pleroma.Web.Telemetry do
       error when is_atom(error) ->
         "#{error}"
 
+      {:http_error, reason, _} when is_number(reason) or is_atom(reason) or is_binary(reason) ->
+        "http_#{reason}"
+
       %{status: code} when is_number(code) ->
         "http_#{code}"
 
