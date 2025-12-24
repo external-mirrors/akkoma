@@ -199,10 +199,15 @@ defmodule Pleroma.Web.CommonAPI do
          %Object{} = note <- Object.normalize(activity, fetch: false),
          %Activity{} = like <- Utils.get_existing_like(user.ap_id, note),
          {:ok, undo, _} <- Builder.undo(user, like),
-         {:ok, activity, _} <- Pipeline.common_pipeline(undo, local: true) do
+         {:ok, activity, _} <- Pipeline.common_pipeline(undo, local: true),
+         # to avoid exposing post data in API response, lie to user and
+         # claim the operation failed if they aren’t (anymore) allowed to access it.
+         # But only check at end to allow retracting the fav if ID still available
+         {_, true} <- {:visibility, Visibility.visible_for_user?(note, user)} do
       {:ok, activity}
     else
       {:find_activity, _} -> {:error, :not_found}
+      {:visibility, _} -> {:error, :not_found}
       _ -> {:error, dgettext("errors", "Could not unfavorite")}
     end
   end

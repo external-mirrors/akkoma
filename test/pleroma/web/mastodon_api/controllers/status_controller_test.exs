@@ -1525,6 +1525,32 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
 
       assert json_response_and_validate_schema(conn, 404) == %{"error" => "Record not found"}
     end
+
+    test "a post favourited in the past, but now isn't visible to user doesn't leak data" do
+      other = insert(:user)
+      %{conn: conn, user: actor} = oauth_access(["write:favourites"])
+
+      {:ok, _, _, _} = CommonAPI.follow(actor, other)
+
+      {:ok, activity} = CommonAPI.post(other, %{status: "invisible", visibility: "private"})
+      assert Visibility.visible_for_user?(activity, actor)
+
+      {:ok, _} = CommonAPI.favorite(actor, activity.id)
+      obj = Object.get_by_id(activity.object.id)
+      assert actor.ap_id in obj.data["likes"]
+
+      {:ok, _} = CommonAPI.unfollow(actor, other)
+      refute Visibility.visible_for_user?(activity, actor)
+
+      assert conn
+             |> put_req_header("content-type", "application/json")
+             |> post("/api/v1/statuses/#{activity.id}/unfavourite")
+             |> json_response_and_validate_schema(404) == %{"error" => "Record not found"}
+
+      # but favourite was actually still retracted
+      obj = Object.get_by_id(activity.object.id)
+      refute actor.ap_id in obj.data["likes"]
+    end
   end
 
   describe "pinned statuses" do
