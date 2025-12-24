@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### REMOVED
+
+### Added
+
+### Fixed
+- pinning, muting or unmuting a status one is not allowed to access no longer leaks its content
+- revoking a favourite on a post one lost access to no longer leaks its content
+- user info updates again are actively federated to other servers;
+  this was accidentally broken in the previous release
+- it is no longer possible to reference posts one cannot access when reporting another user
+
+### Changed
+
+
 ## 2025.12
 
 ### REMOVED
