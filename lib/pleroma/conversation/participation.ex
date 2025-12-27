@@ -213,14 +213,6 @@ defmodule Pleroma.Conversation.Participation do
     |> Repo.aggregate(:count, :id)
   end
 
-  def unread_conversation_count_for_user(user) do
-    from(p in __MODULE__,
-      where: p.user_id == ^user.id,
-      where: not p.read,
-      select: %{count: count(p.id)}
-    )
-  end
-
   def delete(%__MODULE__{} = participation) do
     Repo.delete(participation)
   end
