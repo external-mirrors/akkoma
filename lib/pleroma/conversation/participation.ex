@@ -24,7 +24,7 @@ defmodule Pleroma.Conversation.Participation do
     timestamps()
   end
 
-  def creation_cng(struct, params) do
+  defp creation_cng(struct, params) do
     struct
     |> cast(params, [:user_id, :conversation_id, :read])
     |> validate_required([:user_id, :conversation_id])
@@ -51,7 +51,7 @@ defmodule Pleroma.Conversation.Participation do
     )
   end
 
-  def read_cng(struct, params) do
+  defp read_cng(struct, params) do
     struct
     |> cast(params, [:read])
     |> validate_required([:read])
@@ -99,6 +99,7 @@ defmodule Pleroma.Conversation.Participation do
     {:ok, user, participations}
   end
 
+  # used for tests
   def mark_as_unread(participation) do
     participation
     |> read_cng(%{read: false})
@@ -115,7 +116,7 @@ defmodule Pleroma.Conversation.Participation do
     |> Pleroma.Pagination.fetch_paginated(params)
   end
 
-  def restrict_recipients(query, user, %{recipients: user_ids}) do
+  defp restrict_recipients(query, user, %{recipients: user_ids}) do
     user_binary_ids =
       [user.id | user_ids]
       |> Enum.uniq()
@@ -135,7 +136,7 @@ defmodule Pleroma.Conversation.Participation do
     |> join(:inner, [p], c in subquery(conversation_subquery), on: p.conversation_id == c.id)
   end
 
-  def restrict_recipients(query, _, _), do: query
+  defp restrict_recipients(query, _, _), do: query
 
   def for_user_and_conversation(user, conversation) do
     from(p in __MODULE__,
