@@ -5,7 +5,7 @@ defmodule Pleroma.Mixfile do
     [
       app: :pleroma,
       version: version("3.17.0"),
-      elixir: "~> 1.14.1 or ~> 1.15",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       xref: [exclude: [:eldap]],
@@ -13,7 +13,7 @@ defmodule Pleroma.Mixfile do
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: ["coveralls.html": :test, "mneme.test": :test, "mneme.watch": :test],
+      test_ignore_filters: [~r/_helper.exs$/, ~r/^test\/fixtures\//, ~r/^test\/credo\//],
       # Docs
       name: "Akkoma",
       homepage_url: "https://akkoma.dev/",
@@ -41,6 +41,12 @@ defmodule Pleroma.Mixfile do
       ]
     ]
     |> add_listeners(Mix.env())
+  end
+
+  def cli() do
+    [
+      preferred_cli_env: ["coveralls.html": :test, "mneme.test": :test, "mneme.watch": :test]
+    ]
   end
 
   defp add_listeners(project, :dev), do: Keyword.put(project, :listeners, [Phoenix.CodeReloader])

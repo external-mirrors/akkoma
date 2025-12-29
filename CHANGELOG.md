@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### BREAKING
+- Elixir 1.14 is no longer suported, but EOL anyway. Upgrade to Elixir 1.15+
+
 ### REMOVED
 
 ### Added

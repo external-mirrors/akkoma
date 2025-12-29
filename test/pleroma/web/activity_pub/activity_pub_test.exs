@@ -1650,7 +1650,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
     {:ok, activity} = CommonAPI.post(user, %{status: "foobar", visibility: "list:#{list.id}"})
 
     activity = Repo.preload(activity, :bookmark)
-    activity = %Activity{activity | thread_muted?: !!activity.thread_muted?}
+    activity = %{activity | thread_muted?: !!activity.thread_muted?}
 
     assert ActivityPub.fetch_activities([], %{user: user}) == [activity]
   end
@@ -1850,7 +1850,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
       assert User.following?(follower, old_user)
       assert User.following?(follower_move_opted_out, old_user)
 
-      assert {:ok, activity} = ActivityPub.move(old_user, new_user)
+      assert {:ok, %Activity{} = activity} = ActivityPub.move(old_user, new_user)
 
       assert %Activity{
                actor: ^old_ap_id,
@@ -1882,7 +1882,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
       assert User.following?(follower_move_opted_out, old_user)
       refute User.following?(follower_move_opted_out, new_user)
 
-      activity = %Activity{activity | object: nil}
+      activity = %{activity | object: nil}
 
       assert [%Notification{activity: ^activity}] = Notification.for_user(follower)
 

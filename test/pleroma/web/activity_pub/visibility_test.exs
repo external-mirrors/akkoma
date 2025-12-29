@@ -46,7 +46,7 @@ defmodule Pleroma.Web.ActivityPub.VisibilityTest do
 
     list_object = Object.normalize(list_activity)
     {:ok, list_object} = Object.update_data(list_object, %{"listMessage" => list.ap_id})
-    list_activity = %Activity{list_activity | object: list_object}
+    list_activity = %{list_activity | object: list_object}
 
     %{
       public: public,

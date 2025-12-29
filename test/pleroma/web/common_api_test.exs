@@ -8,7 +8,6 @@ defmodule Pleroma.Web.CommonAPITest do
   @moduletag :mocked
 
   alias Pleroma.Activity
-  alias Pleroma.Conversation.Participation
   alias Pleroma.Notification
   alias Pleroma.Object
   alias Pleroma.Repo
