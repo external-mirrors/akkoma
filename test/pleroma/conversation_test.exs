@@ -78,7 +78,7 @@ defmodule Pleroma.ConversationTest do
     assert Enum.find(conversation.participations, fn %{user_id: user_id} -> har.id == user_id end)
 
     assert Enum.find(conversation.participations, fn %{user_id: user_id} ->
-             jafnhar.id == user_id
+             tridi.id == user_id
            end)
 
     {:ok, activity} =
@@ -103,7 +103,7 @@ defmodule Pleroma.ConversationTest do
            end)
 
     assert Enum.find(conversation_two.participations, fn %{user_id: user_id} ->
-             jafnhar.id == user_id
+             tridi.id == user_id
            end)
 
     {:ok, activity} =
@@ -128,19 +128,11 @@ defmodule Pleroma.ConversationTest do
            end)
 
     assert Enum.find(conversation_three.participations, fn %{user_id: user_id} ->
-             jafnhar.id == user_id
-           end)
-
-    assert Enum.find(conversation_three.participations, fn %{user_id: user_id} ->
              tridi.id == user_id
            end)
 
     assert Enum.find(conversation_three.users, fn %{id: user_id} ->
              har.id == user_id
-           end)
-
-    assert Enum.find(conversation_three.users, fn %{id: user_id} ->
-             jafnhar.id == user_id
            end)
 
     assert Enum.find(conversation_three.users, fn %{id: user_id} ->
@@ -157,7 +149,13 @@ defmodule Pleroma.ConversationTest do
 
     {:ok, conversation} = Conversation.create_or_bump_for(activity)
 
-    assert length(conversation.participations) == 2
+    # only local users get participations
+    assert length(conversation.participations) == 1
+
+    # but all appear in recipients
+    [participation] = conversation.participations
+    participation = Repo.preload(participation, :recipients)
+    assert length(participation.recipients) == 2
 
     {:ok, activity} =
       CommonAPI.post(har, %{status: "Hey @#{jafnhar.nickname}", visibility: "public"})

@@ -64,9 +64,10 @@ defmodule Pleroma.Conversation do
          ap_id when is_binary(ap_id) and byte_size(ap_id) > 0 <- object.data["context"],
          {:ok, conversation} <- create_for_ap_id(ap_id) do
       users = User.get_users_from_set(activity.recipients, local_only: false)
+      local_users = Enum.filter(users, & &1.local)
 
       participations =
-        Enum.map(users, fn user ->
+        Enum.map(local_users, fn user ->
           invisible_conversation = Enum.any?(users, &User.blocks?(user, &1))
 
           opts = Keyword.put(opts, :invisible_conversation, invisible_conversation)
