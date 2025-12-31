@@ -15,7 +15,6 @@ defmodule Pleroma.Conversation do
     # This is the context ap id.
     field(:ap_id, :string)
     has_many(:participations, Participation)
-    has_many(:users, through: [:participations, :user])
 
     timestamps()
   end

@@ -119,7 +119,7 @@ defmodule Pleroma.ConversationTest do
 
     conversation_three =
       Conversation.get_for_ap_id(context)
-      |> Repo.preload([:participations, :users])
+      |> Repo.preload(participations: [:recipients])
 
     assert conversation_three.id == conversation.id
 
@@ -131,12 +131,11 @@ defmodule Pleroma.ConversationTest do
              tridi.id == user_id
            end)
 
-    assert Enum.find(conversation_three.users, fn %{id: user_id} ->
-             har.id == user_id
-           end)
+    expected_recipients = Enum.sort([har.id, tridi.id, jafnhar.id])
 
-    assert Enum.find(conversation_three.users, fn %{id: user_id} ->
-             tridi.id == user_id
+    assert Enum.all?(conversation_three.participations, fn %{recipients: recipients} ->
+             rids = Enum.map(recipients, & &1.id) |> Enum.sort()
+             assert rids == expected_recipients
            end)
   end
 

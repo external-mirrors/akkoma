@@ -114,7 +114,7 @@ defmodule Pleroma.Conversation.Participation do
   def for_user_with_pagination(user, params \\ %{}) do
     from(p in __MODULE__,
       where: p.user_id == ^user.id,
-      preload: [conversation: [:users]]
+      preload: [:conversation]
     )
     |> restrict_recipients(user, params)
     |> select([p], %{id: p.last_bump, entry: p})

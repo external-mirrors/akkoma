@@ -202,10 +202,11 @@ defmodule Pleroma.Conversation.ParticipationTest do
     object3 = Pleroma.Object.normalize(activity_three, fetch: false)
 
     user = Repo.get(Pleroma.User, user.id)
+    participation_one = Pleroma.Repo.preload(participation_one, :recipients)
 
     assert participation_one.conversation.ap_id == object3.data["context"]
     assert participation_two.conversation.ap_id == object2.data["context"]
-    assert participation_one.conversation.users == [user]
+    assert participation_one.recipients == [user]
 
     # Pagination
     assert [%{id: pid, entry: participation_one}] =
