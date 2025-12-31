@@ -169,6 +169,47 @@ defmodule Pleroma.Web.MastodonAPI.ConversationControllerTest do
     assert expect_h1 == Enum.map(res_h1_reprise, & &1["id"])
   end
 
+  test "can paginate over filtered-out sections larger than limit", %{user: user, conn: conn} do
+    blocked = insert(:user)
+
+    p1 = insert(:participation, %{user: user})
+
+    CommonAPI.post(blocked, %{
+      status: "@#{user.nickname} buy the best NFTs here!: xxx",
+      visibility: "direct"
+    })
+
+    CommonAPI.post(blocked, %{
+      status: "@#{user.nickname} invest in the AI future now: xxx",
+      visibility: "direct"
+    })
+
+    p4 = insert(:participation, %{user: user})
+
+    full_noblock =
+      get(conn, "/api/v1/conversations?limit=20")
+      |> json_response_and_validate_schema(200)
+
+    assert length(full_noblock) == 4
+    [%{"id" => p4_id}, _, _, %{"id" => p1_id}] = full_noblock
+    assert p4_id == to_string(p4.id)
+    assert p1_id == to_string(p1.id)
+
+    CommonAPI.block(user, blocked)
+    expect_full = [to_string(p4.id), to_string(p1.id)]
+
+    full_block =
+      get(conn, "/api/v1/conversations?limit=20")
+      |> json_response_and_validate_schema(200)
+
+    assert length(full_block) == 2
+    assert expect_full == Enum.map(full_block, & &1["id"])
+
+    # paginate such that there’l be a block of filtered participations exceeding limit
+    full_paginated = paginate_to_end(conn, "/api/v1/conversations?limit=1", [])
+    assert expect_full == Enum.map(full_paginated, & &1["id"])
+  end
+
   test "filters conversations by recipients", %{user: user_one, conn: conn} do
     user_two = insert(:user)
     user_three = insert(:user)
@@ -336,5 +377,22 @@ defmodule Pleroma.Web.MastodonAPI.ConversationControllerTest do
 
       {dir, link}
     end)
+  end
+
+  defp paginate_to_end(conn, uri, acc) do
+    res_conn = get(conn, uri)
+    res = json_response_and_validate_schema(res_conn, 200)
+    acc = acc ++ res
+
+    link_val = :proplists.get_value("link", res_conn.resp_headers, :none)
+
+    if link_val == :none do
+      acc
+    else
+      links = parse_link_header(link_val)
+      next_uri = :proplists.get_value("next", links, nil)
+      assert next_uri
+      paginate_to_end(conn, next_uri, acc)
+    end
   end
 end

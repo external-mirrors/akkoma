@@ -14,10 +14,11 @@ defmodule Pleroma.Conversation.ParticipationTest do
   defp user_participations(user, opts \\ %{}) do
     Participation.for_user_with_pagination(user, opts)
     |> Pleroma.Pagination.unwrap()
+    |> Participation.preload_last_activity_id_and_filter()
   end
 
   defp user_participations_raw(user, opts \\ %{}) do
-    Participation.for_user_with_pagination_unfiltered(user, opts)
+    Participation.for_user_with_pagination(user, opts)
     |> Pleroma.Pagination.unwrap()
   end
 

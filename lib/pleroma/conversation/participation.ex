@@ -111,8 +111,7 @@ defmodule Pleroma.Conversation.Participation do
     |> Repo.update()
   end
 
-  # "unfiltered" version only meant for tests
-  def for_user_with_pagination_unfiltered(user, params \\ %{}) do
+  def for_user_with_pagination(user, params \\ %{}) do
     from(p in __MODULE__,
       where: p.user_id == ^user.id,
       preload: [conversation: [:users]]
@@ -122,10 +121,10 @@ defmodule Pleroma.Conversation.Participation do
     |> Pleroma.Pagination.fetch_paginated(Map.put(params, :pagination_field, :last_bump))
   end
 
-  def for_user_with_pagination(user, params \\ %{}) do
-    for_user_with_pagination_unfiltered(user, params)
-    |> Enum.map(fn %{id: id, entry: p} -> %{id: id, entry: load_last_activity_id(p)} end)
-    |> Enum.filter(fn %{entry: p} -> p.last_activity_id end)
+  def preload_last_activity_id_and_filter(participations) when is_list(participations) do
+    participations
+    |> Enum.map(fn p -> load_last_activity_id(p) end)
+    |> Enum.filter(fn p -> p.last_activity_id end)
   end
 
   defp load_last_activity_id(%__MODULE__{} = participation) do
