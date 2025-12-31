@@ -39,16 +39,22 @@ defmodule Pleroma.Web.PleromaAPI.ConversationController do
       ) do
     with %Participation{user_id: ^user_id} = participation <-
            Participation.get(participation_id, preload: [:conversation]) do
-      params =
+      qparams =
         params
         |> Map.put(:blocking_user, user)
         |> Map.put(:muting_user, user)
         |> Map.put(:user, user)
 
+      pparams =
+        params
+        |> Map.put(:total, false)
+        # Already sorted using a plain "DESC", matching our index instead of Pagination’s "DESC NULLS LAST"
+        |> Map.put(:skip_extra_order, true)
+
       activities =
         participation.conversation.ap_id
-        |> ActivityPub.fetch_activities_for_context_query(params)
-        |> Pleroma.Pagination.fetch_paginated(Map.put(params, :total, false))
+        |> ActivityPub.fetch_activities_for_context_query(qparams)
+        |> Pleroma.Pagination.fetch_paginated(pparams)
         |> Enum.reverse()
 
       conn
