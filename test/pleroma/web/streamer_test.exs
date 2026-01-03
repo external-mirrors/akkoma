@@ -416,7 +416,7 @@ defmodule Pleroma.Web.StreamerTest do
       token: oauth_token
     } do
       user_id = user.id
-      other_user = insert(:user)
+      other_user = insert(:user, hide_follows_count: false)
       other_user_id = other_user.id
 
       Streamer.get_topic_and_add_socket("user", user, oauth_token)
