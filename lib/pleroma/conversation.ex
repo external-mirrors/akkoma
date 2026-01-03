@@ -45,7 +45,11 @@ defmodule Pleroma.Conversation do
     participation = Repo.preload(participation, :recipients)
 
     if Enum.empty?(participation.recipients) do
-      recipients = User.get_all_by_ap_id(activity.recipients)
+      recipients =
+        [activity.actor | activity.recipients]
+        |> Enum.uniq()
+        |> User.get_all_by_ap_id()
+
       RecipientShip.create(recipients, participation)
     end
   end
