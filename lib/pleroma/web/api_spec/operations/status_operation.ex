@@ -451,11 +451,48 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
       tags: ["Retrieve status translation"],
       summary: "Translate status",
       description: "View the translation of a given status",
-      operationId: "StatusController.translation",
+      operationId: "StatusController.translate",
+      parameters: [id_param()],
+      security: [%{"oAuth" => ["read:statuses"]}],
+      requestBody:
+        request_body(
+          "Parameters",
+          %Schema{
+            type: :object,
+            properties: %{
+              lang: %Schema{
+                type: :string,
+                nullable: true,
+                description: "Translation target language."
+              },
+              source_lang: %Schema{
+                type: :string,
+                nullable: true,
+                description: "Translation source language."
+              }
+            }
+          },
+          required: false
+        ),
+      responses: %{
+        200 => Operation.response("Translation", "application/json", translation()),
+        400 => Operation.response("Error", "application/json", ApiError),
+        404 => Operation.response("Not Found", "application/json", ApiError)
+      }
+    }
+  end
+
+  def translate_legacy_operation do
+    %Operation{
+      tags: ["Retrieve status translation"],
+      summary: "Translate status",
+      description: "View the translation of a given status",
+      operationId: "StatusController.translate_legacy",
+      deprecated: true,
       security: [%{"oAuth" => ["read:statuses"]}],
       parameters: [id_param(), language_param(), source_language_param()],
       responses: %{
-        200 => Operation.response("Translation", "application/json", translation()),
+        200 => Operation.response("Translation", "application/json", translation_legacy()),
         400 => Operation.response("Error", "application/json", ApiError),
         404 => Operation.response("Not Found", "application/json", ApiError)
       }
@@ -822,6 +859,29 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
   defp translation do
     %Schema{
       title: "StatusTranslation",
+      description: "Represents status translation with related information.",
+      type: :object,
+      required: [:content, :detected_source_language, :provider],
+      properties: %{
+        content: %Schema{
+          type: :string,
+          description: "Translated status content"
+        },
+        detected_source_language: %Schema{
+          type: :string,
+          description: "Detected source language"
+        },
+        provider: %Schema{
+          type: :string,
+          description: "Translation provider service name"
+        }
+      }
+    }
+  end
+
+  defp translation_legacy do
+    %Schema{
+      title: "AkkomaStatusTranslation",
       description: "The translation of a status.",
       type: :object,
       required: [:detected_language, :text],

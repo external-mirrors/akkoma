@@ -41,6 +41,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
            :show,
            :context,
            :translate,
+           :translate_legacy,
            :show_history,
            :show_source
          ]
@@ -533,20 +534,34 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
     )
   end
 
-  @doc "GET /api/v1/statuses/:id/translations/:language"
-  def translate(%{assigns: %{user: user}} = conn, %{id: id, language: language} = params) do
-    with {:enabled, true} <- {:enabled, Config.get([:translator, :enabled])},
-         %Activity{} = activity <- Activity.get_by_id_with_object(id),
-         {:visible, true} <- {:visible, Visibility.visible_for_user?(activity, user)},
-         translation_module <- Config.get([:translator, :module]),
-         {:ok, detected, translation} <-
-           fetch_or_translate(
-             activity.id,
-             activity.object.data["content"],
-             Map.get(params, :from, nil),
-             language,
-             translation_module
+  @doc "POST /api/v1/statuses/:id/translate"
+  def translate(%{assigns: %{user: user}, body_params: params} = conn, %{id: id}) do
+    with {:ok, translation} <-
+           do_translate(
+             id,
+             user,
+             Map.get(params, :source_lang, nil),
+             Map.get(params, :lang, nil)
            ) do
+      json(conn, translation)
+    else
+      {:enabled, false} ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{"error" => "Translation is not enabled"})
+
+      {:visible, false} ->
+        {:error, :not_found}
+
+      e ->
+        e
+    end
+  end
+
+  @doc "GET /api/v1/statuses/:id/translations/:language"
+  def translate_legacy(%{assigns: %{user: user}} = conn, %{id: id, language: language} = params) do
+    with {:ok, %{content: translation, detected_source_language: detected}} <-
+           do_translate(id, user, Map.get(params, :from, nil), language) do
       json(conn, %{detected_language: detected, text: translation})
     else
       {:enabled, false} ->
@@ -559,6 +574,28 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
 
       e ->
         e
+    end
+  end
+
+  defp do_translate(id, user, source_language, target_language) do
+    with {:enabled, true} <- {:enabled, Config.get([:translator, :enabled])},
+         %Activity{} = activity <- Activity.get_by_id_with_object(id),
+         {:visible, true} <- {:visible, Visibility.visible_for_user?(activity, user)},
+         translation_module <- Config.get([:translator, :module]),
+         {:ok, detected, translation} <-
+           fetch_or_translate(
+             activity.id,
+             activity.object.data["content"],
+             source_language,
+             target_language,
+             translation_module
+           ) do
+      {:ok,
+       %{
+         content: translation,
+         detected_source_language: detected,
+         provider: translation_module.name()
+       }}
     end
   end
 
