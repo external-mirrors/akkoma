@@ -2215,7 +2215,7 @@ defmodule Pleroma.UserTest do
     test "removes report notifs when user isn't superuser any more" do
       report_activity = insert(:report_activity)
       user = insert(:user, is_moderator: true, is_admin: true)
-      {:ok, _} = Notification.create_notifications(report_activity)
+      {:ok, _, []} = Notification.create_notifications(report_activity)
 
       assert [%Pleroma.Notification{type: "pleroma:report"}] = Notification.for_user(user)
 

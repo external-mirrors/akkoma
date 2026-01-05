@@ -208,7 +208,10 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   def notify_and_stream(activity) do
-    Notification.create_notifications(activity)
+    # XXX: all callers of this should be moved to side_effect handling, such that
+    # notifications can be collected and only be sent out _after_ the transaction succeed
+    {:ok, notifications, _} = Notification.create_notifications(activity)
+    Notification.send(notifications)
 
     original_activity =
       case activity do
