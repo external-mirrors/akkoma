@@ -1028,28 +1028,18 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   def take_emoji_tags(%User{emoji: emoji}) do
     emoji
     |> Map.to_list()
-    |> Enum.map(&build_emoji_tag/1)
+    |> Enum.map(&Builder.emoji_object!/1)
   end
 
-  # TODO: we should probably send mtime instead of unix epoch time for updated
   def add_emoji_tags(%{"emoji" => emoji} = object) do
     tags = object["tag"] || []
 
-    out = Enum.map(emoji, &build_emoji_tag/1)
+    out = Enum.map(emoji, &Builder.emoji_object!/1)
 
     Map.put(object, "tag", tags ++ out)
   end
 
   def add_emoji_tags(object), do: object
-
-  defp build_emoji_tag({name, url}) do
-    %{
-      "icon" => %{"url" => "#{URI.encode(url)}", "type" => "Image"},
-      "name" => ":" <> name <> ":",
-      "type" => "Emoji",
-      "updated" => "1970-01-01T00:00:00Z"
-    }
-  end
 
   def set_conversation(object) do
     Map.put(object, "conversation", object["context"])

@@ -64,13 +64,22 @@ defmodule Pleroma.Web.PleromaAPI.ConversationController do
   end
 
   def update(
-        %{assigns: %{user: %{id: user_id} = user}} = conn,
-        %{id: participation_id, recipients: recipients}
+        %{assigns: %{user: %{id: user_id} = user}, body_params: body_params} = conn,
+        %{id: participation_id} = params
       ) do
-    with %Participation{user_id: ^user_id} = participation <- Participation.get(participation_id),
+    # OpenApiSpex 3.x prevents Plug's usual parameter premerging
+    params = Map.merge(body_params, params)
+
+    with {_, recipients} when recipients != nil <- {:params, params[:recipients]},
+         %Participation{user_id: ^user_id} = participation <- Participation.get(participation_id),
          {:ok, participation} <- Participation.set_recipients(participation, recipients) do
       render(conn, "participation.json", participation: participation, for: user)
     else
+      {:params, _} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{"error" => "No paramters passed to update!"})
+
       {:error, message} ->
         conn
         |> put_status(:bad_request)

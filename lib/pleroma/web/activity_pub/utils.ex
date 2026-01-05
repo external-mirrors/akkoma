@@ -516,7 +516,7 @@ defmodule Pleroma.Web.ActivityPub.Utils do
       |> where([activity], fragment("?->>'content' = ?
         AND EXISTS (
           SELECT FROM jsonb_array_elements(?->'tag') elem
-          WHERE elem->>'id' ILIKE ?
+          WHERE COALESCE(elem->'icon'->>'url', '') ILIKE ?
         )", activity.data, ^emoji_pattern, activity.data, ^domain_pattern))
     else
       query
