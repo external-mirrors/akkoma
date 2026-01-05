@@ -122,18 +122,18 @@ defmodule Pleroma.Conversation.Participation do
       |> Enum.uniq()
       |> User.binary_id()
 
-    conversation_subquery =
-      __MODULE__
-      |> group_by([p], p.conversation_id)
+    recipient_subquery =
+      RecipientShip
+      |> group_by([r], r.participation_id)
       |> having(
-        [p],
-        count(p.user_id) == ^length(user_binary_ids) and
-          fragment("array_agg(?) @> ?", p.user_id, ^user_binary_ids)
+        [r],
+        count(r.user_id) == ^length(user_binary_ids) and
+          fragment("array_agg(?) @> ?", r.user_id, ^user_binary_ids)
       )
-      |> select([p], %{id: p.conversation_id})
+      |> select([r], %{pid: r.participation_id})
 
     query
-    |> join(:inner, [p], c in subquery(conversation_subquery), on: p.conversation_id == c.id)
+    |> join(:inner, [p], r in subquery(recipient_subquery), on: p.id == r.pid)
   end
 
   defp restrict_recipients(query, _, _), do: query
