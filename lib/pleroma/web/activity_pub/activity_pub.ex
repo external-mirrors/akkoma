@@ -238,7 +238,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp maybe_create_activity_expiration(activity), do: {:ok, activity}
 
-  defp create_or_bump_conversation(activity, actor) do
+  def create_or_bump_conversation(activity, actor) do
     with {:ok, conversation} <- Conversation.create_or_bump_for(activity),
          %User{} = user <- User.get_cached_by_ap_id(actor) do
       Participation.mark_as_read(user, conversation)

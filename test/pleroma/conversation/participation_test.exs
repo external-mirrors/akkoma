@@ -8,6 +8,7 @@ defmodule Pleroma.Conversation.ParticipationTest do
   alias Pleroma.Conversation.Participation
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.Web.ActivityPub.Transmogrifier
   alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.CommonAPI
 
@@ -271,6 +272,48 @@ defmodule Pleroma.Conversation.ParticipationTest do
 
     [participation] = user_participations(actor)
     assert participation.last_bump == create2.id
+    # new message was from user themself
+    assert participation.read == true
+  end
+
+  test "updates last_bump and marks as unread when receiving new remote message" do
+    actor = insert(:user, local: true)
+    other = insert(:user, local: false)
+
+    {:ok, create1} =
+      CommonAPI.post(actor, %{status: "hi @#{other.nickname}", visibility: "direct"})
+
+    [participation] = user_participations(actor)
+    assert participation.last_bump == create1.id
+
+    Participation.mark_as_read(participation)
+
+    {:ok, create2} =
+      Transmogrifier.handle_incoming(%{
+        "id" => "#{other.ap_id}/creates/1234",
+        "type" => "Create",
+        "actor" => other.ap_id,
+        "to" => [actor.ap_id],
+        "object" => %{
+          "id" => "#{other.ap_id}/notes/1234",
+          "type" => "Note",
+          "attributedTo" => other.ap_id,
+          "to" => [actor.ap_id],
+          "content" => "hiya, what’s up?",
+          "context" => create1.data["context"],
+          "tag" => [
+            %{
+              "type" => "Mention",
+              "name" => "@#{actor.nickname}@#{URI.parse(actor.ap_id) |> Map.get(:host)}",
+              "href" => actor.ap_id
+            }
+          ]
+        }
+      })
+
+    [participation] = user_participations(actor)
+    assert participation.last_bump == create2.id
+    assert participation.read == false
   end
 
   test "does not update last_bump when user cannot see new post" do

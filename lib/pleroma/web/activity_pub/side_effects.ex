@@ -211,6 +211,18 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
 
       reply_depth = (meta[:depth] || 0) + 1
 
+      participations =
+        with true <- Visibility.is_direct?(activity),
+             {:ok, conversation} <-
+               ActivityPub.create_or_bump_conversation(activity, activity.actor) do
+          conversation
+          |> Repo.preload(:participations)
+          |> Map.get(:participations)
+          |> Repo.preload(:user)
+        else
+          _ -> []
+        end
+
       Pleroma.Workers.NodeInfoFetcherWorker.enqueue("process", %{
         "source_url" => activity.data["actor"]
       })
@@ -233,6 +245,7 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
       meta =
         meta
         |> add_notifications(notifications)
+        |> add_streamables([{"participation", participations}])
 
       ap_streamer().stream_out(activity)
 
@@ -574,12 +587,16 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
     meta
   end
 
-  defp add_notifications(meta, notifications) do
-    existing = Keyword.get(meta, :notifications, [])
-
-    meta
-    |> Keyword.put(:notifications, notifications ++ existing)
+  defp add_to_list(meta, key, entries) do
+    existing = Keyword.get(meta, key, [])
+    Keyword.put(meta, key, entries ++ existing)
   end
+
+  defp add_notifications(meta, notifications),
+    do: add_to_list(meta, :notifications, notifications)
+
+  defp add_streamables(meta, streamables),
+    do: add_to_list(meta, :streamables, streamables)
 
   @impl true
   def handle_after_transaction(meta) do
