@@ -24,6 +24,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   alias Pleroma.Web.ActivityPub.MRF
   alias Pleroma.Web.ActivityPub.ObjectValidators.UserValidator
   alias Pleroma.Web.ActivityPub.Transmogrifier
+  alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.Streamer
   alias Pleroma.Web.WebFinger
   alias Pleroma.Workers.BackgroundWorker
@@ -212,20 +213,15 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     # notifications can be collected and only be sent out _after_ the transaction succeed
     {:ok, notifications, _} = Notification.create_notifications(activity)
     Notification.send(notifications)
-
-    original_activity =
-      case activity do
-        %{data: %{"type" => "Update"}, object: %{data: %{"id" => id}}} ->
-          Activity.get_create_by_object_ap_id_with_object(id)
-
-        _ ->
-          activity
-      end
-
-    conversation = create_or_bump_conversation(original_activity, original_activity.actor)
-    participations = get_participations(conversation)
     stream_out(activity)
-    stream_out_participations(participations)
+  end
+
+  defp maybe_bump_conversation(activity) do
+    if Visibility.is_direct?(activity) do
+      conversation = create_or_bump_conversation(activity, activity.actor)
+      participations = get_participations(conversation)
+      stream_out_participations(participations)
+    end
   end
 
   defp maybe_create_activity_expiration(
@@ -326,6 +322,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
          {:ok, _actor} <- increase_note_count_if_public(actor, activity),
          {:ok, _actor} <- update_last_status_at_if_public(actor, activity),
          _ <- notify_and_stream(activity),
+         _ <- maybe_bump_conversation(activity),
          :ok <- maybe_schedule_poll_notifications(activity),
          :ok <- maybe_federate(activity) do
       {:ok, activity}
