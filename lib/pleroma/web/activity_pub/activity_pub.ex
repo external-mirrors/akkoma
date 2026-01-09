@@ -258,7 +258,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   def stream_out_participations(participations) do
     participations =
       participations
-      |> Repo.preload(:user)
+      |> Repo.preload([:user, :conversation])
 
     Streamer.stream("participation", participations)
   end
