@@ -42,6 +42,13 @@ defmodule Pleroma.Web.WebFingerTest do
       assert is_binary(result)
     end
 
+    test "fails for remote ap_ids" do
+      user = insert(:user, local: false)
+
+      {:error, _} = WebFinger.webfinger(user.ap_id, "XML")
+      {:error, _} = WebFinger.webfinger(user.ap_id, "JSON")
+    end
+
     test "exposes AP id with both canonical and Mastodon content type in JSON" do
       user = insert(:user, local: true)
       {:ok, data} = WebFinger.webfinger(user.ap_id, "JSON")

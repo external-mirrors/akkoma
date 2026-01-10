@@ -45,7 +45,8 @@ defmodule Pleroma.Web.WebFinger do
       {:ok, represent_user(user, fmt)}
     else
       _e ->
-        with %User{} = user <- User.get_cached_by_ap_id(resource) do
+        with %User{} = user <- User.get_cached_by_ap_id(resource),
+             true <- user.local do
           {:ok, represent_user(user, fmt)}
         else
           _e ->
