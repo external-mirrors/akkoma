@@ -68,7 +68,7 @@ defmodule Pleroma.Web.WebFinger do
     [user.ap_id]
   end
 
-  def represent_user(user, "JSON") do
+  defp represent_user(user, "JSON") do
     %{
       "subject" => "acct:#{user.nickname}@#{domain()}",
       "aliases" => gather_aliases(user),
@@ -76,7 +76,7 @@ defmodule Pleroma.Web.WebFinger do
     }
   end
 
-  def represent_user(user, "XML") do
+  defp represent_user(user, "XML") do
     aliases =
       user
       |> gather_aliases()
