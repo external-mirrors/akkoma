@@ -5,8 +5,12 @@
 defmodule Pleroma.Web.WebFingerTest do
   use Pleroma.DataCase
   alias Pleroma.Web.WebFinger
+  alias Pleroma.Web.XML
   import Pleroma.Factory
   import Tesla.Mock
+
+  @apt_canonical "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""
+  @apt_mastodon "application/activity+json"
 
   setup do
     mock_global(fn env -> apply(HttpRequestMock, :request, [env]) end)
@@ -36,6 +40,36 @@ defmodule Pleroma.Web.WebFingerTest do
 
       {:ok, result} = WebFinger.webfinger(user.ap_id, "XML")
       assert is_binary(result)
+    end
+
+    test "exposes AP id with both canonical and Mastodon content type in JSON" do
+      user = insert(:user, local: true)
+      {:ok, data} = WebFinger.webfinger(user.ap_id, "JSON")
+
+      assert is_list(data["links"])
+
+      canonical = Enum.find(data["links"], &(&1["type"] == @apt_canonical))
+      mastodon = Enum.find(data["links"], &(&1["type"] == @apt_mastodon))
+
+      assert canonical
+      assert canonical["href"] == user.ap_id
+
+      assert mastodon
+      assert mastodon["href"] == user.ap_id
+    end
+
+    test "exposes AP id with both canonical and Mastodon content type in XML" do
+      user = insert(:user, local: true)
+      {:ok, binary_data} = WebFinger.webfinger(user.ap_id, "XML")
+
+      {:ok, data} = XML.parse_document(binary_data)
+      path = &(~s{//Link[@rel="self" and @type='} <> &1 <> ~s{']/@href})
+
+      canonical = XML.string_from_xpath(path.(@apt_canonical), data)
+      mastodon = XML.string_from_xpath(path.(@apt_mastodon), data)
+
+      assert canonical == user.ap_id
+      assert mastodon == user.ap_id
     end
   end
 

@@ -109,14 +109,18 @@ defmodule Pleroma.Web.WebFinger do
         ~s{//Link[@rel="http://ostatus.org/schema/1.0/subscribe"]/@template}
         |> XML.string_from_xpath(doc)
 
-      ap_id =
+      ap_id_compat =
         ~s{//Link[@rel="self" and @type="application/activity+json"]/@href}
+        |> XML.string_from_xpath(doc)
+
+      ap_id_spec =
+        ~s{//Link[@rel="self" and @type='application/ld+json; profile="https://www.w3.org/ns/activitystreams"']/@href}
         |> XML.string_from_xpath(doc)
 
       data = %{
         "subject" => subject,
         "subscribe_address" => subscribe_address,
-        "ap_id" => ap_id
+        "ap_id" => ap_id_spec || ap_id_compat
       }
 
       {:ok, data}
