@@ -45,7 +45,8 @@ defmodule Pleroma.Web.WebFinger do
       {:ok, represent_user(user, fmt)}
     else
       _e ->
-        with %User{} = user <- User.get_cached_by_ap_id(resource) do
+        with %User{} = user <- User.get_cached_by_ap_id(resource),
+             true <- user.local do
           {:ok, represent_user(user, fmt)}
         else
           _e ->
@@ -68,7 +69,7 @@ defmodule Pleroma.Web.WebFinger do
     [user.ap_id]
   end
 
-  def represent_user(user, "JSON") do
+  defp represent_user(user, "JSON") do
     %{
       "subject" => "acct:#{user.nickname}@#{domain()}",
       "aliases" => gather_aliases(user),
@@ -76,7 +77,7 @@ defmodule Pleroma.Web.WebFinger do
     }
   end
 
-  def represent_user(user, "XML") do
+  defp represent_user(user, "XML") do
     aliases =
       user
       |> gather_aliases()
@@ -109,14 +110,18 @@ defmodule Pleroma.Web.WebFinger do
         ~s{//Link[@rel="http://ostatus.org/schema/1.0/subscribe"]/@template}
         |> XML.string_from_xpath(doc)
 
-      ap_id =
+      ap_id_compat =
         ~s{//Link[@rel="self" and @type="application/activity+json"]/@href}
+        |> XML.string_from_xpath(doc)
+
+      ap_id_spec =
+        ~s{//Link[@rel="self" and @type='application/ld+json; profile="https://www.w3.org/ns/activitystreams"']/@href}
         |> XML.string_from_xpath(doc)
 
       data = %{
         "subject" => subject,
         "subscribe_address" => subscribe_address,
-        "ap_id" => ap_id
+        "ap_id" => ap_id_spec || ap_id_compat
       }
 
       {:ok, data}
