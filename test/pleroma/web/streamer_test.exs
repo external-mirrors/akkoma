@@ -867,7 +867,7 @@ defmodule Pleroma.Web.StreamerTest do
                Jason.decode!(received_event)
 
       assert %{"last_status" => last_status} = Jason.decode!(received_payload)
-      [participation] = Participation.for_user(user)
+      [%{entry: participation}] = Participation.for_user_with_pagination(user)
       assert last_status["pleroma"]["direct_conversation_id"] == participation.id
     end
 

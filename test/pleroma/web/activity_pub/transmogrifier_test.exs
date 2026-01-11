@@ -625,7 +625,7 @@ defmodule Pleroma.Web.ActivityPub.TransmogrifierTest do
                  "bto" => [],
                  "bcc" => [],
                  "content" => "🐈",
-                 "context" => "2hu",
+                 "context" => <<_ctx_uri::binary>>,
                  "id" => "http://localhost" <> _,
                  "object" => ^note_ap_id,
                  "tag" => []

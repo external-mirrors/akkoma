@@ -42,7 +42,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
 
       participations =
         conversation.participations
-        |> Repo.preload(:user)
+        |> Repo.preload([:user, :conversation])
 
       with_mock Pleroma.Web.Streamer,
         stream: fn _, _ -> nil end do
@@ -67,7 +67,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
         conversation =
           activity.data["context"]
           |> Pleroma.Conversation.get_for_ap_id()
-          |> Repo.preload(participations: :user)
+          |> Repo.preload(participations: [:user, :conversation])
 
         assert called(Pleroma.Web.Streamer.stream("participation", conversation.participations))
       end

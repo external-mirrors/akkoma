@@ -67,8 +67,10 @@ defmodule Pleroma.Web.Telemetry do
           {meta.args["activity_id"], nil, "inbox_collection"}
 
         "publish_one" ->
-          full_target = get_in(meta.args, ["params", "inbox"])
-          %{host: simple_target} = URI.parse(full_target || "")
+          full_inbox = get_in(meta.args, ["params", "inbox"]) || ""
+          %{host: simple_target} = URI.parse(full_inbox)
+          activity_apid = get_in(meta.args, ["params", "id"]) || "(no AP id)"
+          full_target = activity_apid <> " to " <> full_inbox
           error = collect_apdelivery_error(event, meta)
           {full_target, simple_target, error}
       end

@@ -20,20 +20,27 @@ defmodule Pleroma.Factory do
             ]
             |> Enum.map(&File.read!/1)
 
-  def participation_factory do
+  def participation_factory(attrs \\ %{}) do
     conversation = insert(:conversation)
-    user = insert(:user)
+    user = attrs[:user] || insert(:user)
+    activity = insert(:direct_note_activity, %{user: user, context: conversation.ap_id})
+
+    attrs = Map.drop(attrs, [:user])
 
     %Pleroma.Conversation.Participation{
       conversation: conversation,
       user: user,
+      last_bump: activity.id,
       read: false
     }
+    |> Map.merge(attrs)
   end
 
-  def conversation_factory do
+  def conversation_factory(attrs \\ %{}) do
+    ctx_ap_id = attrs[:ap_id] || sequence(:ap_id, &"https://some_conversation/#{&1}")
+
     %Pleroma.Conversation{
-      ap_id: sequence(:ap_id, &"https://some_conversation/#{&1}")
+      ap_id: ctx_ap_id
     }
   end
 
@@ -245,10 +252,10 @@ defmodule Pleroma.Factory do
     }
   end
 
-  def direct_note_factory do
+  def direct_note_factory(attrs \\ %{}) do
     user2 = insert(:user)
 
-    %Pleroma.Object{data: data} = note_factory()
+    %Pleroma.Object{data: data} = note_factory(attrs)
     %Pleroma.Object{data: Map.merge(data, %{"to" => [user2.ap_id]})}
   end
 
@@ -303,24 +310,32 @@ defmodule Pleroma.Factory do
     }
   end
 
-  def direct_note_activity_factory do
-    dm = insert(:direct_note)
+  def direct_note_activity_factory(attrs \\ %{}) do
+    user = attrs[:user] || insert(:user)
+    context = attrs[:context] || sequence(:ap_id, &"https://some_conversation/#{&1}")
+    dm = attrs[:note] || insert(:direct_note, user: user, data: %{"context" => context})
 
-    data = %{
-      "id" => Pleroma.Web.ActivityPub.Utils.generate_activity_id(),
-      "type" => "Create",
-      "actor" => dm.data["actor"],
-      "to" => dm.data["to"],
-      "object" => dm.data,
-      "published" => DateTime.utc_now() |> DateTime.to_iso8601(),
-      "context" => dm.data["context"]
-    }
+    data_attrs = attrs[:data_attrs] || %{}
+    attrs = Map.drop(attrs, [:user, :note, :data_attrs, :context])
+
+    data =
+      %{
+        "id" => Pleroma.Web.ActivityPub.Utils.generate_activity_id(),
+        "type" => "Create",
+        "actor" => dm.data["actor"],
+        "to" => dm.data["to"],
+        "object" => dm.data,
+        "published" => DateTime.utc_now() |> DateTime.to_iso8601(),
+        "context" => dm.data["context"]
+      }
+      |> Map.merge(data_attrs)
 
     %Pleroma.Activity{
       data: data,
       actor: data["actor"],
       recipients: data["to"]
     }
+    |> Map.merge(attrs)
   end
 
   def add_activity_factory(attrs \\ %{}) do
@@ -364,10 +379,11 @@ defmodule Pleroma.Factory do
 
   def followers_only_note_activity_factory(attrs \\ %{}) do
     user = attrs[:user] || insert(:user)
-    note = insert(:followers_only_note, user: user)
+    context = attrs[:context] || sequence(:ap_id, &"https://some_conversation/#{&1}")
+    note = insert(:followers_only_note, user: user, data: %{"context" => context})
 
     data_attrs = attrs[:data_attrs] || %{}
-    attrs = Map.drop(attrs, [:user, :note, :data_attrs])
+    attrs = Map.drop(attrs, [:user, :note, :data_attrs, :context])
 
     data =
       %{
@@ -391,10 +407,11 @@ defmodule Pleroma.Factory do
 
   def note_activity_factory(attrs \\ %{}) do
     user = attrs[:user] || insert(:user)
-    note = attrs[:note] || insert(:note, user: user)
+    context = attrs[:context] || sequence(:ap_id, &"https://some_conversation/#{&1}")
+    note = attrs[:note] || insert(:note, user: user, data: %{"context" => context})
 
     data_attrs = attrs[:data_attrs] || %{}
-    attrs = Map.drop(attrs, [:user, :note, :data_attrs])
+    attrs = Map.drop(attrs, [:user, :note, :data_attrs, :context])
 
     data =
       %{

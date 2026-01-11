@@ -727,7 +727,9 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
       assert Repo.get_by(Notification, user_id: poster.id, activity_id: announce.id)
     end
 
-    test "it streams out the announce", %{announce: announce} do
+    test "it streams out the announce with notification but only after transaction", %{
+      announce: announce
+    } do
       with_mocks([
         {
           Pleroma.Web.Streamer,
@@ -744,10 +746,18 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
           ]
         }
       ]) do
-        {:ok, announce, _} = SideEffects.handle(announce)
+        {:ok, announce, meta} = SideEffects.handle(announce)
 
+        # ideally the non-notification streaming would also happen
+        # only after the transaction but that’s not yet implemented
         assert called(Pleroma.Web.Streamer.stream(["user", "list"], announce))
 
+        refute called(Pleroma.Web.Streamer.stream(["user", "user:notification"], :_))
+        refute called(Pleroma.Web.Push.send(:_))
+
+        SideEffects.handle_after_transaction(meta)
+
+        assert called(Pleroma.Web.Streamer.stream(["user", "user:notification"], :_))
         assert called(Pleroma.Web.Push.send(:_))
       end
     end

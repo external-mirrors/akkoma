@@ -24,6 +24,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   alias Pleroma.Web.ActivityPub.MRF
   alias Pleroma.Web.ActivityPub.ObjectValidators.UserValidator
   alias Pleroma.Web.ActivityPub.Transmogrifier
+  alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.Streamer
   alias Pleroma.Web.WebFinger
   alias Pleroma.Workers.BackgroundWorker
@@ -208,21 +209,19 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   def notify_and_stream(activity) do
-    Notification.create_notifications(activity)
-
-    original_activity =
-      case activity do
-        %{data: %{"type" => "Update"}, object: %{data: %{"id" => id}}} ->
-          Activity.get_create_by_object_ap_id_with_object(id)
-
-        _ ->
-          activity
-      end
-
-    conversation = create_or_bump_conversation(original_activity, original_activity.actor)
-    participations = get_participations(conversation)
+    # XXX: all callers of this should be moved to side_effect handling, such that
+    # notifications can be collected and only be sent out _after_ the transaction succeed
+    {:ok, notifications, _} = Notification.create_notifications(activity)
+    Notification.send(notifications)
     stream_out(activity)
-    stream_out_participations(participations)
+  end
+
+  defp maybe_bump_conversation(activity) do
+    if Visibility.is_direct?(activity) do
+      conversation = create_or_bump_conversation(activity, activity.actor)
+      participations = get_participations(conversation)
+      stream_out_participations(participations)
+    end
   end
 
   defp maybe_create_activity_expiration(
@@ -239,7 +238,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp maybe_create_activity_expiration(activity), do: {:ok, activity}
 
-  defp create_or_bump_conversation(activity, actor) do
+  def create_or_bump_conversation(activity, actor) do
     with {:ok, conversation} <- Conversation.create_or_bump_for(activity),
          %User{} = user <- User.get_cached_by_ap_id(actor) do
       Participation.mark_as_read(user, conversation)
@@ -258,7 +257,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   def stream_out_participations(participations) do
     participations =
       participations
-      |> Repo.preload(:user)
+      |> Repo.preload([:user, :conversation])
 
     Streamer.stream("participation", participations)
   end
@@ -323,6 +322,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
          {:ok, _actor} <- increase_note_count_if_public(actor, activity),
          {:ok, _actor} <- update_last_status_at_if_public(actor, activity),
          _ <- notify_and_stream(activity),
+         _ <- maybe_bump_conversation(activity),
          :ok <- maybe_schedule_poll_notifications(activity),
          :ok <- maybe_federate(activity) do
       {:ok, activity}
@@ -482,9 +482,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     from(activity in Activity)
     |> maybe_preload_objects(opts)
     |> maybe_preload_bookmarks(opts)
-    |> maybe_set_thread_muted_field(opts)
     |> restrict_blocked(opts)
     |> restrict_blockers_visibility(opts)
+    |> restrict_muted_users(opts)
     |> restrict_recipients(recipients, opts[:user])
     |> restrict_filtered(opts)
     |> where(
@@ -1096,24 +1096,35 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_reblogs(query, _), do: query
 
-  defp restrict_muted(query, %{with_muted: true}), do: query
+  defp restrict_muted(query, opts) do
+    query
+    |> restrict_muted_users(opts)
+    |> restrict_muted_threads(opts)
+  end
 
-  defp restrict_muted(query, %{muting_user: %User{} = user} = opts) do
+  defp restrict_muted_users(query, %{with_muted: true}), do: query
+
+  defp restrict_muted_users(query, %{muting_user: %User{} = user} = opts) do
     mutes = opts[:muted_users_ap_ids] || User.muted_users_ap_ids(user)
 
-    query =
-      from([activity] in query,
-        where: fragment("not (? = ANY(?))", activity.actor, ^mutes),
-        where:
-          fragment(
-            "not (?->'to' \\?| ?) or ? = ?",
-            activity.data,
-            ^mutes,
-            activity.actor,
-            ^user.ap_id
-          )
-      )
+    from([activity] in query,
+      where: fragment("not (? = ANY(?))", activity.actor, ^mutes),
+      where:
+        fragment(
+          "not (?->'to' \\?| ?) or ? = ?",
+          activity.data,
+          ^mutes,
+          activity.actor,
+          ^user.ap_id
+        )
+    )
+  end
 
+  defp restrict_muted_users(query, _), do: query
+
+  defp restrict_muted_threads(query, %{with_muted: true}), do: query
+
+  defp restrict_muted_threads(query, %{muting_user: %User{} = _user} = opts) do
     unless opts[:skip_preload] do
       from([thread_mute: tm] in query, where: is_nil(tm.user_id))
     else
@@ -1121,7 +1132,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     end
   end
 
-  defp restrict_muted(query, _), do: query
+  defp restrict_muted_threads(query, _), do: query
 
   defp restrict_blocked(query, %{blocking_user: %User{} = user} = opts) do
     blocked_ap_ids = opts[:blocked_users_ap_ids] || User.blocked_users_ap_ids(user)
