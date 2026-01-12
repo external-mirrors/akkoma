@@ -20,6 +20,11 @@ defmodule Pleroma.Repo.Migrations.SortActivityContextIndex do
   def up() do
     drop_if_exists(@old_idx)
     create_if_not_exists(@new_idx)
+
+    flush()
+
+    # ensure planner immediately picks up new index for subsequent migrations
+    execute("ANALYZE activities;")
   end
 
   def down() do
