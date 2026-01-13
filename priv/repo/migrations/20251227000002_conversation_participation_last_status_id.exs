@@ -27,15 +27,17 @@ defmodule Pleroma.Repo.Migrations.ConversationParticipationLastStatusId do
       SET last_bump = (
         SELECT a.id
         FROM activities AS a
-             JOIN conversations AS c ON c.ap_id = a.data->>'context'
-             JOIN users AS u ON u.id = p.user_id
-        WHERE c.id = p.conversation_id AND
-              (u.ap_id = ANY(a.recipients) OR u.ap_id = a.actor) AND
+        WHERE a.data->>'context' = c.ap_id AND
               a.data->>'type' = 'Create' AND
+              (u.ap_id = ANY(a.recipients) OR u.ap_id = a.actor) AND
               activity_visibility(a.actor, a.recipients, a.data) = 'direct'
         ORDER BY a.id DESC
         LIMIT 1
-      );
+      )
+      FROM conversation_participations AS p2
+           JOIN users AS u ON p2.user_id = u.id
+           JOIN conversations AS c ON p2.conversation_id = c.id
+      WHERE p2.id = p.id;
     """
 
     # delete empty conversations if any
