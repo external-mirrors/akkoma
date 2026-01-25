@@ -1211,53 +1211,52 @@ defmodule Pleroma.User do
   end
 
   def get_cached_by_nickname(nickname) do
-    if String.valid?(nickname) do 
-    key = "nickname:#{nickname}"
+    if String.valid?(nickname) do
+      key = "nickname:#{nickname}"
 
-    @cachex.fetch!(:user_cache, key, fn _ ->
-      case get_or_fetch_by_nickname(nickname) do
-        {:ok, user} -> {:commit, user}
-        {:error, _error} -> {:ignore, nil}
-      end
-    end)
+      @cachex.fetch!(:user_cache, key, fn _ ->
+        case get_or_fetch_by_nickname(nickname) do
+          {:ok, user} -> {:commit, user}
+          {:error, _error} -> {:ignore, nil}
+        end
+      end)
     else
-     :error
-    end 
+      :error
+    end
   end
 
   def get_cached_by_nickname_or_id(nickname_or_id, opts \\ []) do
     if String.valid?(nickname_or_id) do
+      restrict_to_local = Config.get([:instance, :limit_to_local_content])
 
-    restrict_to_local = Config.get([:instance, :limit_to_local_content])
+      cond do
+        is_integer(nickname_or_id) or FlakeId.flake_id?(nickname_or_id) ->
+          get_cached_by_id(nickname_or_id) || get_cached_by_nickname(nickname_or_id)
 
-    cond do
-      is_integer(nickname_or_id) or FlakeId.flake_id?(nickname_or_id) ->
-        get_cached_by_id(nickname_or_id) || get_cached_by_nickname(nickname_or_id)
+        restrict_to_local == false or not String.contains?(nickname_or_id, "@") ->
+          get_cached_by_nickname(nickname_or_id)
 
-      restrict_to_local == false or not String.contains?(nickname_or_id, "@") ->
-        get_cached_by_nickname(nickname_or_id)
+        restrict_to_local == :unauthenticated and match?(%User{}, opts[:for]) ->
+          get_cached_by_nickname(nickname_or_id)
 
-      restrict_to_local == :unauthenticated and match?(%User{}, opts[:for]) ->
-        get_cached_by_nickname(nickname_or_id)
-
-      true ->
-        nil
-    end
+        true ->
+          nil
+      end
     else
-    :error
+      :error
     end
   end
 
   @spec get_by_nickname(String.t()) :: User.t() | nil
   def get_by_nickname(nickname) do
     if String.valid?(nickname) do
-    Repo.get_by(User, nickname: nickname) ||
-      if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
-        Repo.get_by(User, nickname: local_nickname(nickname))
-      end
-      else
+      Repo.get_by(User, nickname: nickname) ||
+        if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
+          Repo.get_by(User, nickname: local_nickname(nickname))
+        end
+    else
       :error
-      end
+    end
   end
 
   def get_by_email(email), do: Repo.get_by(User, email: email)

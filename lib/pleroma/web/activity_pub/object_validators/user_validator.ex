@@ -85,13 +85,13 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.UserValidator do
     end)
   end
 
-  defp validate_nickname(%("preferredUsername" => nick)) when is_binary(nick) do
+  defp validate_nickname(%{"preferredUsername" => nick}) when is_binary(nick) do
     if String.valid?(nick) do
       :ok
     else
-     {:error, "Nickname is not valid UTF-8"}
-   end
- end
+      {:error, "Nickname is not valid UTF-8"}
+    end
+  end
 
- defp validate_nickname(_), do: :ok 
+  defp validate_nickname(_), do: :ok
 end
