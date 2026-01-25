@@ -124,6 +124,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountControllerTest do
       assert %{"id" => id} = json_response_and_validate_schema(conn, 200)
       assert id == user.id
     end
+    
 
     test "accounts fetches correct account for nicknames beginning with numbers", %{conn: conn} do
       # Need to set an old-style integer ID to reproduce the problem
@@ -176,6 +177,16 @@ defmodule Pleroma.Web.MastodonAPI.AccountControllerTest do
                conn
                |> get("/api/v1/accounts/#{user.id}")
                |> json_response_and_validate_schema(:not_found)
+    end
+
+    test "returns 404 when the username is not valid utf8" do
+      nick = <<0xc0>>
+      refute String.valid?(nick)
+
+      assert %{"error" => "Can't find user"} =
+               build_conn()
+               |> get("/api/v1/accounts/#{nick}")
+               |> json_response_and_validate_schema(404)
     end
   end
 

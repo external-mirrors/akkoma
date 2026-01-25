@@ -1211,6 +1211,7 @@ defmodule Pleroma.User do
   end
 
   def get_cached_by_nickname(nickname) do
+    if String.valid?(nickname) do 
     key = "nickname:#{nickname}"
 
     @cachex.fetch!(:user_cache, key, fn _ ->
@@ -1219,9 +1220,14 @@ defmodule Pleroma.User do
         {:error, _error} -> {:ignore, nil}
       end
     end)
+    else
+     :error
+    end 
   end
 
   def get_cached_by_nickname_or_id(nickname_or_id, opts \\ []) do
+    if String.valid?(nickname_or_id) do
+
     restrict_to_local = Config.get([:instance, :limit_to_local_content])
 
     cond do
@@ -1237,13 +1243,20 @@ defmodule Pleroma.User do
       true ->
         nil
     end
+    else
+    :error
+    end
   end
 
   @spec get_by_nickname(String.t()) :: User.t() | nil
   def get_by_nickname(nickname) do
+    if String.valid?(nickname) do
     Repo.get_by(User, nickname: nickname) ||
       if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
         Repo.get_by(User, nickname: local_nickname(nickname))
+      end
+      else
+      :error
       end
   end
 
