@@ -29,9 +29,9 @@ defmodule Pleroma.HTTP.AdapterHelper do
           conn_max_idle_time: Config.get!([:http, :receive_timeout]),
           protocols: Config.get!([:http, :protocols]),
           conn_opts: [
-            # When we upgrade our deps to Mint >= 1.6.0 we can also explicitly enable "inet4: true"
             transport_opts: [
               inet6: true,
+              inet4: true,
               cacerts: :public_key.cacerts_get()
             ]
           ]
