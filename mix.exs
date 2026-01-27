@@ -146,7 +146,7 @@ defmodule Pleroma.Mixfile do
       {:tesla, "~> 1.16.0"},
       {:castore, "~> 1.0"},
       {:cowlib, "~> 2.12"},
-      {:finch, "~> 0.20.0"},
+      {:finch, "~> 0.21.0"},
       {:jason, "~> 1.4"},
       {:trailing_format_plug, "~> 0.0.7"},
       {:mogrify, "~> 0.9"},
