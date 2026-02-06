@@ -62,7 +62,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         instance: %{
           name: "example.com",
           nodeinfo: %{
-            "version" => "2.1"
+            version: "2.1"
           },
           favicon: nil
         },
@@ -135,7 +135,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
                  instance: %{
                    name: "somewhere.example.com",
                    nodeinfo: %{
-                     "version" => "2.0"
+                     version: "2.0"
                    },
                    favicon: "https://example.com/favicon.ico"
                  }
