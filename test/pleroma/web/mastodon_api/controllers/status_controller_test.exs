@@ -2542,7 +2542,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
 
         assert %{
                  "error" =>
-                   "You can only quote public or unlisted statuses and your own private posts"
+                   "You cannot quote this status at all or not with the intended visibility"
                } =
                  conn
                  |> put_req_header("content-type", "application/json")
@@ -2572,7 +2572,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
 
       assert %{
                "error" =>
-                 "You can only quote public or unlisted statuses and your own private posts"
+                 "You cannot quote this status at all or not with the intended visibility"
              } =
                conn
                |> put_req_header("content-type", "application/json")
@@ -2582,6 +2582,20 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
                  "quoted_status_id" => quoted_other.id
                })
                |> json_response_and_validate_schema(422)
+    end
+
+    test "posting a quote, quoting a local post locally", %{conn: conn} do
+      other = insert(:user)
+      {:ok, local_status} = CommonAPI.post(other, %{status: "epsilon", visibility: "local"})
+
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/api/v1/statuses", %{
+        "status" => "greater than zero",
+        "visibility" => "local",
+        "quoted_status_id" => local_status.id
+      })
+      |> json_response_and_validate_schema(200)
     end
 
     test "posting a quote, after quote, the status gets deleted", %{conn: conn} do

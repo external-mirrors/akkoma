@@ -147,6 +147,7 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
     quoting_visibility = CommonAPI.get_quoted_visibility(quoting)
 
     quoting_visibility in ["public", "unlisted"] or
+      (quoting_visibility == "local" && quote_visibility == quoting_visibility) or
       (quoting_visibility == "private" && quote_visibility == quoting_visibility &&
          actor == quoted_author)
   end
@@ -171,7 +172,7 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
           draft,
           dgettext(
             "errors",
-            "You can only quote public or unlisted statuses and your own private posts"
+            "You cannot quote this status at all or not with the intended visibility"
           )
         )
     end
