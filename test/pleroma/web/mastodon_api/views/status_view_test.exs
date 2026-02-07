@@ -434,6 +434,21 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     note = insert(:note_activity)
     user = insert(:user)
 
+    {:ok, activity} = CommonAPI.post(user, %{status: "hehe", quoted_status_id: note.id})
+
+    status = StatusView.render("show.json", %{activity: activity})
+
+    assert status.quote_id == to_string(note.id)
+
+    [status] = StatusView.render("index.json", %{activities: [activity], as: :activity})
+
+    assert status.quote_id == to_string(note.id)
+  end
+
+  test "a quote created with deprecated quote_id" do
+    note = insert(:note_activity)
+    user = insert(:user)
+
     {:ok, activity} = CommonAPI.post(user, %{status: "hehe", quote_id: note.id})
 
     status = StatusView.render("show.json", %{activity: activity})
@@ -464,7 +479,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     {:ok, _relationship} = User.block(user, blocked_user)
 
     {:ok, activity} = CommonAPI.post(blocked_user, %{status: ":< i am ANGERY"})
-    {:ok, quote_activity} = CommonAPI.post(other_user, %{status: "hehe", quote_id: activity.id})
+
+    {:ok, quote_activity} =
+      CommonAPI.post(other_user, %{status: "hehe", quoted_status_id: activity.id})
 
     status = StatusView.render("show.json", %{activity: quote_activity, for: user})
     assert is_nil(status.quote)
@@ -478,7 +495,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     {:ok, _relationship} = User.mute(user, blocked_user)
 
     {:ok, activity} = CommonAPI.post(blocked_user, %{status: ":< i am ANGERY"})
-    {:ok, quote_activity} = CommonAPI.post(other_user, %{status: "hehe", quote_id: activity.id})
+
+    {:ok, quote_activity} =
+      CommonAPI.post(other_user, %{status: "hehe", quoted_status_id: activity.id})
 
     status = StatusView.render("show.json", %{activity: quote_activity, for: user})
     assert is_nil(status.quote)

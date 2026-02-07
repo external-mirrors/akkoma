@@ -24,7 +24,6 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
             in_reply_to: nil,
             language: nil,
             content_map: %{},
-            quote_id: nil,
             quote: nil,
             visibility: nil,
             expires_at: nil,
@@ -69,7 +68,11 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
   end
 
   defp put_params(draft, params) do
-    params = Map.put_new(params, :in_reply_to_status_id, params[:in_reply_to_id])
+    params =
+      params
+      |> Map.put_new(:in_reply_to_status_id, params[:in_reply_to_id])
+      |> Map.put_new(:quoted_status_id, params[:quote_id])
+
     %{draft | params: params}
   end
 
@@ -135,9 +138,9 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
 
   defp in_reply_to(draft), do: draft
 
-  defp quote_id(%{params: %{quote_id: ""}} = draft), do: draft
+  defp quote_id(%{params: %{quoted_status_id: ""}} = draft), do: draft
 
-  defp quote_id(%{params: %{quote_id: id}} = draft) when is_binary(id) do
+  defp quote_id(%{params: %{quoted_status_id: id}} = draft) when is_binary(id) do
     with {:activity, %Activity{} = quote} <- {:activity, Activity.get_by_id(id)},
          visibility <- CommonAPI.get_quoted_visibility(quote),
          {:visibility, true} <- {:visibility, visibility in ["public", "unlisted"]} do
@@ -151,7 +154,7 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
     end
   end
 
-  defp quote_id(%{params: %{quote_id: %Activity{} = quote}} = draft) do
+  defp quote_id(%{params: %{quoted_status_id: %Activity{} = quote}} = draft) do
     %{draft | quote: quote}
   end
 

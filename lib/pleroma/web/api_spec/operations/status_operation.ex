@@ -636,10 +636,16 @@ defmodule Pleroma.Web.ApiSpec.StatusOperation do
           description:
             "The number of seconds the posted activity should expire in. When a posted activity expires it will be deleted from the server, and a delete request for it will be federated. This needs to be longer than an hour."
         },
-        quote_id: %Schema{
+        quoted_status_id: %Schema{
           nullable: true,
           type: :string,
           description: "Will quote a given status."
+        },
+        quote_id: %Schema{
+          deprecated: true,
+          nullable: true,
+          type: :string,
+          description: "Deprecated alias for quoted_status_id."
         }
       },
       example: %{

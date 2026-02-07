@@ -2497,6 +2497,26 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/statuses", %{
           "status" => "Hmph, how very glib",
+          "quoted_status_id" => quoted_status.id
+        })
+
+      response = json_response_and_validate_schema(conn, 200)
+
+      assert response["quote_id"] == quoted_status.id
+      assert response["quote"]["id"] == quoted_status.id
+      assert response["quote"]["content"] == quoted_status.object.data["content"]
+      assert response["pleroma"]["context"] == quoted_status.data["context"]
+    end
+
+    test "posting a quote with deprecated quote_id parameter", %{conn: conn} do
+      user = insert(:user)
+      {:ok, quoted_status} = CommonAPI.post(user, %{status: "tell me, for whom do you fight?"})
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/statuses", %{
+          "status" => "Hmph, how very glib",
           "quote_id" => quoted_status.id
         })
 
@@ -2523,7 +2543,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
                  |> put_req_header("content-type", "application/json")
                  |> post("/api/v1/statuses", %{
                    "status" => "Hmph, how very glib",
-                   "quote_id" => quoted_status.id
+                   "quoted_status_id" => quoted_status.id
                  })
                  |> json_response_and_validate_schema(422)
       end)
@@ -2540,7 +2560,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/statuses", %{
           "status" => "I fight for eorzea!",
-          "quote_id" => quoted_status.id
+          "quoted_status_id" => quoted_status.id
         })
         |> json_response_and_validate_schema(200)
 
@@ -2567,7 +2587,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
                |> put_req_header("content-type", "application/json")
                |> post("/api/v1/statuses", %{
                  "status" => "I fight for eorzea!",
-                 "quote_id" => quoted_status.id
+                 "quoted_status_id" => quoted_status.id
                })
                |> json_response_and_validate_schema(422)
     end
@@ -2578,7 +2598,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
                |> put_req_header("content-type", "application/json")
                |> post("/api/v1/statuses", %{
                  "status" => "I fight for eorzea!",
-                 "quote_id" => "oops"
+                 "quoted_status_id" => "oops"
                })
                |> json_response_and_validate_schema(422)
     end
