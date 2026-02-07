@@ -5,6 +5,7 @@
 defmodule Pleroma.Web.CommonAPI.ActivityDraft do
   alias Pleroma.Activity
   alias Pleroma.Object
+  alias Pleroma.User
   alias Pleroma.Web.ActivityPub.Builder
   alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.CommonAPI
@@ -138,19 +139,41 @@ defmodule Pleroma.Web.CommonAPI.ActivityDraft do
 
   defp in_reply_to(draft), do: draft
 
+  defp can_quote(
+         %User{ap_id: actor},
+         %Activity{actor: quoted_author, data: %{"type" => "Create"}} = quoting,
+         quote_visibility
+       ) do
+    quoting_visibility = CommonAPI.get_quoted_visibility(quoting)
+
+    quoting_visibility in ["public", "unlisted"] or
+      (quoting_visibility == "private" && quote_visibility == quoting_visibility &&
+         actor == quoted_author)
+  end
+
+  defp can_quote(_, _, _), do: false
+
   defp quote_id(%{params: %{quoted_status_id: ""}} = draft), do: draft
 
-  defp quote_id(%{params: %{quoted_status_id: id}} = draft) when is_binary(id) do
+  defp quote_id(
+         %{user: actor, visibility: quote_visibiliity, params: %{quoted_status_id: id}} = draft
+       )
+       when is_binary(id) do
     with {:activity, %Activity{} = quote} <- {:activity, Activity.get_by_id(id)},
-         visibility <- CommonAPI.get_quoted_visibility(quote),
-         {:visibility, true} <- {:visibility, visibility in ["public", "unlisted"]} do
+         {:visibility, true} <- {:visibility, can_quote(actor, quote, quote_visibiliity)} do
       %{draft | quote: Activity.get_by_id(id)}
     else
       {:activity, _} ->
         add_error(draft, dgettext("errors", "You can't quote a status that doesn't exist"))
 
       {:visibility, false} ->
-        add_error(draft, dgettext("errors", "You can only quote public or unlisted statuses"))
+        add_error(
+          draft,
+          dgettext(
+            "errors",
+            "You can only quote public or unlisted statuses and your own private posts"
+          )
+        )
     end
   end
 
