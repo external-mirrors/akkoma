@@ -181,10 +181,19 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
   end
 
   def render("instance.json", %{instance: %Pleroma.Instances.Instance{} = instance}) do
+    nodeinfo =
+      if Pleroma.Config.get!([:instance, :filter_embedded_nodeinfo]) and instance.nodeinfo do
+        %{}
+        |> maybe_put_nodeinfo(instance.nodeinfo, "version")
+        |> maybe_put_nodeinfo(instance.nodeinfo, "software")
+      else
+        instance.nodeinfo
+      end
+
     %{
       name: instance.host,
       favicon: instance.favicon |> MediaProxy.url(),
-      nodeinfo: instance.nodeinfo
+      nodeinfo: nodeinfo
     }
   end
 
@@ -441,6 +450,16 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
   end
 
   defp maybe_put_email_address(data, _, _), do: data
+
+  defp maybe_put_nodeinfo(map, nodeinfo, key) do
+    val = nodeinfo[key]
+
+    if val do
+      Map.put(map, key, val)
+    else
+      map
+    end
+  end
 
   defp image_url(%{"url" => [%{"href" => href} | _]}), do: href
   defp image_url(_), do: nil

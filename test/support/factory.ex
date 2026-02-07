@@ -47,7 +47,7 @@ defmodule Pleroma.Factory do
   def instance_factory(attrs \\ %{}) do
     %Pleroma.Instances.Instance{
       host: attrs[:domain] || "example.com",
-      nodeinfo: %{version: "2.0", openRegistrations: true},
+      nodeinfo: %{"version" => "2.0", "openRegistrations" => true},
       unreachable_since: nil
     }
     |> Map.merge(attrs)

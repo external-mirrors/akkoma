@@ -434,6 +434,21 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     note = insert(:note_activity)
     user = insert(:user)
 
+    {:ok, activity} = CommonAPI.post(user, %{status: "hehe", quoted_status_id: note.id})
+
+    status = StatusView.render("show.json", %{activity: activity})
+
+    assert status.quote_id == to_string(note.id)
+
+    [status] = StatusView.render("index.json", %{activities: [activity], as: :activity})
+
+    assert status.quote_id == to_string(note.id)
+  end
+
+  test "a quote created with deprecated quote_id" do
+    note = insert(:note_activity)
+    user = insert(:user)
+
     {:ok, activity} = CommonAPI.post(user, %{status: "hehe", quote_id: note.id})
 
     status = StatusView.render("show.json", %{activity: activity})
@@ -443,6 +458,49 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     [status] = StatusView.render("index.json", %{activities: [activity], as: :activity})
 
     assert status.quote_id == to_string(note.id)
+  end
+
+  test "a quote provides polyglott *oma and Masto quote object" do
+    note = insert(:note_activity)
+    user = insert(:user)
+
+    {:ok, activity} = CommonAPI.post(user, %{status: "hehe", quoted_status_id: note.id})
+
+    status = StatusView.render("show.json", %{activity: activity})
+
+    # *oma style
+    assert status.quote_id == to_string(note.id)
+    assert status.quote.id == to_string(note.id)
+
+    # Mastodon style
+    assert status.quote.quoted_status.id == to_string(note.id)
+    assert status.quote.state == "accepted"
+  end
+
+  test "a nested quote only provides shallow ids" do
+    note = insert(:note_activity)
+    user = insert(:user)
+
+    {:ok, activity_q1} = CommonAPI.post(user, %{status: "hehe", quoted_status_id: note.id})
+    {:ok, activity_q2} = CommonAPI.post(user, %{status: "hihi", quoted_status_id: activity_q1.id})
+
+    status = StatusView.render("show.json", %{activity: activity_q2})
+
+    # first-level has full object in both flavours
+    assert status.quote_id == to_string(activity_q1.id)
+    assert status.quote.id == to_string(activity_q1.id)
+    assert status.quote.state == "accepted"
+    assert status.quote.quoted_status.id == to_string(activity_q1.id)
+
+    nested = status.quote
+
+    # *oma-style shallow
+    assert nested.quote_id == to_string(note.id)
+
+    # For Mastodon-style shallow, status.quote should be %{state: "accepted", quoted_status_id: "…"}
+    # but then *oma-style clients expecting either null or a full status object
+    # may throw up errors during parsing, thus nothing at all is provided.
+    assert nested.quote == nil
   end
 
   test "a quote that we can't resolve" do
@@ -464,7 +522,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     {:ok, _relationship} = User.block(user, blocked_user)
 
     {:ok, activity} = CommonAPI.post(blocked_user, %{status: ":< i am ANGERY"})
-    {:ok, quote_activity} = CommonAPI.post(other_user, %{status: "hehe", quote_id: activity.id})
+
+    {:ok, quote_activity} =
+      CommonAPI.post(other_user, %{status: "hehe", quoted_status_id: activity.id})
 
     status = StatusView.render("show.json", %{activity: quote_activity, for: user})
     assert is_nil(status.quote)
@@ -478,7 +538,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     {:ok, _relationship} = User.mute(user, blocked_user)
 
     {:ok, activity} = CommonAPI.post(blocked_user, %{status: ":< i am ANGERY"})
-    {:ok, quote_activity} = CommonAPI.post(other_user, %{status: "hehe", quote_id: activity.id})
+
+    {:ok, quote_activity} =
+      CommonAPI.post(other_user, %{status: "hehe", quoted_status_id: activity.id})
 
     status = StatusView.render("show.json", %{activity: quote_activity, for: user})
     assert is_nil(status.quote)

@@ -2497,6 +2497,26 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/statuses", %{
           "status" => "Hmph, how very glib",
+          "quoted_status_id" => quoted_status.id
+        })
+
+      response = json_response_and_validate_schema(conn, 200)
+
+      assert response["quote_id"] == quoted_status.id
+      assert response["quote"]["id"] == quoted_status.id
+      assert response["quote"]["content"] == quoted_status.object.data["content"]
+      assert response["pleroma"]["context"] == quoted_status.data["context"]
+    end
+
+    test "posting a quote with deprecated quote_id parameter", %{conn: conn} do
+      user = insert(:user)
+      {:ok, quoted_status} = CommonAPI.post(user, %{status: "tell me, for whom do you fight?"})
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/statuses", %{
+          "status" => "Hmph, how very glib",
           "quote_id" => quoted_status.id
         })
 
@@ -2508,7 +2528,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
       assert response["pleroma"]["context"] == quoted_status.data["context"]
     end
 
-    test "posting a quote, quoting a status that isn't public", %{conn: conn} do
+    test "posting a quote, quoting someone else’s status that isn't public publicly", %{
+      conn: conn
+    } do
       user = insert(:user)
 
       Enum.each(["private", "local", "direct"], fn visibility ->
@@ -2518,15 +2540,62 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
             visibility: visibility
           })
 
-        assert %{"error" => "You can only quote public or unlisted statuses"} =
+        assert %{
+                 "error" =>
+                   "You cannot quote this status at all or not with the intended visibility"
+               } =
                  conn
                  |> put_req_header("content-type", "application/json")
                  |> post("/api/v1/statuses", %{
                    "status" => "Hmph, how very glib",
-                   "quote_id" => quoted_status.id
+                   "quoted_status_id" => quoted_status.id
                  })
                  |> json_response_and_validate_schema(422)
       end)
+    end
+
+    test "posting a quote, quoting your own private post", %{conn: conn, user: user} do
+      {:ok, quoted_status} = CommonAPI.post(user, %{status: "a", visibility: "private"})
+
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/api/v1/statuses", %{
+        "status" => "b",
+        "visibility" => "private",
+        "quoted_status_id" => quoted_status.id
+      })
+      |> json_response_and_validate_schema(200)
+
+      # but fails for other’s private posts
+      other = insert(:user)
+      {:ok, quoted_other} = CommonAPI.post(other, %{status: "x", visibility: "private"})
+
+      assert %{
+               "error" =>
+                 "You cannot quote this status at all or not with the intended visibility"
+             } =
+               conn
+               |> put_req_header("content-type", "application/json")
+               |> post("/api/v1/statuses", %{
+                 "status" => "y",
+                 "visibility" => "private",
+                 "quoted_status_id" => quoted_other.id
+               })
+               |> json_response_and_validate_schema(422)
+    end
+
+    test "posting a quote, quoting a local post locally", %{conn: conn} do
+      other = insert(:user)
+      {:ok, local_status} = CommonAPI.post(other, %{status: "epsilon", visibility: "local"})
+
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/api/v1/statuses", %{
+        "status" => "greater than zero",
+        "visibility" => "local",
+        "quoted_status_id" => local_status.id
+      })
+      |> json_response_and_validate_schema(200)
     end
 
     test "posting a quote, after quote, the status gets deleted", %{conn: conn} do
@@ -2540,7 +2609,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/statuses", %{
           "status" => "I fight for eorzea!",
-          "quote_id" => quoted_status.id
+          "quoted_status_id" => quoted_status.id
         })
         |> json_response_and_validate_schema(200)
 
@@ -2567,7 +2636,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
                |> put_req_header("content-type", "application/json")
                |> post("/api/v1/statuses", %{
                  "status" => "I fight for eorzea!",
-                 "quote_id" => quoted_status.id
+                 "quoted_status_id" => quoted_status.id
                })
                |> json_response_and_validate_schema(422)
     end
@@ -2578,7 +2647,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
                |> put_req_header("content-type", "application/json")
                |> post("/api/v1/statuses", %{
                  "status" => "I fight for eorzea!",
-                 "quote_id" => "oops"
+                 "quoted_status_id" => "oops"
                })
                |> json_response_and_validate_schema(422)
     end
