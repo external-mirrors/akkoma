@@ -1211,14 +1211,18 @@ defmodule Pleroma.User do
   end
 
   def get_cached_by_nickname(nickname) do
-    key = "nickname:#{nickname}"
+    if String.valid?(nickname) do
+      key = "nickname:#{nickname}"
 
-    @cachex.fetch!(:user_cache, key, fn _ ->
-      case get_or_fetch_by_nickname(nickname) do
-        {:ok, user} -> {:commit, user}
-        {:error, _error} -> {:ignore, nil}
-      end
-    end)
+      @cachex.fetch!(:user_cache, key, fn _ ->
+        case get_or_fetch_by_nickname(nickname) do
+          {:ok, user} -> {:commit, user}
+          {:error, _error} -> {:ignore, nil}
+        end
+      end)
+    else
+      nil
+    end
   end
 
   def get_cached_by_nickname_or_id(nickname_or_id, opts \\ []) do
@@ -1241,10 +1245,14 @@ defmodule Pleroma.User do
 
   @spec get_by_nickname(String.t()) :: User.t() | nil
   def get_by_nickname(nickname) do
-    Repo.get_by(User, nickname: nickname) ||
-      if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
-        Repo.get_by(User, nickname: local_nickname(nickname))
-      end
+    if String.valid?(nickname) do
+      Repo.get_by(User, nickname: nickname) ||
+        if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
+          Repo.get_by(User, nickname: local_nickname(nickname))
+        end
+    else
+      nil
+    end
   end
 
   def get_by_email(email), do: Repo.get_by(User, email: email)
