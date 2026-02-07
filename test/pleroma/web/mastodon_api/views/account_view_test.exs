@@ -44,7 +44,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         last_status_at: ~N[2023-12-31T15:06:17]
       })
 
-    insert(:instance, %{host: "example.com", nodeinfo: %{version: "2.1"}})
+    insert(:instance, %{host: "example.com", nodeinfo: %{"version" => "2.1"}})
 
     expected = %{
       id: to_string(user.id),
@@ -62,7 +62,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         instance: %{
           name: "example.com",
           nodeinfo: %{
-            version: "2.1"
+            "version" => "2.1"
           },
           favicon: nil
         },
@@ -135,7 +135,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
                  instance: %{
                    name: "somewhere.example.com",
                    nodeinfo: %{
-                     version: "2.0"
+                     "version" => "2.0"
                    },
                    favicon: "https://example.com/favicon.ico"
                  }
@@ -151,8 +151,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
                  instance: %{
                    name: "localhost",
                    nodeinfo: %{
-                     software: %{
-                       name: "akkoma"
+                     "software" => %{
+                       "name" => "akkoma"
                      }
                    }
                  }
@@ -248,7 +248,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         instance: %{
           name: "localhost",
           favicon: "http://localhost:4001/favicon.png",
-          nodeinfo: %{version: "2.0"}
+          nodeinfo: %{"version" => "2.0"}
         },
         status_ttl_days: nil,
         permit_followback: false
@@ -275,7 +275,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
 
     with_mock(
       Pleroma.Web.Nodeinfo.Nodeinfo,
-      get_nodeinfo: fn _ -> %{version: "2.0"} end
+      get_nodeinfo: fn _ -> %{"version" => "2.0"} end
     ) do
       assert expected ==
                AccountView.render("show.json", %{user: user, skip_visibility_check: true})
