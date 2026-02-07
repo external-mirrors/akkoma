@@ -1221,29 +1221,25 @@ defmodule Pleroma.User do
         end
       end)
     else
-      :error
+      nil
     end
   end
 
   def get_cached_by_nickname_or_id(nickname_or_id, opts \\ []) do
-    if String.valid?(nickname_or_id) do
-      restrict_to_local = Config.get([:instance, :limit_to_local_content])
+    restrict_to_local = Config.get([:instance, :limit_to_local_content])
 
-      cond do
-        is_integer(nickname_or_id) or FlakeId.flake_id?(nickname_or_id) ->
-          get_cached_by_id(nickname_or_id) || get_cached_by_nickname(nickname_or_id)
+    cond do
+      is_integer(nickname_or_id) or FlakeId.flake_id?(nickname_or_id) ->
+        get_cached_by_id(nickname_or_id) || get_cached_by_nickname(nickname_or_id)
 
-        restrict_to_local == false or not String.contains?(nickname_or_id, "@") ->
-          get_cached_by_nickname(nickname_or_id)
+      restrict_to_local == false or not String.contains?(nickname_or_id, "@") ->
+        get_cached_by_nickname(nickname_or_id)
 
-        restrict_to_local == :unauthenticated and match?(%User{}, opts[:for]) ->
-          get_cached_by_nickname(nickname_or_id)
+      restrict_to_local == :unauthenticated and match?(%User{}, opts[:for]) ->
+        get_cached_by_nickname(nickname_or_id)
 
-        true ->
-          nil
-      end
-    else
-      :error
+      true ->
+        nil
     end
   end
 
@@ -1255,7 +1251,7 @@ defmodule Pleroma.User do
           Repo.get_by(User, nickname: local_nickname(nickname))
         end
     else
-      :error
+      nil
     end
   end
 

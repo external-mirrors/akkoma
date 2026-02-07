@@ -93,5 +93,9 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.UserValidator do
     end
   end
 
+  defp validate_nickname(%{"preferredUsername" => _nick}) do
+    {:error, "Nickname is not a valid string"}
+  end
+
   defp validate_nickname(_), do: :ok
 end
