@@ -52,6 +52,8 @@ defmodule Pleroma.Web.MastodonAPI.TimelineController do
       |> User.followed_hashtags()
       |> Enum.map(& &1.id)
 
+    excluded_list_members = Pleroma.List.get_exclusive_list_members(user)
+
     params =
       params
       |> Map.put(:type, ["Create", "Announce"])
@@ -67,7 +69,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineController do
     Logger.debug("TimelineController.home: #{nickname} - fetching activities")
 
     activities =
-      [user.ap_id | User.following(user)]
+      [user.ap_id | User.following(user) -- excluded_list_members]
       |> ActivityPub.fetch_activities(params)
       |> Enum.reverse()
 

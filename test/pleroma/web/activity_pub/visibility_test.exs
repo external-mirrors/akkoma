@@ -18,7 +18,7 @@ defmodule Pleroma.Web.ActivityPub.VisibilityTest do
     unrelated = insert(:user)
     remote = insert(:user, local: false)
     {:ok, following, user} = Pleroma.User.follow(following, user)
-    {:ok, list} = Pleroma.List.create("foo", user)
+    {:ok, list} = Pleroma.List.create(%{title: "foo"}, user)
 
     Pleroma.List.follow(list, unrelated)
 
