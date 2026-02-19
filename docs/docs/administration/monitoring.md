@@ -52,9 +52,11 @@ curl -i -H 'Authorization: Bearer $ACCESS_TOKEN' https://myinstance.example/api/
 
 You may use the eponymous [Prometheus](https://prometheus.io/)
 or anything compatible with it like e.g. [VictoriaMetrics](https://victoriametrics.com/).
-The latter claims better performance and storage efficiency and
-our reference Grafana dashboard is also better tested with VictoriaMetrics.
-Should any issues with Prometheus proper pop up, patches to resolve it are very welcome.
+The latter claims better performance and storage efficiency.
+However, at the moment our reference dashboard only works with VictoriaMetrics,
+thus if you wish to use use the reference as an easy dropin template you must
+use VictoriaMetrics.
+Patches to allow the dashboard to work with plain Prometheus are welcome though.
 
 Both of them can usually be easily installed via distro-packages or docker.
 Depending on your distro or installation method the preferred way to change the CLI arguments and the location of config files may differ; consult the documentation of your chosen method to find out.  
