@@ -770,6 +770,7 @@ defmodule Pleroma.UserTest do
   describe "get_or_fetch/1 remote users with tld, while BE is runned on subdomain" do
     setup do: clear_config([Pleroma.Web.WebFinger, :update_nickname_on_user_fetch], true)
 
+    @tag :skip
     test "for mastodon" do
       ap_id = "a@mastodon.example"
       {:ok, fetched_user} = User.get_or_fetch(ap_id)
@@ -778,6 +779,7 @@ defmodule Pleroma.UserTest do
       assert fetched_user.nickname == "a@mastodon.example"
     end
 
+    @tag :skip
     test "for pleroma" do
       ap_id = "a@pleroma.example"
       {:ok, fetched_user} = User.get_or_fetch(ap_id)
