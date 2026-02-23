@@ -190,4 +190,8 @@ defmodule Pleroma.Web.ActivityPub.UserViewTest do
       assert %{"totalItems" => 1} = UserView.render("following.json", %{user: user})
     end
   end
+
+  describe "webfinger" do
+    # TODO
+  end
 end

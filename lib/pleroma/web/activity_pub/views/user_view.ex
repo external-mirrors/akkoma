@@ -12,6 +12,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
   alias Pleroma.Web.ActivityPub.ObjectView
   alias Pleroma.Web.ActivityPub.Transmogrifier
   alias Pleroma.Web.ActivityPub.Utils
+  alias Pleroma.Web.WebFinger
 
   require Pleroma.Web.ActivityPub.Transmogrifier
 
@@ -57,6 +58,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     |> maybe_put("following", user.following_address)
     |> maybe_put("followers", user.follower_address)
     |> maybe_put("preferredUsername", user.nickname)
+    |> maybe_put_webfinger(user)
     |> Map.merge(Utils.make_json_ld_header())
   end
 
@@ -106,6 +108,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
       "capabilities" => capabilities,
       "alsoKnownAs" => user.also_known_as
     }
+    |> maybe_put_webfinger(user)
     |> Map.merge(maybe_make_image(&User.avatar_url/2, "icon", user))
     |> Map.merge(maybe_make_image(&User.banner_url/2, "image", user))
     # Yes, the key is named ...Url eventhough it is a whole 'Image' object
@@ -134,6 +137,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
       # since Mastodon requires a WebFinger address for all users, this seems like a good idea
       "preferredUsername" => user.nickname
     }
+    |> maybe_put_webfinger(user)
     |> Map.merge(Utils.make_json_ld_header())
   end
 
@@ -296,6 +300,14 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     }
     |> Map.merge(Utils.make_json_ld_header())
   end
+
+  defp maybe_put_webfinger(%{"preferredUsername" => username} = data, %{local: true}) do
+    # FEP-2c59 entry for local users
+    webfinger_domain = WebFinger.domain()
+    Map.put(data, "webfinger", "#{username}@#{webfinger_domain}")
+  end
+
+  defp maybe_put_webfinger(data, _), do: data
 
   defp maybe_put_total_items(map, false, _total), do: map
 
