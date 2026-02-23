@@ -1640,7 +1640,14 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
     # if WebFinger request was already done, we probably have acct, otherwise
     # we request WebFinger here
-    nickname = additional[:nickname_from_acct] || generate_nickname(data)
+    # nickname = additional[:nickname_from_acct] || generate_nickname(data)
+
+    # TEMPORARILY DISABLE foreign webfinger domains!
+    # Old code did not properly validate consistency between actor and webfinge data,
+    # allowing nickname associations domains or actor do not consent with
+    nickname =
+      (is_binary(data["preferredUsername"]) &&
+         "#{data["preferredUsername"]}@#{URI.parse(data["id"]).host}") || nil
 
     # also_known_as must be a URL
     also_known_as =
