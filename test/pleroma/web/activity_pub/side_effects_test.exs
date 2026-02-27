@@ -153,15 +153,19 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
   describe "update users" do
     setup do
       user = insert(:user, local: false)
+      user_data = Pleroma.Web.ActivityPub.UserView.render("user.json", user: user)
 
       {:ok, update_data, []} =
-        Builder.update(user, %{
-          "id" => user.ap_id,
-          "type" => "Person",
-          "name" => "new name!",
-          "icon" => %{"type" => "Image", "url" => "https://example.org/icon.png"},
-          "backgroundUrl" => %{"type" => "Image", "url" => "https://example.org/bg.jxl"}
-        })
+        Builder.update(
+          user,
+          Map.merge(user_data, %{
+            "id" => user.ap_id,
+            "type" => "Person",
+            "name" => "new name!",
+            "icon" => %{"type" => "Image", "url" => "https://example.org/icon.png"},
+            "backgroundUrl" => %{"type" => "Image", "url" => "https://example.org/bg.jxl"}
+          })
+        )
 
       {:ok, update, _meta} = ActivityPub.persist(update_data, local: true)
 

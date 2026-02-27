@@ -245,16 +245,20 @@ defmodule Pleroma.User.Fetcher do
   defp collection_private(_data), do: {:ok, true}
 
   def user_data_from_user_object(data, additional \\ []) do
-    with {:ok, data} <- MRF.filter(data) do
+    with {:ok, data} <- MRF.filter(data),
+         {:valid, {:ok, _, _}} <- {:valid, UserValidator.validate(data, [])} do
       {:ok, object_to_user_data(data, additional)}
     else
-      e -> {:error, e}
+      {:valid, reason} ->
+        {:error, {:validate, reason}}
+
+      e ->
+        {:error, e}
     end
   end
 
   defp fetch_and_prepare_user_from_ap_id(ap_id, additional) do
     with {:ok, data} <- APFetcher.fetch_and_contain_remote_object_from_id(ap_id),
-         {:valid, {:ok, _, _}} <- {:valid, UserValidator.validate(data, [])},
          {:ok, data} <- user_data_from_user_object(data, additional) do
       {:ok, maybe_update_follow_information(data)}
     else
@@ -265,9 +269,6 @@ defmodule Pleroma.User.Fetcher do
 
       {:reject, _reason} = e ->
         {:error, e}
-
-      {:valid, reason} ->
-        {:error, {:validate, reason}}
 
       {:error, e} ->
         {:error, e}
