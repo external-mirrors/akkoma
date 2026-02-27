@@ -1,5 +1,6 @@
 # Pleroma: A lightweight social networking server
 # Copyright © 2017-2021 Pleroma Authors <https://pleroma.social/>
+# Copyright © 2026 Akkoma Authors <https://akkoma.dev/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.User.Fetcher do
@@ -59,7 +60,19 @@ defmodule Pleroma.User.Fetcher do
     end
   end
 
-  defp object_to_user_data(data, additional) do
+  defp try_fallback_nick(%{"id" => ap_id, "preferredUsername" => name})
+       when is_binary(name) and is_binary(ap_id) do
+    with true <- name != "",
+         domain when domain != nil and domain != "" <- URI.parse(ap_id).host do
+      "#{name}@#{domain}"
+    else
+      _ -> nil
+    end
+  end
+
+  defp try_fallback_nick(_), do: nil
+
+  defp object_to_user_data(data, verified_nick) do
     fields =
       data
       |> Map.get("attachment", [])
@@ -110,15 +123,8 @@ defmodule Pleroma.User.Fetcher do
         data["endpoints"]["sharedInbox"]
       end
 
-    # if WebFinger request was already done, we probably have acct, otherwise
-    # we request WebFinger here
-    # nickname = additional[:nickname_from_acct] || generate_nickname(data)
-    # TEMPORARILY DISABLE foreign webfinger domains!
-    # Old code did not properly validate consistency between actor and webfinge data,
-    # allowing nickname associations domains or actor do not consent with
-    nickname =
-      (is_binary(data["preferredUsername"]) &&
-         "#{data["preferredUsername"]}@#{URI.parse(data["id"]).host}") || nil
+    # can still be nil if no name was indicated in AP data
+    nickname = verified_nick || try_fallback_nick(data)
 
     # also_known_as must be a URL
     also_known_as =
@@ -158,22 +164,6 @@ defmodule Pleroma.User.Fetcher do
       nickname: nickname
     }
   end
-
-  defp generate_nickname(%{"preferredUsername" => username} = data) when is_binary(username) do
-    generated = "#{username}@#{URI.parse(data["id"]).host}"
-
-    if Config.get([WebFinger, :update_nickname_on_user_fetch]) do
-      case WebFinger.Finger.finger(generated) do
-        {:ok, %{"subject" => "acct:" <> acct}} -> acct
-        _ -> generated
-      end
-    else
-      generated
-    end
-  end
-
-  # nickname can be nil because of virtual actors
-  defp generate_nickname(_), do: nil
 
   def fetch_follow_information_for_user(user) do
     with {:ok, following_data} <-
@@ -243,37 +233,6 @@ defmodule Pleroma.User.Fetcher do
   end
 
   defp collection_private(_data), do: {:ok, true}
-
-  def user_data_from_user_object(data, additional \\ []) do
-    with {:ok, data} <- MRF.filter(data),
-         {:valid, {:ok, _, _}} <- {:valid, UserValidator.validate(data, [])} do
-      {:ok, object_to_user_data(data, additional)}
-    else
-      {:valid, reason} ->
-        {:error, {:validate, reason}}
-
-      e ->
-        {:error, e}
-    end
-  end
-
-  defp fetch_and_prepare_user_from_ap_id(ap_id, additional) do
-    with {:ok, data} <- APFetcher.fetch_and_contain_remote_object_from_id(ap_id),
-         {:ok, data} <- user_data_from_user_object(data, additional) do
-      {:ok, maybe_update_follow_information(data)}
-    else
-      # If this has been deleted, only log a debug and not an error
-      {:error, {"Object has been deleted", _, _} = e} ->
-        Logger.debug("User was explicitly deleted #{ap_id}, #{inspect(e)}")
-        {:error, :not_found}
-
-      {:reject, _reason} = e ->
-        {:error, e}
-
-      {:error, e} ->
-        {:error, e}
-    end
-  end
 
   def maybe_handle_clashing_nickname(data) do
     with nickname when is_binary(nickname) <- data[:nickname],
@@ -345,40 +304,109 @@ condition? Not changing anything."
 
   def enqueue_pin_fetches(_), do: nil
 
-  def make_user_from_ap_id(ap_id, additional \\ []) do
-    user = User.get_cached_by_ap_id(ap_id)
+  def validate_and_cast(data, verified_nick) do
+    with {:ok, data} <- MRF.filter(data),
+         {:valid, {:ok, _, _}} <- {:valid, UserValidator.validate(data, [])} do
+      {:ok, object_to_user_data(data, verified_nick)}
+    else
+      {:valid, reason} ->
+        {:error, {:validate, reason}}
 
-    with {:ok, data} <- fetch_and_prepare_user_from_ap_id(ap_id, additional) do
-      user =
-        if data.ap_id != ap_id do
-          User.get_cached_by_ap_id(data.ap_id)
-        else
-          user
-        end
+      e ->
+        {:error, e}
+    end
+  end
 
-      if user do
-        user
-        |> User.remote_user_changeset(data)
-        |> User.update_and_set_cache()
-        |> tap(fn _ -> enqueue_pin_fetches(data) end)
-      else
+  defp insert_or_update(%User{} = olduser, newdata) do
+    olduser
+    |> User.remote_user_changeset(newdata)
+    |> User.update_and_set_cache()
+  end
+
+  defp insert_or_update(nil, newdata) do
+    newdata
+    |> User.remote_user_changeset()
+    |> Repo.insert()
+    |> User.set_cache()
+  end
+
+  defp make_user_from_apdata_and_nick(ap_data, verified_nick, olduser \\ nil) do
+    with {:ok, data} <- validate_and_cast(ap_data, verified_nick) do
+      olduser = olduser || User.get_cached_by_ap_id(data.ap_id)
+
+      if !olduser || olduser.nickname != data.nickname do
         maybe_handle_clashing_nickname(data)
+      end
 
-        data
-        |> User.remote_user_changeset()
-        |> Repo.insert()
-        |> User.set_cache()
-        |> tap(fn _ -> enqueue_pin_fetches(data) end)
+      data = maybe_update_follow_information(data)
+
+      with {:ok, newuser} <- insert_or_update(olduser, data) do
+        enqueue_pin_fetches(data)
+        {:ok, newuser}
       end
     end
   end
 
-  def make_user_from_nickname(nickname) do
-    with {:ok, %{"ap_id" => ap_id, "subject" => "acct:" <> acct}} when not is_nil(ap_id) <-
-           WebFinger.Finger.finger(nickname) do
-      make_user_from_ap_id(ap_id, nickname_from_acct: acct)
+  defp discover_nick_from_actor_data(data) do
+    case WebFinger.Finger.finger_actor(data) do
+      {:ok, nil} ->
+        Logger.debug("No WebFinger found for #{data["id"]}; using fallback")
+        nil
+
+      {:ok, nick} ->
+        nick
+
+      {:error, error} ->
+        Logger.error(
+          "Invalid WebFinger for #{data["id"]}; spoof attempt or just misconfiguration? Using safe fallback: #{inspect(error)}"
+        )
+
+        nil
+    end
+  end
+
+  def make_user_from_ap_id(ap_id) do
+    with {:ok, data} <- APFetcher.fetch_and_contain_remote_object_from_id(ap_id),
+         verified_nick <- discover_nick_from_actor_data(data) do
+      make_user_from_apdata_and_nick(data, verified_nick)
     else
-      _e -> {:error, "No AP id in WebFinger"}
+      # If this has been deleted, only log a debug and not an error
+      {:error, {"Object has been deleted", _, _} = e} ->
+        Logger.debug("User was explicitly deleted #{ap_id}, #{inspect(e)}")
+        {:error, :not_found}
+
+      {:reject, _reason} = e ->
+        {:error, e}
+
+      {:error, e} ->
+        {:error, e}
+    end
+  end
+
+  def make_user_from_nickname(nickname) do
+    case WebFinger.Finger.finger_mention(nickname) do
+      {:ok, handle, actor_data} ->
+        make_user_from_apdata_and_nick(actor_data, handle)
+
+      error ->
+        error
+    end
+  end
+
+  def update_user_with_apdata(%{"id" => ap_id} = new_ap_data) do
+    with %User{} = old_user <- User.get_cached_by_ap_id(ap_id) do
+      new_nick =
+        if Config.get!([Pleroma.Web.WebFinger, :update_nickname_on_user_fetch]) do
+          discover_nick_from_actor_data(new_ap_data)
+        else
+          old_user.nickname
+        end
+
+      make_user_from_apdata_and_nick(new_ap_data, new_nick, old_user)
+    else
+      nil ->
+        Logger.warning("Cannot update unknown user #{ap_id}")
+        {:error, :not_found}
     end
   end
 end

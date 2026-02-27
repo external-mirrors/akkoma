@@ -11,7 +11,7 @@
 
 - [FEP-67ff: FEDERATION](https://codeberg.org/fediverse/fep/src/branch/main/fep/67ff/fep-67ff.md)
 - [FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md)
-    *(only exposing the property for local actors atm; not yet parsed in received remote data)*
+    *(exposed for local actors and read in newly discovered users; not yet used to detect webfinger handle changes)*
 - [FEP-dc88: Formatting Mathematics](https://codeberg.org/fediverse/fep/src/branch/main/fep/dc88/fep-dc88.md)
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-fffd: Proxy Objects](https://codeberg.org/fediverse/fep/src/branch/main/fep/fffd/fep-fffd.md)

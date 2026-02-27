@@ -13,8 +13,8 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
   end
 
   test "returns error for nonsensical input" do
-    assert {:error, _} = Finger.finger("bliblablu")
-    assert {:error, _} = Finger.finger("pleroma.social")
+    assert {:error, _} = Finger.finger_actor(%{"id" => "bliblablu"})
+    assert {:error, _} = Finger.finger_mention("pleroma.social")
   end
 
   test "returns error when there is no content-type header" do
@@ -28,30 +28,30 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
 
       %{
         url:
-          "https://social.heldscal.la/.well-known/webfinger?resource=acct:invalid_content@social.heldscal.la"
+          "https://social.heldscal.la/.well-known/webfinger?resource=invalid_content@social.heldscal.la"
       } ->
         {:ok, %Tesla.Env{status: 200, body: ""}}
     end)
 
     user = "invalid_content@social.heldscal.la"
-    assert {:error, {:content_type, nil}} = Finger.finger(user)
+    assert {:error, {:content_type, nil}} = Finger.finger_mention(user)
   end
 
   test "returns error when fails parse xml or json" do
     user = "invalid_content@social.heldscal.la"
-    assert {:error, %Jason.DecodeError{}} = Finger.finger(user)
+    assert {:error, %Jason.DecodeError{}} = Finger.finger_mention(user)
   end
 
   test "returns the ActivityPub actor URI for an ActivityPub user" do
     user = "framasoft@framatube.org"
 
-    {:ok, _data} = Finger.finger(user)
+    {:ok, _nick, _data} = Finger.finger_mention(user)
   end
 
   test "it work for AP-only user" do
     user = "kpherox@mstdn.jp"
 
-    {:ok, data} = Finger.finger(user)
+    {:ok, data} = Finger.finger_raw_data(user)
 
     assert data["magic_key"] == nil
     assert data["salmon"] == nil
@@ -83,18 +83,18 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
   test "it works with idna domains as nickname" do
     nickname = "lain@" <> to_string(:idna.encode("zetsubou.みんな"))
 
-    {:ok, _data} = Finger.finger(nickname)
+    {:ok, _data} = Finger.finger_raw_data(nickname)
   end
 
   test "it works with idna domains as link" do
     ap_id = "https://" <> to_string(:idna.encode("zetsubou.みんな")) <> "/users/lain"
-    {:ok, _data} = Finger.finger(ap_id)
+    {:ok, _data} = Finger.finger_raw_data(ap_id)
   end
 
   test "respects json content-type" do
     Tesla.Mock.mock(fn
       %{
-        url: "https://mastodon.social/.well-known/webfinger?resource=acct:emelie@mastodon.social"
+        url: "https://mastodon.social/.well-known/webfinger?resource=emelie@mastodon.social"
       } ->
         {:ok,
          %Tesla.Env{
@@ -111,13 +111,13 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
          }}
     end)
 
-    {:ok, _data} = Finger.finger("emelie@mastodon.social")
+    {:ok, _data} = Finger.finger_raw_data("emelie@mastodon.social")
   end
 
   test "respects xml content-type" do
     Tesla.Mock.mock(fn
       %{
-        url: "https://pawoo.net/.well-known/webfinger?resource=acct:pekorino@pawoo.net"
+        url: "https://pawoo.net/.well-known/webfinger?resource=pekorino@pawoo.net"
       } ->
         {:ok,
          %Tesla.Env{
@@ -134,13 +134,13 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
          }}
     end)
 
-    {:ok, _data} = Finger.finger("pekorino@pawoo.net")
+    {:ok, _data} = Finger.finger_raw_data("pekorino@pawoo.net")
   end
 
   test "prevents spoofing" do
     Tesla.Mock.mock(fn
       %{
-        url: "https://bad.com/.well-known/webfinger?resource=acct:meanie@bad.com"
+        url: "https://bad.com/.well-known/webfinger?resource=meanie@bad.com"
       } ->
         {:ok,
          %Tesla.Env{
@@ -157,12 +157,12 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
          }}
     end)
 
-    {:error, _data} = Finger.finger("meanie@bad.com")
+    {:error, _data} = Finger.finger_mention("meanie@bad.com")
   end
 
   test "prevents forgeries" do
     Tesla.Mock.mock(fn
-      %{url: "https://bad.com/.well-known/webfinger?resource=acct:meanie@bad.com"} ->
+      %{url: "https://bad.com/.well-known/webfinger?resource=meanie@bad.com"} ->
         fake_webfinger =
           File.read!("test/fixtures/webfinger/imposter-webfinger.json") |> Jason.decode!()
 
@@ -172,6 +172,6 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok, %Tesla.Env{status: 404}}
     end)
 
-    assert {:error, {:webfinger_invalid, _, _}} = Finger.finger("meanie@bad.com")
+    assert {:error, :finger_domain_spoof} = Finger.finger_mention("meanie@bad.com")
   end
 end
