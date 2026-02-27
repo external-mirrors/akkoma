@@ -31,6 +31,7 @@ defmodule Pleroma.User do
   alias Pleroma.Registration
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.User.Fetcher
   alias Pleroma.UserRelationship
   alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.Builder
@@ -1261,7 +1262,7 @@ defmodule Pleroma.User do
     get_by_nickname(nickname_or_email) || get_by_email(nickname_or_email)
   end
 
-  def fetch_by_nickname(nickname), do: ActivityPub.make_user_from_nickname(nickname)
+  def fetch_by_nickname(nickname), do: Fetcher.make_user_from_nickname(nickname)
 
   def get_or_fetch_by_nickname(nickname) do
     with %User{} = user <- get_by_nickname(nickname) do
@@ -1410,7 +1411,7 @@ defmodule Pleroma.User do
   end
 
   def fetch_follow_information(user) do
-    with {:ok, info} <- ActivityPub.fetch_follow_information_for_user(user) do
+    with {:ok, info} <- Fetcher.fetch_follow_information_for_user(user) do
       user
       |> follow_information_changeset(info)
       |> update_and_set_cache()
@@ -1985,7 +1986,7 @@ defmodule Pleroma.User do
 
   def html_filter_policy(_), do: Config.get([:markup, :scrub_policy])
 
-  def fetch_by_ap_id(ap_id), do: ActivityPub.make_user_from_ap_id(ap_id)
+  def fetch_by_ap_id(ap_id), do: Fetcher.make_user_from_ap_id(ap_id)
 
   def get_or_fetch_by_ap_id(ap_id, options \\ []) do
     cached_user = get_cached_by_ap_id(ap_id)
