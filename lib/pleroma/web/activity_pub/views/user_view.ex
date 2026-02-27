@@ -303,7 +303,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
 
   defp maybe_put_webfinger(%{"preferredUsername" => username} = data, %{local: true}) do
     # FEP-2c59 entry for local users
-    webfinger_domain = WebFinger.domain()
+    webfinger_domain = WebFinger.Schema.domain()
     Map.put(data, "webfinger", "#{username}@#{webfinger_domain}")
   end
 

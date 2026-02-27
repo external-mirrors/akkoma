@@ -1692,7 +1692,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     generated = "#{username}@#{URI.parse(data["id"]).host}"
 
     if Config.get([WebFinger, :update_nickname_on_user_fetch]) do
-      case WebFinger.finger(generated) do
+      case WebFinger.Finger.finger(generated) do
         {:ok, %{"subject" => "acct:" <> acct}} -> acct
         _ -> generated
       end
@@ -1901,7 +1901,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   def make_user_from_nickname(nickname) do
     with {:ok, %{"ap_id" => ap_id, "subject" => "acct:" <> acct}} when not is_nil(ap_id) <-
-           WebFinger.finger(nickname) do
+           WebFinger.Finger.finger(nickname) do
       make_user_from_ap_id(ap_id, nickname_from_acct: acct)
     else
       _e -> {:error, "No AP id in WebFinger"}
