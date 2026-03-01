@@ -1258,11 +1258,6 @@ defmodule Pleroma.Web.CommonAPITest do
       assert CommonAPI.get_user(user.ap_id) == user
     end
 
-    test "gets user by guessed nickname" do
-      user = insert(:user, ap_id: "", nickname: "mario@mushroom.kingdom")
-      assert CommonAPI.get_user("https://mushroom.kingdom/users/mario") == user
-    end
-
     test "fallback" do
       assert %User{
                name: "",

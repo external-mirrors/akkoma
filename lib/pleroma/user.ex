@@ -1104,16 +1104,6 @@ defmodule Pleroma.User do
     |> Repo.all()
   end
 
-  # This is mostly an SPC migration fix. This guesses the user nickname by taking the last part
-  # of the ap_id and the domain and tries to get that user
-  def get_by_guessed_nickname(ap_id) do
-    domain = URI.parse(ap_id).host
-    name = List.last(String.split(ap_id, "/"))
-    nickname = "#{name}@#{domain}"
-
-    get_cached_by_nickname(nickname)
-  end
-
   @spec set_cache(
           {:error, any}
           | {:ok, User.t()}

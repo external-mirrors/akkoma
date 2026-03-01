@@ -217,24 +217,6 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     assert ms_user.acct == "erroruser@example.com"
   end
 
-  test "tries to get a user by nickname if fetching by ap_id doesn't work" do
-    user = insert(:user)
-
-    {:ok, activity} = CommonAPI.post(user, %{status: "Hey @shp!", visibility: "direct"})
-
-    {:ok, user} =
-      user
-      |> Ecto.Changeset.change(%{ap_id: "#{user.ap_id}/extension/#{user.nickname}"})
-      |> Repo.update()
-
-    User.invalidate_cache(user)
-
-    result = StatusView.render("show.json", activity: activity)
-
-    assert result[:account][:id] == to_string(user.id)
-    assert_schema(result, "Status", Pleroma.Web.ApiSpec.spec())
-  end
-
   test "a note with null content" do
     note = insert(:note_activity)
     note_object = Object.normalize(note, fetch: false)

@@ -593,9 +593,6 @@ defmodule Pleroma.Web.CommonAPI do
       user = User.get_cached_by_ap_id(ap_id) ->
         user
 
-      user = User.get_by_guessed_nickname(ap_id) ->
-        user
-
       fake_record_fallback ->
         # TODO: refactor (fake records is never a good idea)
         User.error_user(ap_id)
