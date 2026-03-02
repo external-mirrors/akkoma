@@ -5,8 +5,9 @@
 defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
   use Pleroma.Web.ConnCase
 
-  import ExUnit.CaptureLog
   import Pleroma.Factory
+
+  alias Pleroma.ConfigDB
 
   setup do
     admin = insert(:user, is_admin: true)
@@ -20,8 +21,12 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
     {:ok, %{admin: admin, token: token, conn: conn}}
   end
 
-  describe "POST /api/pleroma/admin/config" do
+  describe "POST /api/v1/pleroma/admin/config" do
+    setup do: clear_config(:configurable_from_database, true)
+
     test "doesn't allow updating the database_config_whitelist itself", %{conn: conn} do
+      clear_config(:database_config_whitelist, [{:pleroma}])
+
       original_whitelist = Pleroma.Config.get(:database_config_whitelist)
 
       refute ConfigDB.get_by_group_and_key(:pleroma, :database_config_whitelist)
@@ -29,7 +34,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
       conn =
         conn
         |> put_req_header("content-type", "application/json")
-        |> post("/api/pleroma/admin/config", %{
+        |> post("/api/v1/pleroma/admin/config", %{
           configs: [
             %{
               group: ":pleroma",
@@ -47,9 +52,9 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
     end
   end
 
-  describe "GET /api/pleroma/admin/config/descriptions" do
+  describe "GET /api/v1/pleroma/admin/config/descriptions" do
     test "all keys from description are whitelisted", %{conn: conn} do
-      conn = get(conn, "/api/pleroma/admin/config/descriptions")
+      conn = get(conn, "/api/v1/pleroma/admin/config/descriptions")
 
       assert response = json_response_and_validate_schema(conn, 200)
 
