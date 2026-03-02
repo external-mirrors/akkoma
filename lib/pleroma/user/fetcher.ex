@@ -365,7 +365,7 @@ condition? Not changing anything."
   defp needs_nick_update(%{"webfinger" => nick}, nick), do: false
 
   defp needs_nick_update(%{"preferredUsername" => name}, oldnick) when is_binary(name) do
-    String.starts_with(oldnick, name <> "@")
+    String.starts_with?(oldnick, name <> "@")
   end
 
   defp needs_nick_update(ap_data, oldnick) do
@@ -382,10 +382,12 @@ condition? Not changing anything."
     end
   end
 
-  def make_user_from_ap_id(ap_id) do
+  defp refresh_or_fetch_from_ap_id(ap_id, olduser) do
     with {:ok, data} <- APFetcher.fetch_and_contain_remote_object_from_id(ap_id),
-         verified_nick <- discover_nick_from_actor_data(data) do
-      make_user_from_apdata_and_nick(data, verified_nick)
+         # if AP id somehow changed on refetch, discard old info
+         verified_olduser <- (olduser && olduser.ap_id == data["id"] && olduser) || nil,
+         verified_nick <- refreshed_nick(data, verified_olduser) do
+      make_user_from_apdata_and_nick(data, verified_nick, verified_olduser)
     else
       # If this has been deleted, only log a debug and not an error
       {:error, {"Object has been deleted", _, _} = e} ->
@@ -399,6 +401,10 @@ condition? Not changing anything."
         {:error, e}
     end
   end
+
+  def make_user_from_ap_id(ap_id), do: refresh_or_fetch_from_ap_id(ap_id, nil)
+
+  def refetch_user(%User{ap_id: ap_id} = u), do: refresh_or_fetch_from_ap_id(ap_id, u)
 
   def make_user_from_nickname(nickname) do
     case WebFinger.Finger.finger_mention(nickname) do

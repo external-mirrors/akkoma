@@ -1978,10 +1978,14 @@ defmodule Pleroma.User do
 
   def fetch_by_ap_id(ap_id), do: Fetcher.make_user_from_ap_id(ap_id)
 
+  defp refetch_or_fetch_by_ap_id(%User{} = user, _), do: Fetcher.refetch_user(user)
+  defp refetch_or_fetch_by_ap_id(_, ap_id), do: Fetcher.make_user_from_ap_id(ap_id)
+
   def get_or_fetch_by_ap_id(ap_id, options \\ []) do
     cached_user = get_cached_by_ap_id(ap_id)
 
-    maybe_fetched_user = needs_update?(cached_user, options) && fetch_by_ap_id(ap_id)
+    maybe_fetched_user =
+      needs_update?(cached_user, options) && refetch_or_fetch_by_ap_id(cached_user, ap_id)
 
     case {cached_user, maybe_fetched_user} do
       {_, {:ok, %User{} = user}} ->
