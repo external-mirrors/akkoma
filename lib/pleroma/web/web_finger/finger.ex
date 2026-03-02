@@ -39,6 +39,8 @@ defmodule Pleroma.Web.WebFinger.Finger do
       }
 
       {:ok, data}
+    else
+      _ -> {:error, :invalid_xml}
     end
   end
 
