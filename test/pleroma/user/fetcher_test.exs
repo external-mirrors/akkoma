@@ -421,18 +421,6 @@ defmodule Pleroma.User.FetcherTest do
              end) =~ "Follower/Following counter update for #{user.ap_id} failed"
     end
 
-    test "just returns the input if the user type is Application", %{
-      user: user
-    } do
-      user =
-        user
-        |> Map.put(:type, "Application")
-
-      refute capture_log(fn ->
-               assert ^user = Fetcher.maybe_update_follow_information(user)
-             end) =~ "Follower/Following counter update for #{user.ap_id} failed"
-    end
-
     test "it just returns the input if the user has no following/follower addresses", %{
       user: user
     } do

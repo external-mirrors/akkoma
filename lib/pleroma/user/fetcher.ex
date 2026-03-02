@@ -190,7 +190,6 @@ defmodule Pleroma.User.Fetcher do
 
   def maybe_update_follow_information(user_data) do
     with {:enabled, true} <- {:enabled, Config.get([:instance, :external_user_synchronization])},
-         {_, true} <- {:user_type_check, user_data[:type] in ["Person", "Service"]},
          {_, true} <-
            {:collections_available,
             !!(user_data[:following_address] && user_data[:follower_address])},
