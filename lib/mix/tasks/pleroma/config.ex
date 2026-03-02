@@ -260,7 +260,7 @@ defmodule Mix.Tasks.Pleroma.Config do
     whitelisted_configs = Pleroma.Config.get(:database_config_whitelist)
 
     if whitelisted_configs in [nil, false] do
-      shell_error("No unwanted settings in ConfigDB. No changes made.")
+      shell_info("No unwanted settings in ConfigDB. No changes made.")
     else
       whitelisted_groups =
         whitelisted_configs
@@ -294,7 +294,7 @@ defmodule Mix.Tasks.Pleroma.Config do
           shell_error("No changes made.")
         end
       else
-        shell_error("No unwanted settings in ConfigDB. No changes made.")
+        shell_info("No unwanted settings in ConfigDB. No changes made.")
       end
     end
   end
