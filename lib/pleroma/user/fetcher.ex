@@ -361,6 +361,27 @@ condition? Not changing anything."
     end
   end
 
+  defp needs_nick_update(%{"webfinger" => "acct:" <> nick}, nick), do: false
+  defp needs_nick_update(%{"webfinger" => nick}, nick), do: false
+
+  defp needs_nick_update(%{"preferredUsername" => name}, oldnick) when is_binary(name) do
+    String.starts_with(oldnick, name <> "@")
+  end
+
+  defp needs_nick_update(ap_data, oldnick) do
+    ap_nick = ap_data["webfinger"] || ap_data["preferredUsername"]
+    (!oldnick && ap_nick) || (oldnick && !ap_nick)
+  end
+
+  defp refreshed_nick(ap_data, olduser) do
+    if Config.get!([Pleroma.Web.WebFinger, :update_nickname_on_user_fetch]) ||
+         !olduser || needs_nick_update(ap_data, olduser.nickname) do
+      discover_nick_from_actor_data(ap_data)
+    else
+      olduser.nickname
+    end
+  end
+
   def make_user_from_ap_id(ap_id) do
     with {:ok, data} <- APFetcher.fetch_and_contain_remote_object_from_id(ap_id),
          verified_nick <- discover_nick_from_actor_data(data) do
@@ -391,13 +412,7 @@ condition? Not changing anything."
 
   def update_user_with_apdata(%{"id" => ap_id} = new_ap_data) do
     with %User{} = old_user <- User.get_cached_by_ap_id(ap_id) do
-      new_nick =
-        if Config.get!([Pleroma.Web.WebFinger, :update_nickname_on_user_fetch]) do
-          discover_nick_from_actor_data(new_ap_data)
-        else
-          old_user.nickname
-        end
-
+      new_nick = refreshed_nick(new_ap_data, old_user)
       make_user_from_apdata_and_nick(new_ap_data, new_nick, old_user)
     else
       nil ->
