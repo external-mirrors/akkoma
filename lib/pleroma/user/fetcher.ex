@@ -194,12 +194,9 @@ defmodule Pleroma.User.Fetcher do
          {_, true} <-
            {:collections_available,
             !!(user_data[:following_address] && user_data[:follower_address])},
-         {:ok, info} <-
+         {:ok, follow_info} <-
            fetch_follow_information_for_user(user_data) do
-      info = Map.merge(user_data[:info] || %{}, info)
-
-      user_data
-      |> Map.put(:info, info)
+      Map.merge(user_data, follow_info)
     else
       {:user_type_check, false} ->
         user_data
