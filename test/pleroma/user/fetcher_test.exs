@@ -409,16 +409,30 @@ defmodule Pleroma.User.FetcherTest do
         ap_id: "https://gensokyo.2hu/users/raymoo",
         following_address: "https://gensokyo.2hu/users/following",
         follower_address: "https://gensokyo.2hu/users/followers",
-        type: "Person"
+        type: "Person",
+        hide_follows: false,
+        hide_follows_count: false,
+        following_count: 15,
+        hide_followers: false,
+        hide_followers_count: false,
+        follower_count: 7
       }
 
       %{user: user}
     end
 
-    test "logs an error when it can't fetch the info", %{user: user} do
+    test "assumes private counters when it can't fetch the info", %{user: user} do
+      refute user.hide_follows
+      refute user.hide_followers
+
       assert capture_log(fn ->
-               Fetcher.maybe_update_follow_information(user)
-             end) =~ "Follower/Following counter update for #{user.ap_id} failed"
+               user = Fetcher.maybe_update_follow_information(user)
+               assert user.hide_follows
+               assert user.following_count == 0
+               assert user.hide_followers
+               assert user.follower_count == 0
+             end) =~
+               "Failed to fetch follower/ing collection #{user.follower_address}; assuming private"
     end
 
     test "it just returns the input if the user has no following/follower addresses", %{

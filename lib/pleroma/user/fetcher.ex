@@ -165,24 +165,30 @@ defmodule Pleroma.User.Fetcher do
     }
   end
 
-  def fetch_follow_information_for_user(user) do
-    with {:ok, following_data} <-
-           APFetcher.fetch_and_contain_remote_object_from_id(user.following_address),
-         {:ok, hide_follows} <- collection_private(following_data),
-         {:ok, followers_data} <-
-           APFetcher.fetch_and_contain_remote_object_from_id(user.follower_address),
-         {:ok, hide_followers} <- collection_private(followers_data) do
-      {:ok,
-       %{
-         hide_follows: hide_follows,
-         follower_count: normalize_counter(followers_data["totalItems"]),
-         following_count: normalize_counter(following_data["totalItems"]),
-         hide_followers: hide_followers
-       }}
-    else
-      {:error, _} = e -> e
-      e -> {:error, e}
+  defp eval_collection_counter(apid) when is_binary(apid) do
+    case APFetcher.fetch_and_contain_remote_object_from_id(apid) do
+      {:ok, data} ->
+        {collection_private(data), normalize_counter(data["totalItems"])}
+
+      _ ->
+        Logger.debug("Failed to fetch follower/ing collection #{apid}; assuming private")
+        {true, 0}
     end
+  end
+
+  defp eval_collection_counter(_), do: {true, 0}
+
+  def fetch_follow_information_for_user(user) do
+    {hide_follows, following_count} = eval_collection_counter(user.following_address)
+    {hide_followers, follower_count} = eval_collection_counter(user.follower_address)
+
+    {:ok,
+     %{
+       hide_follows: hide_follows,
+       following_count: following_count,
+       hide_followers: hide_followers,
+       follower_count: follower_count
+     }}
   end
 
   defp normalize_counter(counter) when is_integer(counter), do: counter
@@ -217,18 +223,18 @@ defmodule Pleroma.User.Fetcher do
 
   defp collection_private(%{"first" => %{"type" => type}})
        when type in ["CollectionPage", "OrderedCollectionPage"],
-       do: {:ok, false}
+       do: false
 
   defp collection_private(%{"first" => first}) do
     with {:ok, %{"type" => type}} when type in ["CollectionPage", "OrderedCollectionPage"] <-
            APFetcher.fetch_and_contain_remote_object_from_id(first) do
-      {:ok, false}
+      false
     else
-      {:error, _} -> {:ok, true}
+      _ -> true
     end
   end
 
-  defp collection_private(_data), do: {:ok, true}
+  defp collection_private(_data), do: true
 
   def maybe_handle_clashing_nickname(data) do
     with nickname when is_binary(nickname) <- data[:nickname],

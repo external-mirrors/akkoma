@@ -48,6 +48,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - improved performance of `GET api/v1/custom_emoji`
 - outgoing HTTP requests now accept compressed responses
 - the system CA certificate store is now used by default
+- when refreshing remote follow* stats all fetch-related erros are now treated as stats being private;
+    this avoids spurious error logs and better matches the intent of implementations serving fallback HTML responses on the AP collection endpoints
 
 
 ## 2025.12
