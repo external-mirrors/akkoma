@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - non-UTF-8 usernames no longer lead to internal server errors in API endpoints
 - when SimplePolicy rules are configured but the MRF not enabled, it’s rules no longer interfere with fetching
 - fixed remote follow counter refresh on user (re)fetch
+- remote users whose follow* counts are private are now actually shown as such in API instead of represeneting them with public zero counters
 
 ### Changed
 - `PATCH /api/v1/pleroma/conversations/:id` now accepts updat parameters via JSON body too

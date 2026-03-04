@@ -423,13 +423,17 @@ defmodule Pleroma.User.FetcherTest do
 
     test "assumes private counters when it can't fetch the info", %{user: user} do
       refute user.hide_follows
+      refute user.hide_follows_count
       refute user.hide_followers
+      refute user.hide_followers_count
 
       assert capture_log(fn ->
                user = Fetcher.maybe_update_follow_information(user)
                assert user.hide_follows
+               assert user.hide_follows_count
                assert user.following_count == 0
                assert user.hide_followers
+               assert user.hide_followers_count
                assert user.follower_count == 0
              end) =~
                "Failed to fetch follower/ing collection #{user.follower_address}; assuming private"

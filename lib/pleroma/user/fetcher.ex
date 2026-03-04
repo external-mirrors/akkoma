@@ -180,31 +180,39 @@ defmodule Pleroma.User.Fetcher do
 
   defp collection_private(_data), do: true
 
+  defp counter_private(%{"totalItems" => _}), do: false
+  defp counter_private(_), do: true
+
   defp normalize_counter(counter) when is_integer(counter), do: counter
   defp normalize_counter(_), do: 0
 
   defp eval_collection_counter(apid) when is_binary(apid) do
     case APFetcher.fetch_and_contain_remote_object_from_id(apid) do
       {:ok, data} ->
-        {collection_private(data), normalize_counter(data["totalItems"])}
+        {collection_private(data), counter_private(data), normalize_counter(data["totalItems"])}
 
       _ ->
         Logger.debug("Failed to fetch follower/ing collection #{apid}; assuming private")
-        {true, 0}
+        {true, true, 0}
     end
   end
 
   defp eval_collection_counter(_), do: {true, 0}
 
   def fetch_follow_information_for_user(user) do
-    {hide_follows, following_count} = eval_collection_counter(user.following_address)
-    {hide_followers, follower_count} = eval_collection_counter(user.follower_address)
+    {hide_follows, hide_follows_count, following_count} =
+      eval_collection_counter(user.following_address)
+
+    {hide_followers, hide_followers_count, follower_count} =
+      eval_collection_counter(user.follower_address)
 
     {:ok,
      %{
        hide_follows: hide_follows,
+       hide_follows_count: hide_follows_count,
        following_count: following_count,
        hide_followers: hide_followers,
+       hide_followers_count: hide_followers_count,
        follower_count: follower_count
      }}
   end
