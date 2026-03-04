@@ -164,14 +164,17 @@ defmodule Pleroma.Web.WebFinger.Finger do
     end
   end
 
+  defp normalise_webfinger_handle("acct:@" <> handle), do: handle
   defp normalise_webfinger_handle("acct:" <> handle), do: handle
+  defp normalise_webfinger_handle("@" <> handle), do: handle
   defp normalise_webfinger_handle(handle) when is_binary(handle), do: handle
 
   defp parse_handle(handle) do
-    case String.split(handle, "@", parts: 2) do
+    case String.split(handle, "@", parts: 3) do
+      ["", name, domain] -> {name, domain}
       [name, domain] -> {name, domain}
       [name] -> {name, nil}
-      [] -> {nil, nil}
+      _ -> {nil, nil}
     end
   end
 
@@ -318,11 +321,8 @@ defmodule Pleroma.Web.WebFinger.Finger do
       if Regex.match?(~r/^https?:\/\//, resource) do
         URI.parse(resource).host
       else
-        case String.split(resource, "@", parts: 3) do
-          [_, domain] -> domain
-          ["", _, domain] -> domain
-          _ -> {:error, :invalid_resource}
-        end
+        {_, domain} = parse_handle(resource)
+        domain
       end
 
     with {_, domain} when is_binary(domain) <- {:domain, domain},
