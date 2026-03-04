@@ -165,6 +165,24 @@ defmodule Pleroma.User.Fetcher do
     }
   end
 
+  defp collection_private(%{"first" => %{"type" => type}})
+       when type in ["CollectionPage", "OrderedCollectionPage"],
+       do: false
+
+  defp collection_private(%{"first" => first}) do
+    with {:ok, %{"type" => type}} when type in ["CollectionPage", "OrderedCollectionPage"] <-
+           APFetcher.fetch_and_contain_remote_object_from_id(first) do
+      false
+    else
+      _ -> true
+    end
+  end
+
+  defp collection_private(_data), do: true
+
+  defp normalize_counter(counter) when is_integer(counter), do: counter
+  defp normalize_counter(_), do: 0
+
   defp eval_collection_counter(apid) when is_binary(apid) do
     case APFetcher.fetch_and_contain_remote_object_from_id(apid) do
       {:ok, data} ->
@@ -190,9 +208,6 @@ defmodule Pleroma.User.Fetcher do
        follower_count: follower_count
      }}
   end
-
-  defp normalize_counter(counter) when is_integer(counter), do: counter
-  defp normalize_counter(_), do: 0
 
   def maybe_update_follow_information(user_data) do
     with {:enabled, true} <- {:enabled, Config.get([:instance, :external_user_synchronization])},
@@ -220,21 +235,6 @@ defmodule Pleroma.User.Fetcher do
         user_data
     end
   end
-
-  defp collection_private(%{"first" => %{"type" => type}})
-       when type in ["CollectionPage", "OrderedCollectionPage"],
-       do: false
-
-  defp collection_private(%{"first" => first}) do
-    with {:ok, %{"type" => type}} when type in ["CollectionPage", "OrderedCollectionPage"] <-
-           APFetcher.fetch_and_contain_remote_object_from_id(first) do
-      false
-    else
-      _ -> true
-    end
-  end
-
-  defp collection_private(_data), do: true
 
   def maybe_handle_clashing_nickname(data) do
     with nickname when is_binary(nickname) <- data[:nickname],
