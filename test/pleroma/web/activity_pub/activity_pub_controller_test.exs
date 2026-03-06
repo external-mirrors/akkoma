@@ -1603,7 +1603,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       assert result["first"]["orderedItems"] == [user.ap_id]
     end
 
-    test "it returns a uri if the user has 'hide_followers' set", %{conn: conn} do
+    test "it does not return a page uri if the user has 'hide_followers' set", %{conn: conn} do
       user = insert(:user)
       user_two = insert(:user, hide_followers: true)
       {:ok, user, user_two} = User.follow(user, user_two)
@@ -1614,7 +1614,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
         |> get("/users/#{user_two.nickname}/followers")
         |> json_response(200)
 
-      assert is_binary(result["first"])
+      refute Map.has_key?(result, "first")
+      refute Map.has_key?(result, "orderedItems")
+      refute Map.has_key?(result, "items")
     end
 
     test "it returns a 403 error on pages, if the user has 'hide_followers' set and the request is from another user",
@@ -1702,7 +1704,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       assert result["first"]["orderedItems"] == [user_two.ap_id]
     end
 
-    test "it returns a uri if the user has 'hide_follows' set", %{conn: conn} do
+    test "it does not return a page uri if the user has 'hide_follows' set", %{conn: conn} do
       user = insert(:user)
       user_two = insert(:user, hide_follows: true)
       User.follow(user, user_two)
@@ -1713,7 +1715,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
         |> get("/users/#{user_two.nickname}/following")
         |> json_response(200)
 
-      assert is_binary(result["first"])
+      refute Map.has_key?(result, "first")
+      refute Map.has_key?(result, "orderedItems")
+      refute Map.has_key?(result, "items")
     end
 
     test "it returns a 403 error on pages, if the user has 'hide_follows' set and the request is from another user",

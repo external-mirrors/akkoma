@@ -174,15 +174,10 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     showing_items = (opts[:for] && opts[:for] == user) || !user.hide_follows
     showing_count = showing_items || !user.hide_follows_count
 
-    total =
-      if showing_count do
-        user.following_count
-      else
-        0
-      end
+    total = showing_count && user.following_count
 
     following =
-      if showing_items and total > 0 do
+      if showing_items && total > 0 do
         User.get_friends_query(user)
         |> Ecto.Query.select([u], u.ap_id)
         |> Repo.all()
@@ -190,22 +185,20 @@ defmodule Pleroma.Web.ActivityPub.UserView do
         []
       end
 
-    %{
-      "id" => "#{user.ap_id}/following",
-      "type" => "OrderedCollection",
-      "totalItems" => total,
-      "first" =>
-        if showing_items do
-          CollectionViewHelper.collection_page_offset(
-            following,
-            "#{user.ap_id}/following",
-            1,
-            !user.hide_follows
-          )
-        else
-          "#{user.ap_id}/following?page=1"
-        end
-    }
+    first_page =
+      showing_items &&
+        CollectionViewHelper.collection_page_offset(
+          following,
+          "#{user.ap_id}/following",
+          1,
+          !user.hide_follows
+        )
+
+    CollectionViewHelper.collection_root_ordered(
+      "#{user.ap_id}/following",
+      total,
+      first_page
+    )
     |> Map.merge(Utils.make_json_ld_header())
   end
 
@@ -243,12 +236,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     showing_items = (opts[:for] && opts[:for] == user) || !user.hide_followers
     showing_count = showing_items || !user.hide_followers_count
 
-    total =
-      if showing_count do
-        user.follower_count
-      else
-        0
-      end
+    total = showing_count && user.follower_count
 
     followers =
       if showing_items and total > 0 do
@@ -259,32 +247,30 @@ defmodule Pleroma.Web.ActivityPub.UserView do
         []
       end
 
-    %{
-      "id" => "#{user.ap_id}/followers",
-      "type" => "OrderedCollection",
-      "first" =>
-        if showing_items do
-          CollectionViewHelper.collection_page_offset(
-            followers,
-            "#{user.ap_id}/followers",
-            1,
-            showing_items,
-            total
-          )
-        else
-          "#{user.ap_id}/followers?page=1"
-        end
-    }
-    |> maybe_put_total_items(showing_count, total)
+    first_page =
+      showing_items &&
+        CollectionViewHelper.collection_page_offset(
+          followers,
+          "#{user.ap_id}/followers",
+          1,
+          showing_items,
+          total
+        )
+
+    CollectionViewHelper.collection_root_ordered(
+      "#{user.ap_id}/followers",
+      total,
+      first_page
+    )
     |> Map.merge(Utils.make_json_ld_header())
   end
 
   def render("activity_collection.json", %{iri: iri}) do
-    %{
-      "id" => iri,
-      "type" => "OrderedCollection",
-      "first" => "#{iri}?page=true"
-    }
+    CollectionViewHelper.collection_root_ordered(
+      iri,
+      false,
+      "#{iri}?page=true"
+    )
     |> Map.merge(Utils.make_json_ld_header())
   end
 
@@ -327,12 +313,6 @@ defmodule Pleroma.Web.ActivityPub.UserView do
   end
 
   defp maybe_put_webfinger(data, _), do: data
-
-  defp maybe_put_total_items(map, false, _total), do: map
-
-  defp maybe_put_total_items(map, true, total) do
-    Map.put(map, "totalItems", total)
-  end
 
   defp maybe_make_image(func, key, user) do
     image = func.(user, no_default: true)
