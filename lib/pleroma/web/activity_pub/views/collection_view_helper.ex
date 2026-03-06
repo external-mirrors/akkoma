@@ -9,7 +9,6 @@ defmodule Pleroma.Web.ActivityPub.CollectionViewHelper do
   def collection_page_offset(collection, iri, page, show_items \\ true, total \\ nil) do
     offset = (page - 1) * 10
     items = Enum.slice(collection, offset, 10)
-    items = Enum.map(items, fn user -> user.ap_id end)
     total = total || length(collection)
 
     map = %{

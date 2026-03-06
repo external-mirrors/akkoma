@@ -1592,7 +1592,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
     test "it returns the followers in a collection", %{conn: conn} do
       user = insert(:user)
       user_two = insert(:user)
-      User.follow(user, user_two)
+      {:ok, user, user_two} = User.follow(user, user_two)
 
       result =
         conn
@@ -1606,7 +1606,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
     test "it returns a uri if the user has 'hide_followers' set", %{conn: conn} do
       user = insert(:user)
       user_two = insert(:user, hide_followers: true)
-      User.follow(user, user_two)
+      {:ok, user, user_two} = User.follow(user, user_two)
 
       result =
         conn
@@ -1655,6 +1655,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
         User.follow(other_user, user)
       end)
 
+      # refresh follow* count
+      user = User.get_cached_by_id(user.id)
+
       result =
         conn
         |> assign(:user, user)
@@ -1688,7 +1691,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
     test "it returns the following in a collection", %{conn: conn} do
       user = insert(:user)
       user_two = insert(:user)
-      User.follow(user, user_two)
+      {:ok, user, user_two} = User.follow(user, user_two)
 
       result =
         conn
@@ -1751,6 +1754,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
         other_user = insert(:user)
         User.follow(user, other_user)
       end)
+
+      # refresh follow* count
+      user = User.get_cached_by_id(user.id)
 
       result =
         conn

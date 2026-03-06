@@ -14,9 +14,8 @@ defmodule Pleroma.Web.ActivityPub.UserView do
   alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.WebFinger
 
+  require Ecto.Query
   require Pleroma.Web.ActivityPub.Transmogrifier
-
-  import Ecto.Query
 
   defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, k, v), do: Map.put(map, k, v)
@@ -145,15 +144,20 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     showing_items = (opts[:for] && opts[:for] == user) || !user.hide_follows
     showing_count = showing_items || !user.hide_follows_count
 
-    query = User.get_friends_query(user)
-    query = from(user in query, select: [:ap_id])
-    following = Repo.all(query)
-
     total =
       if showing_count do
-        length(following)
+        user.following_count
       else
         0
+      end
+
+    following =
+      if showing_items and total > 0 do
+        User.get_friends_query(user)
+        |> Ecto.Query.select([u], u.ap_id)
+        |> Repo.all()
+      else
+        []
       end
 
     CollectionViewHelper.collection_page_offset(
@@ -170,15 +174,20 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     showing_items = (opts[:for] && opts[:for] == user) || !user.hide_follows
     showing_count = showing_items || !user.hide_follows_count
 
-    query = User.get_friends_query(user)
-    query = from(user in query, select: [:ap_id])
-    following = Repo.all(query)
-
     total =
       if showing_count do
-        length(following)
+        user.following_count
       else
         0
+      end
+
+    following =
+      if showing_items and total > 0 do
+        User.get_friends_query(user)
+        |> Ecto.Query.select([u], u.ap_id)
+        |> Repo.all()
+      else
+        []
       end
 
     %{
@@ -204,15 +213,20 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     showing_items = (opts[:for] && opts[:for] == user) || !user.hide_followers
     showing_count = showing_items || !user.hide_followers_count
 
-    query = User.get_followers_query(user)
-    query = from(user in query, select: [:ap_id])
-    followers = Repo.all(query)
-
     total =
       if showing_count do
-        length(followers)
+        user.follower_count
       else
         0
+      end
+
+    followers =
+      if showing_items and total > 0 do
+        User.get_followers_query(user)
+        |> Ecto.Query.select([u], u.ap_id)
+        |> Repo.all()
+      else
+        []
       end
 
     CollectionViewHelper.collection_page_offset(
@@ -229,15 +243,20 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     showing_items = (opts[:for] && opts[:for] == user) || !user.hide_followers
     showing_count = showing_items || !user.hide_followers_count
 
-    query = User.get_followers_query(user)
-    query = from(user in query, select: [:ap_id])
-    followers = Repo.all(query)
-
     total =
       if showing_count do
-        length(followers)
+        user.follower_count
       else
         0
+      end
+
+    followers =
+      if showing_items and total > 0 do
+        User.get_followers_query(user)
+        |> Ecto.Query.select([u], u.ap_id)
+        |> Repo.all()
+      else
+        []
       end
 
     %{
