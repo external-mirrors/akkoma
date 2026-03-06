@@ -571,7 +571,6 @@ config :pleroma, :database_config_whitelist, [
   {:cors_plug},
   {:ex_aws, :s3},
   {:mime},
-  {:prometheus, Pleroma.Web.Endpoint.MetricsExporter},
   {:web_push_encryption, :vapid_details},
   {:logger}
 ]
