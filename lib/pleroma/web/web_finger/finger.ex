@@ -181,7 +181,7 @@ defmodule Pleroma.Web.WebFinger.Finger do
   @doc """
   Discovers and verifies the WebFinger handle of an ActivityPub actor for use as a nickname.
   If the actor or instance does not use WebFinger or just temporarily unavailable no value
-  is returned and it is up to callers to decide ona na apropiate fallback or stop processing.
+  is returned and it is up to callers to decide on an appropriate fallback or stop processing.
 
   Returns {:ok, handle} if discovered and successfully verified,
   {:ok, nil} if no WebFinger can be discovered but was also not required and
@@ -229,7 +229,7 @@ defmodule Pleroma.Web.WebFinger.Finger do
          # such that the actual WebFinger response is _never_ served directly from the domain used in handles.
          # Unlike in domain authority checks for AP IDs, here only fixed /.well-known URLs are queried,
          # thus a redirect on this endpoint can be considered an approval from the redirecting domain
-         # (but not the redericted-to domain!) and it should be safe to accept both domain authorities here.
+         # (but not the redirected-to domain!) and it should be safe to accept both domain authorities here.
          {_, false} <-
            {:finger_domain_spoof, nick_domain != finger_domain && nick_domain != ap_domain},
          ap_name <- actor_data["preferredUsername"],

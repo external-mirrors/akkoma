@@ -42,10 +42,142 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
     assert {:error, %Jason.DecodeError{}} = Finger.finger_mention(user)
   end
 
+  test "returns error when the "
+
   test "returns the ActivityPub actor URI for an ActivityPub user" do
     user = "framasoft@framatube.org"
 
     {:ok, _nick, _data} = Finger.finger_mention(user)
+  end
+
+  describe "FEP-2c59 compliance" do
+    test "should use the webfinger property to look up the webfinger data for an actor" do
+      Tesla.Mock.mock(fn
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fingered.example.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        %{url: "https://fingered.example.com/users/user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/fep-2c59/user-with-webfinger.json")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{domain}}", "fingered.example.com")
+               |> String.replace("{{webfinger_property}}", "user@example.com")
+           }}
+      end)
+
+      {:ok, "user@example.com", _data} = Finger.finger_mention("@user@example.com")
+    end
+
+    test "should permit the use of the webfinger property to act as a redirect" do
+      Tesla.Mock.mock(fn
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "somewhere-else.com")
+               |> String.replace("{{nickname}}", "another-user")
+               |> String.replace("{{subdomain}}", "somewhere-else.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://somewhere-else.com/.well-known/webfinger?resource=acct:user@example.com"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        %{url: "https://somewhere-else.com/users/another-user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/fep-2c59/user-with-webfinger.json")
+               |> String.replace("{{nickname}}", "another-user")
+               |> String.replace("{{domain}}", "somewhere-else.com")
+               |> String.replace("{{webfinger_property}}", "another-user@somewhere-else.com")
+           }}
+      end)
+
+      {:ok, "another-user@somewhere-else.com", _data} = Finger.finger_mention("@user@example.com")
+    end
+
+    test "should reject a cross-domain webfinger if the final actor has an incorrect webfinger property" do
+      Tesla.Mock.mock(fn
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "somewhere-else.com")
+               |> String.replace("{{nickname}}", "another-user")
+               |> String.replace("{{subdomain}}", "somewhere-else.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://somewhere-else.com/.well-known/webfinger?resource=acct:user@example.com"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        %{url: "https://somewhere-else.com/users/another-user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/fep-2c59/user-with-webfinger.json")
+               |> String.replace("{{nickname}}", "another-user")
+               |> String.replace("{{domain}}", "somewhere-else.com")
+               |> String.replace("{{webfinger_property}}", "oops-you-cant-redirect-here@nope.com")
+           }}
+      end)
+
+      {:error, :finger_data_mismatch} = Finger.finger_mention("@user@example.com")
+    end
   end
 
   test "it work for AP-only user" do
