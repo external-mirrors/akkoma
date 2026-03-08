@@ -28,7 +28,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
 
       %{
         url:
-          "https://social.heldscal.la/.well-known/webfinger?resource=invalid_content@social.heldscal.la"
+          "https://social.heldscal.la/.well-known/webfinger?resource=acct:invalid_content@social.heldscal.la"
       } ->
         {:ok, %Tesla.Env{status: 200, body: ""}}
     end)
@@ -94,7 +94,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
   test "respects json content-type" do
     Tesla.Mock.mock(fn
       %{
-        url: "https://mastodon.social/.well-known/webfinger?resource=emelie@mastodon.social"
+        url: "https://mastodon.social/.well-known/webfinger?resource=acct:emelie@mastodon.social"
       } ->
         {:ok,
          %Tesla.Env{
@@ -117,7 +117,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
   test "respects xml content-type" do
     Tesla.Mock.mock(fn
       %{
-        url: "https://pawoo.net/.well-known/webfinger?resource=pekorino@pawoo.net"
+        url: "https://pawoo.net/.well-known/webfinger?resource=acct:pekorino@pawoo.net"
       } ->
         {:ok,
          %Tesla.Env{
@@ -140,7 +140,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
   test "prevents spoofing" do
     Tesla.Mock.mock(fn
       %{
-        url: "https://bad.com/.well-known/webfinger?resource=meanie@bad.com"
+        url: "https://bad.com/.well-known/webfinger?resource=acct:meanie@bad.com"
       } ->
         {:ok,
          %Tesla.Env{
@@ -162,7 +162,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
 
   test "prevents forgeries" do
     Tesla.Mock.mock(fn
-      %{url: "https://bad.com/.well-known/webfinger?resource=meanie@bad.com"} ->
+      %{url: "https://bad.com/.well-known/webfinger?resource=acct:meanie@bad.com"} ->
         fake_webfinger =
           File.read!("test/fixtures/webfinger/imposter-webfinger.json") |> Jason.decode!()
 

@@ -246,6 +246,12 @@ defmodule Pleroma.Web.WebFinger.Finger do
     end
   end
 
+  # Mastodon does not respond to requests with a leading "@" regardless of whether an additional "acct:" prefix is used.
+  # While all tested implementations also respond without a leading "acct:",
+  # including it seems more robust since Mastodon always does so in its own queries.
+  defp resource_from_mention("@" <> nick), do: "acct:" <> nick
+  defp resource_from_mention(nick), do: "acct:" <> nick
+
   defp verify_ap_data_from_finger(%{"webfinger" => preferred_handle} = data, finger_handle, _, _) do
     if normalise_webfinger_handle(preferred_handle) == finger_handle do
       {:ok, finger_handle, data}
@@ -290,10 +296,11 @@ defmodule Pleroma.Web.WebFinger.Finger do
   @spec finger_mention(String.t()) :: {:ok, String.t(), map()} | {:error, any()}
   def finger_mention(mention_handle) when is_binary(mention_handle) do
     {qname, qdomain} = parse_handle(mention_handle)
+    resource = resource_from_mention(mention_handle)
 
     with {_, false} <- {:invalid_handle, qname == nil || qdomain == nil},
          {_, {:ok, finger_domain, %{"ap_id" => fingered_ap_id, "subject" => finger_subject}}} <-
-           {:query, finger_unverified_data(qdomain, mention_handle)},
+           {:query, finger_unverified_data(qdomain, resource)},
          handle <- normalise_webfinger_handle(finger_subject),
          {nick_user, nick_domain} <- parse_handle(handle),
          # see comment in finger_actor for why both domains can and need to be accepted
@@ -317,12 +324,12 @@ defmodule Pleroma.Web.WebFinger.Finger do
   """
   @spec finger_raw_data(String.t()) :: {:ok, map()} | {:error, any()}
   def finger_raw_data(resource) do
-    domain =
+    {domain, resource} =
       if Regex.match?(~r/^https?:\/\//, resource) do
-        URI.parse(resource).host
+        {URI.parse(resource).host, resource}
       else
         {_, domain} = parse_handle(resource)
-        domain
+        {domain, resource_from_mention(resource)}
       end
 
     with {_, domain} when is_binary(domain) <- {:domain, domain},

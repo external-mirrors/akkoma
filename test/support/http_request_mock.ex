@@ -138,7 +138,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://osada.macgirvin.com/.well-known/webfinger?resource=mike@osada.macgirvin.com" =
+        "https://osada.macgirvin.com/.well-known/webfinger?resource=acct:mike@osada.macgirvin.com" =
           url,
         _,
         _,
@@ -193,7 +193,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://social.heldscal.la/.well-known/webfinger?resource=nonexistant@social.heldscal.la",
+        "https://social.heldscal.la/.well-known/webfinger?resource=acct:nonexistant@social.heldscal.la",
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -852,7 +852,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://mastodon.social/.well-known/webfinger?resource=not_found@mastodon.social",
+        "https://mastodon.social/.well-known/webfinger?resource=acct:not_found@mastodon.social",
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -897,7 +897,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://squeet.me/xrd?uri=lain@squeet.me",
+        "https://squeet.me/xrd?uri=acct:lain@squeet.me",
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -910,7 +910,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://social.heldscal.la/.well-known/webfinger?resource=shp@social.heldscal.la",
+        "https://social.heldscal.la/.well-known/webfinger?resource=acct:shp@social.heldscal.la",
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -924,7 +924,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://social.heldscal.la/.well-known/webfinger?resource=invalid_content@social.heldscal.la",
+        "https://social.heldscal.la/.well-known/webfinger?resource=acct:invalid_content@social.heldscal.la",
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -947,7 +947,7 @@ defmodule HttpRequestMock do
         [{"accept", "application/xrd+xml,application/jrd+json"}]
       )
       when url in [
-             "https://framatube.org/main/xrd?uri=framasoft@framatube.org",
+             "https://framatube.org/main/xrd?uri=acct:framasoft@framatube.org",
              "https://framatube.org/main/xrd?uri=https://framatube.org/accounts/framasoft"
            ] do
     {:ok,
@@ -968,7 +968,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "http://gnusocial.de/main/xrd?uri=winterdienst@gnusocial.de",
+        "http://gnusocial.de/main/xrd?uri=acct:winterdienst@gnusocial.de",
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -1239,7 +1239,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=lain@zetsubou.xn--q9jyb4c",
+        "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=acct:lain@zetsubou.xn--q9jyb4c",
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -1310,7 +1310,7 @@ defmodule HttpRequestMock do
         [{"accept", "application/xrd+xml,application/jrd+json"}]
       )
       when url in [
-             "https://lm.kazv.moe/.well-known/webfinger?resource=mewmew@lm.kazv.moe",
+             "https://lm.kazv.moe/.well-known/webfinger?resource=acct:mewmew@lm.kazv.moe",
              "https://lm.kazv.moe/.well-known/webfinger?resource=https://lm.kazv.moe/users/mewmew"
            ] do
     {:ok,
@@ -1383,7 +1383,7 @@ defmodule HttpRequestMock do
     {:ok, %Tesla.Env{status: 404, body: ""}}
   end
 
-  def get("https://mstdn.jp/.well-known/webfinger?resource=kpherox@mstdn.jp" = url, _, _, _) do
+  def get("https://mstdn.jp/.well-known/webfinger?resource=acct:kpherox@mstdn.jp" = url, _, _, _) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -1709,7 +1709,7 @@ defmodule HttpRequestMock do
   end
 
   Macros.mock_masto_webfinger(
-    "https://sub.mastodon.example/.well-known/webfinger?resource=a@mastodon.example",
+    "https://sub.mastodon.example/.well-known/webfinger?resource=acct:a@mastodon.example",
     "a",
     "mastodon.example",
     "sub.mastodon.example"
@@ -1769,7 +1769,7 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://sub.pleroma.example/.well-known/webfinger?resource=a@pleroma.example" = url,
+        "https://sub.pleroma.example/.well-known/webfinger?resource=acct:a@pleroma.example" = url,
         _,
         _,
         _
