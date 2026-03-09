@@ -42,8 +42,6 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
     assert {:error, %Jason.DecodeError{}} = Finger.finger_mention(user)
   end
 
-  test "returns error when the "
-
   test "returns the ActivityPub actor URI for an ActivityPub user" do
     user = "framasoft@framatube.org"
 
@@ -178,6 +176,137 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
 
       {:error, :finger_data_mismatch} = Finger.finger_mention("@user@example.com")
     end
+
+    test "should refetch the initial actor if no backlink exists on the final actor" do
+      Tesla.Mock.mock(fn
+        # first, the initial webfinger we fetch points to somewhere-else.com
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "somewhere-else.com")
+               |> String.replace("{{nickname}}", "another-user")
+               |> String.replace("{{subdomain}}", "somewhere-else.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://somewhere-else.com/.well-known/webfinger?resource=acct:user@example.com"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        # then we fetch the actor, but no backlink on this one!
+        %{url: "https://somewhere-else.com/users/another-user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-user.json")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        # so we need to refetch this one
+        %{url: "https://example.com/users/user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-user.json")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        # and finally refetch the webfinger resource from the ID found above
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=https://example.com/users/user"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "example.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://example.com/.well-known/webfinger?resource=https://example.com/users/user"
+           }}
+      end)
+
+      assert {:ok, "user@example.com"} =
+               Finger.finger_mention("@user@example.com")
+    end
+
+    test "should reject when the actor refetch does not agree with the intial query" do
+      Tesla.Mock.mock(fn
+        # first, the initial webfinger we fetch points to somewhere-else.com
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "somewhere-else.com")
+               |> String.replace("{{nickname}}", "another-user")
+               |> String.replace("{{subdomain}}", "somewhere-else.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://somewhere-else.com/.well-known/webfinger?resource=acct:user@example.com"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        # then we fetch the actor, but no backlink on this one!
+        %{url: "https://somewhere-else.com/users/another-user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-user.json")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+
+        # so we need to refetch this one - but oops, we have a data mismatch in here!
+        %{url: "https://example.com/users/user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-user.json")
+               |> String.replace("{{nickname}}", "not-a-user-we-expected")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+      end)
+
+      assert {:error, :id_mismatch} =
+               Finger.finger_mention("@user@example.com")
+    end
   end
 
   describe "finger_actor/1" do
@@ -211,11 +340,25 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
            }}
       end)
 
-      assert {:ok, "user@example.com"} =
-               Finger.finger_actor(%{
-                 "id" => "https://social.example.com/users/user",
-                 "webfinger" => "user@example.com"
-               })
+      # all of the following are valid forms the webfinger property can take
+      possible_forms = [
+        # the expected
+        "user@example.com",
+        # a leading @
+        "@user@example.com",
+        # prefixed with acct:,
+        "acct:user@example.com",
+        # with both, because why not honestly
+        "acct:@user@example.com"
+      ]
+
+      for form <- possible_forms do
+        assert {:ok, "user@example.com"} =
+                 Finger.finger_actor(%{
+                   "id" => "https://social.example.com/users/user",
+                   "webfinger" => form
+                 })
+      end
     end
 
     test "should not permit a redirect on the webfinger" do
@@ -234,8 +377,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                |> String.replace("{{nickname}}", "user")
                |> String.replace("{{subdomain}}", "social.example.com"),
              headers: [{"content-type", "application/jrd+json"}],
-             url:
-               "https://oops-this-was-a-redirect/somewhere"
+             url: "https://oops-this-was-a-redirect/somewhere"
            }}
 
         %{url: "https://example.com/.well-known/host-meta"} ->
@@ -285,6 +427,48 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
       end)
 
       assert {:ok, "user@example.com"} =
+               Finger.finger_actor(%{
+                 "id" => "https://example.com/users/user"
+               })
+    end
+
+    test "should gracefully handle the username being an empty string" do
+      # oopsie we had the wrong format
+      assert {:error, :no_domain} =
+               Finger.finger_actor(%{
+                 "id" => "https://social.example.com/users/user",
+                 "webfinger" => "@oops"
+               })
+    end
+
+    test "should gracefully handle the webfinger returning something silly" do
+      Tesla.Mock.mock(fn
+        # we should finger the ID directly
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=https://example.com/users/user"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: "woah this isn't json???",
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://example.com/.well-known/webfinger?resource=https://example.com/users/user"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+      end)
+
+      # a nil error is expected here, nothing technically went wrong for the caller to think about
+      # a remote issue isn't our concern
+      assert {:ok, nil} =
                Finger.finger_actor(%{
                  "id" => "https://example.com/users/user"
                })
