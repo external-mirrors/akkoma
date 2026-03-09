@@ -23,6 +23,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok,
          %Tesla.Env{
            status: 200,
+           url: "https://social.heldscal.la/.well-known/host-meta",
            body: File.read!("test/fixtures/tesla_mock/social.heldscal.la_host_meta")
          }}
 
@@ -30,7 +31,13 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         url:
           "https://social.heldscal.la/.well-known/webfinger?resource=acct:invalid_content@social.heldscal.la"
       } ->
-        {:ok, %Tesla.Env{status: 200, body: ""}}
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           url:
+             "https://social.heldscal.la/.well-known/webfinger?resource=acct:invalid_content@social.heldscal.la",
+           body: ""
+         }}
     end)
 
     user = "invalid_content@social.heldscal.la"
@@ -70,6 +77,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -79,6 +87,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://fingered.example.com/users/user",
              headers: [{"content-type", "application/activity+json"}],
              body:
                File.read!("test/fixtures/webfinger/fep-2c59/user-with-webfinger.json")
@@ -113,6 +122,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -122,6 +132,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://somewhere-else.com/users/another-user",
              headers: [{"content-type", "application/activity+json"}],
              body:
                File.read!("test/fixtures/webfinger/fep-2c59/user-with-webfinger.json")
@@ -156,6 +167,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -165,6 +177,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://somewhere-else.com/users/another-user",
              headers: [{"content-type", "application/activity+json"}],
              body:
                File.read!("test/fixtures/webfinger/fep-2c59/user-with-webfinger.json")
@@ -200,6 +213,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -210,6 +224,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://somewhere-else.com/users/another-user",
              headers: [{"content-type", "application/activity+json"}],
              body:
                File.read!("test/fixtures/webfinger/pleroma-user.json")
@@ -222,6 +237,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/users/user",
              headers: [{"content-type", "application/activity+json"}],
              body:
                File.read!("test/fixtures/webfinger/pleroma-user.json")
@@ -274,6 +290,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -284,6 +301,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://somewhere-else.com/users/another-user",
              headers: [{"content-type", "application/activity+json"}],
              body:
                File.read!("test/fixtures/webfinger/pleroma-user.json")
@@ -296,6 +314,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/users/user",
              headers: [{"content-type", "application/activity+json"}],
              body:
                File.read!("test/fixtures/webfinger/pleroma-user.json")
@@ -306,6 +325,57 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
 
       assert {:error, :id_mismatch} =
                Finger.finger_mention("@user@example.com")
+    end
+
+    test "handles empty username" do
+      # note: unsure how relevant this is in practice
+      Tesla.Mock.mock(fn
+        %{url: "https://example.com/.well-known/webfinger?resource=acct:@example.com"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: "https://example.com/.well-known/webfinger?resource=acct:@example.com",
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/masto-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{subdomain}}", "example.com")
+               |> String.replace("{{apid}}", "https://example.com/user")
+               # not actual name, but needed to ensure emptiness remains recognised after normalisation
+               |> String.replace("{{nickname}}", "@")
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             url: "https://example.com/.well-known/host-meta"
+           }}
+
+        %{url: "https://example.com/user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: "https://example.com/user",
+             headers: [
+               {"content-type",
+                "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""}
+             ],
+             body: """
+             {
+               "id": "https://example.com/user",
+               "type": "Person",
+               "inbox": "https://example.com/inbox",
+               "outbox": "https://example.com/outbox",
+               "followers": "https://example.com/followers",
+               "following": "https://example.com/following"
+             }
+             """
+           }}
+      end)
+
+      {:ok, "@example.com", %{"inbox" => "https://example.com/inbox"}} =
+        Finger.finger_mention("@@example.com")
     end
   end
 
@@ -334,6 +404,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -384,6 +455,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -420,6 +492,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
@@ -460,6 +533,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
           {:ok,
            %Tesla.Env{
              status: 200,
+             url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
                |> String.replace("{{domain}}", "example.com")
