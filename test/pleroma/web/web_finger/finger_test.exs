@@ -91,7 +91,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
       {:ok, "user@example.com", _data} = Finger.finger_mention("@user@example.com")
     end
 
-    test "should permit the use of the webfinger property to act as a redirect" do
+    test "allows HTTP redirects to serve as webfinger domain delegation" do
       Tesla.Mock.mock(fn
         %{
           url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
@@ -205,7 +205,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                |> String.replace("{{domain}}", "example.com")
            }}
 
-        # then we fetch the actor, but no backlink on this one!
+        # then we fetch the actor, but behold AP ID doesn’t match content URL, not even same domain!
         %{url: "https://somewhere-else.com/users/another-user"} ->
           {:ok,
            %Tesla.Env{
@@ -279,7 +279,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                |> String.replace("{{domain}}", "example.com")
            }}
 
-        # then we fetch the actor, but no backlink on this one!
+        # then we fetch the actor, but behold AP ID doesn’t match content URL, not even same domain!
         %{url: "https://somewhere-else.com/users/another-user"} ->
           {:ok,
            %Tesla.Env{
@@ -397,7 +397,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                })
     end
 
-    test "should fallback to user@domain if no webfinger property is present on the actor" do
+    test "can discover nick from WebFinger query alone if actor contains no hints" do
       Tesla.Mock.mock(fn
         # we should finger the ID directly
         %{
@@ -432,7 +432,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                })
     end
 
-    test "should gracefully handle the username being an empty string" do
+    test "should gracefully reject nicks without a domain" do
       # oopsie we had the wrong format
       assert {:error, :no_domain} =
                Finger.finger_actor(%{
