@@ -50,7 +50,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
     {:ok, _nick, _data} = Finger.finger_mention(user)
   end
 
-  describe "FEP-2c59 compliance" do
+  describe "finger_mention/1" do
     test "should use the webfinger property to look up the webfinger data for an actor" do
       Tesla.Mock.mock(fn
         %{
@@ -177,6 +177,117 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
       end)
 
       {:error, :finger_data_mismatch} = Finger.finger_mention("@user@example.com")
+    end
+  end
+
+  describe "finger_actor/1" do
+    test "should use the webfinger property if it exists" do
+      Tesla.Mock.mock(fn
+        # we should finger the webfinger property
+        %{
+          url:
+            "https://example.com/.well-known/webfinger?resource=https://social.example.com/users/user"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "social.example.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://example.com/.well-known/webfinger?resource=https://social.example.com/users/user"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+      end)
+
+      assert {:ok, "user@example.com"} =
+               Finger.finger_actor(%{
+                 "id" => "https://social.example.com/users/user",
+                 "webfinger" => "user@example.com"
+               })
+    end
+
+    test "should not permit a redirect on the webfinger" do
+      Tesla.Mock.mock(fn
+        # we should finger the webfinger property
+        %{
+          url:
+            "https://example.com/.well-known/webfinger?resource=https://social.example.com/users/user"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "social.example.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://oops-this-was-a-redirect/somewhere"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+      end)
+
+      assert {:error, :redirect} =
+               Finger.finger_actor(%{
+                 "id" => "https://social.example.com/users/user",
+                 "webfinger" => "user@example.com"
+               })
+    end
+
+    test "should fallback to user@domain if no webfinger property is present on the actor" do
+      Tesla.Mock.mock(fn
+        # we should finger the ID directly
+        %{
+          url: "https://example.com/.well-known/webfinger?resource=https://example.com/users/user"
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "example.com"),
+             headers: [{"content-type", "application/jrd+json"}],
+             url:
+               "https://example.com/.well-known/webfinger?resource=https://example.com/users/user"
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body:
+               File.read!("test/fixtures/webfinger/masto-host-meta.xml")
+               |> String.replace("{{domain}}", "example.com")
+           }}
+      end)
+
+      assert {:ok, "user@example.com"} =
+               Finger.finger_actor(%{
+                 "id" => "https://example.com/users/user"
+               })
     end
   end
 
