@@ -370,11 +370,11 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
            }}
       end)
 
-      assert {:ok, "user@example.com"} =
+      assert {:ok, "user@example.com", _} =
                Finger.finger_mention("@user@example.com")
     end
 
-    test "should reject when the actor refetch does not agree with the intial query" do
+    test "should reject when the preferredUsername of actor does not agree with WebFinger response" do
       Tesla.Mock.mock(fn
         # first, the initial webfinger we fetch points to somewhere-else.com
         %{
@@ -384,13 +384,13 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
            %Tesla.Env{
              status: 200,
              body:
-               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
-               |> String.replace("{{domain}}", "somewhere-else.com")
-               |> String.replace("{{nickname}}", "another-user")
-               |> String.replace("{{subdomain}}", "somewhere-else.com"),
+               File.read!("test/fixtures/webfinger/masto-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{subdomain}}", "example.com")
+               |> String.replace("{{apid}}", "https://example.com/users/user")
+               |> String.replace("{{nickname}}", "another-user"),
              headers: [{"content-type", "application/jrd+json"}],
-             url:
-               "https://somewhere-else.com/.well-known/webfinger?resource=acct:user@example.com"
+             url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"
            }}
 
         %{url: "https://example.com/.well-known/host-meta"} ->
@@ -400,19 +400,6 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
              url: "https://example.com/.well-known/host-meta",
              body:
                File.read!("test/fixtures/webfinger/masto-host-meta.xml")
-               |> String.replace("{{domain}}", "example.com")
-           }}
-
-        # then we fetch the actor, but behold AP ID doesn’t match content URL, not even same domain!
-        %{url: "https://somewhere-else.com/users/another-user"} ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             url: "https://somewhere-else.com/users/another-user",
-             headers: [{"content-type", "application/activity+json"}],
-             body:
-               File.read!("test/fixtures/webfinger/pleroma-user.json")
-               |> String.replace("{{nickname}}", "user")
                |> String.replace("{{domain}}", "example.com")
            }}
 
@@ -427,10 +414,13 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                File.read!("test/fixtures/webfinger/pleroma-user.json")
                |> String.replace("{{nickname}}", "not-a-user-we-expected")
                |> String.replace("{{domain}}", "example.com")
+               |> Jason.decode!()
+               |> Map.put("id", "https://example.com/users/user")
+               |> Jason.encode!()
            }}
       end)
 
-      assert {:error, :id_mismatch} =
+      assert {:error, :fingered_nick_mismatch} =
                Finger.finger_mention("@user@example.com")
     end
 
