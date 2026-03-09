@@ -56,6 +56,113 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
   end
 
   describe "finger_mention/1" do
+    test "accepts content in authority of final domain" do
+      # Not FEP-2c59, but otherwise one possible sane setup
+      Tesla.Mock.mock(fn
+        %{url: "https://fedi.example.com/.well-known/webfinger?resource=" <> rsrc}
+        when rsrc in ["acct:user@fedi.example.com", "https://fedi.example.com/users/user"] ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             # fedi.example.com -> example.com
+             url: "https://example.com/.well-known/webfinger?resource=acct:user@fedi.example.com",
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.com")
+           }}
+
+        %{url: "https://fedi.example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             url: "https://example.com/.well-known/host-meta"
+           }}
+
+        %{url: "https://fedi.example.com/users/user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: "https://fedi.example.com/users/user",
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-user.json")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{domain}}", "fedi.example.com")
+           }}
+      end)
+
+      {:ok, "user@example.com", _} = Finger.finger_mention("user@fedi.example.com")
+    end
+
+    test "accepts content in authority of query domain" do
+      # Early 2026 Mastodon style
+      Tesla.Mock.mock(fn
+        %{url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             # example.com -> fedi.example.com
+             url: "https://fedi.example.com/.well-known/webfinger?resource=acct:user@example.com",
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.com")
+           }}
+
+        %{url: "https://fedi.example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             url: "https://example.com/.well-known/host-meta"
+           }}
+
+        %{url: "https://fedi.example.com/users/user"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: "https://fedi.example.com/users/user",
+             headers: [{"content-type", "application/activity+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-user.json")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{domain}}", "fedi.example.com")
+           }}
+      end)
+
+      {:ok, "user@example.com", _} = Finger.finger_mention("user@example.com")
+    end
+
+    test "errors when being served content from unrelated third-party domain" do
+      Tesla.Mock.mock(fn
+        %{url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com",
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "shinyplace.example")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.org")
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             url: "https://example.com/.well-known/host-meta"
+           }}
+      end)
+
+      {:error, :finger_domain_spoof} = Finger.finger_mention("user@example.com")
+    end
+
     test "should use the webfinger property to look up the webfinger data for an actor" do
       Tesla.Mock.mock(fn
         %{
@@ -546,6 +653,36 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                Finger.finger_actor(%{
                  "id" => "https://example.com/users/user"
                })
+    end
+  end
+
+  describe "finger_raw_data/1" do
+    test "just spits out data withut any checks" do
+      # note: this is an obvious spoof or severe misconfig and rejected by all other finger_* functions
+      Tesla.Mock.mock(fn
+        %{url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com",
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "shinyplace.example")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.org")
+           }}
+
+        %{url: "https://example.com/.well-known/host-meta"} ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             url: "https://example.com/.well-known/host-meta"
+           }}
+      end)
+
+      {:ok, %{"subject" => "acct:user@shinyplace.example"}} =
+        Finger.finger_raw_data("user@example.com")
     end
   end
 
