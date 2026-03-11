@@ -128,6 +128,7 @@ defmodule Pleroma.Web.ApiSpec.TimelineOperation do
         only_media_param(),
         remote_param(),
         with_muted_param()
+        | pagination_params()
       ],
       operationId: "TimelineController.hashtag",
       responses: %{
