@@ -529,7 +529,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
       end
     end
 
-    test "should not permit a redirect on the webfinger" do
+    test "permits a redirect on the webfinger endpoint if all data matches" do
       Tesla.Mock.mock(fn
         # we should finger the webfinger property
         %{
@@ -559,7 +559,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
            }}
       end)
 
-      assert {:error, :redirect} =
+      assert {:ok, "user@example.com"} =
                Finger.finger_actor(%{
                  "id" => "https://social.example.com/users/user",
                  "webfinger" => "user@example.com"

@@ -107,9 +107,9 @@ defmodule Pleroma.Web.WebFinger.Finger do
     e -> {:error, "Cachex error: #{inspect(e)}"}
   end
 
-  defp make_finger_uri(domain, resource, allow_delegation) do
+  defp make_finger_uri(domain, resource) do
     encoded_resource = URI.encode(resource)
-    discovered_template = allow_delegation && find_lrdd_template(domain)
+    discovered_template = find_lrdd_template(domain)
 
     case discovered_template do
       {:ok, template} ->
@@ -150,19 +150,17 @@ defmodule Pleroma.Web.WebFinger.Finger do
 
   defp map_fetch_error_reason(%Tesla.Env{} = env), do: {:http_error, :connect, env}
 
-  defp finger_unverified_data(domain, resource, allow_delegation \\ true) do
-    query_uri = make_finger_uri(domain, resource, allow_delegation)
+  defp finger_unverified_data(domain, resource) do
+    query_uri = make_finger_uri(domain, resource)
     resp = HTTP.Backoff.get(query_uri, [{"accept", "application/xrd+xml,application/jrd+json"}])
 
     with {:ok, %{url: resolved_uri, status: status} = resp_data} when status in 200..299 <- resp,
-         {_, true} <- {:redirect, allow_delegation || query_uri == resolved_uri},
          {_, {:ok, parsed_data}} <- {:parse, parse_finger_response(resp_data)} do
       resolved_domain = URI.parse(resolved_uri).host
 
       {:ok, resolved_domain, parsed_data}
     else
       {:ok, %Tesla.Env{} = env} -> {:error, map_fetch_error_reason(env)}
-      {:redirect, _} -> {:error, :redirect}
       {:parse, {:error, _} = error} -> error
       {:error, _reason} = e -> e
     end
@@ -201,9 +199,13 @@ defmodule Pleroma.Web.WebFinger.Finger do
 
     with {_, false} <- {:no_domain, domain == nil || ap_domain == nil},
          {_, false} <- {:matching_domain, domain == ap_domain},
-         # Per FEP-2c59 no form of redirects are allowed when fingering the handle
+         # We check for an exact match to the preferred handle which will ALWAYS
+         # belong to the initial query domain, thus we do not need to consider the final domain here.
+         # If the query domain delegates to another domain via host-meta or HTTP redirects on
+         # ./well-known/ paths (which ought to be directly controlled by the operator),
+         # this clearly indicates consent of the query domain to allow the final domain to manage this data
          {_, {:ok, _, %{"ap_id" => fingered_ap_id, "subject" => finger_subject}}} <-
-           {:query, finger_unverified_data(domain, ap_id, false)},
+           {:query, finger_unverified_data(domain, ap_id)},
          {_, false} <- {:fingered_data_mismatch, ap_id != fingered_ap_id},
          finger_handle <- normalise_webfinger_handle(finger_subject),
          {_, false} <- {:fingered_data_mismatch, preferred_handle != finger_handle} do
