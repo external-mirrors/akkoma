@@ -38,6 +38,21 @@ Depending on instance configuration the same may be true for GET requests.
 We set the optional extension term `htmlMfm: true` when using content type "text/x.misskeymarkdown".
 Incoming messages containing `htmlMfm: true` will not have their content re-parsed.
 
+## WebFinger
+
+Akkoma requires WebFinger implmentations to respond to queries about a given user both when
+`acct:user@domain` or the canonical ActivityPub id of the actor is passed as the `resource`.
+
+Akkoma strongly encourages ActivityPub implementations to include
+a FEP-2c59-compliant WebFinger backlink in their actor documents.
+
+Without FEP-2c59 and if different domains are used for ActivityPub and the Webfinger subject,
+Akkoma relies on the presence of an host-meta LRDD template on the ActivityPub domain
+or a HTTP redirect from the ActivityPub domain’s `/.well-known/webfinger` to an equivalent endpoint
+on the domain used in the `subject` to discover and validate the domain association.  
+Without FEP-2c59 Akkoma may not become aware of changes to the
+preferred WebFinger `subject` domain for already discovered users.
+
 ## Nodeinfo
 
 Akkoma provides many additional entries in its nodeinfo response,

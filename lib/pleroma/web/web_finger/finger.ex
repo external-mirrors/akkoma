@@ -6,6 +6,10 @@
 defmodule Pleroma.Web.WebFinger.Finger do
   @moduledoc """
   Used to query validated WebFinger data from remote hosts.
+
+  Notably this validation includes making sure BOTH the
+  domain used in the WebFinger handle AND the ActivityPub actor agree to the
+  final domain username and domain parts being associated to the particular actor.
   """
 
   alias Pleroma.HTTP
