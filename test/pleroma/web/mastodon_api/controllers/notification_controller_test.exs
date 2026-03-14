@@ -17,7 +17,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
     other_user = insert(:user)
 
     {:ok, activity} = CommonAPI.post(other_user, %{status: "hi @#{user.nickname}"})
-    {:ok, [_notification]} = Notification.create_notifications(activity)
+    {:ok, [_notification], []} = Notification.create_notifications(activity)
 
     response =
       conn
@@ -36,7 +36,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
 
     {:ok, activity} = CommonAPI.post(other_user, %{status: "hi @#{user.nickname}"})
 
-    {:ok, [_notification]} = Notification.create_notifications(activity)
+    {:ok, [_notification], []} = Notification.create_notifications(activity)
 
     conn =
       conn
@@ -89,7 +89,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
     {:ok, _} = CommonAPI.block(blocker, user)
     {:ok, activity} = CommonAPI.post(blocker, %{status: "hi @#{user.nickname}"})
 
-    {:ok, [_notification]} = Notification.create_notifications(activity)
+    {:ok, [_notification], []} = Notification.create_notifications(activity)
 
     conn =
       conn
@@ -105,7 +105,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
 
     {:ok, activity} = CommonAPI.post(other_user, %{status: "hi @#{user.nickname}"})
 
-    {:ok, [notification]} = Notification.create_notifications(activity)
+    {:ok, [notification], []} = Notification.create_notifications(activity)
 
     conn = get(conn, "/api/v1/notifications/#{notification.id}")
 
@@ -122,7 +122,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
 
     {:ok, activity} = CommonAPI.post(other_user, %{status: "hi @#{user.nickname}"})
 
-    {:ok, [notification]} = Notification.create_notifications(activity)
+    {:ok, [notification], []} = Notification.create_notifications(activity)
 
     conn =
       conn
@@ -138,7 +138,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
 
     {:ok, activity} = CommonAPI.post(other_user, %{status: "hi @#{user.nickname}"})
 
-    {:ok, [_notification]} = Notification.create_notifications(activity)
+    {:ok, [_notification], []} = Notification.create_notifications(activity)
 
     ret_conn = post(conn, "/api/v1/notifications/clear")
 

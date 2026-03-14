@@ -78,7 +78,7 @@ defmodule Pleroma.ConversationTest do
     assert Enum.find(conversation.participations, fn %{user_id: user_id} -> har.id == user_id end)
 
     assert Enum.find(conversation.participations, fn %{user_id: user_id} ->
-             jafnhar.id == user_id
+             tridi.id == user_id
            end)
 
     {:ok, activity} =
@@ -103,7 +103,7 @@ defmodule Pleroma.ConversationTest do
            end)
 
     assert Enum.find(conversation_two.participations, fn %{user_id: user_id} ->
-             jafnhar.id == user_id
+             tridi.id == user_id
            end)
 
     {:ok, activity} =
@@ -119,7 +119,7 @@ defmodule Pleroma.ConversationTest do
 
     conversation_three =
       Conversation.get_for_ap_id(context)
-      |> Repo.preload([:participations, :users])
+      |> Repo.preload(participations: [:recipients])
 
     assert conversation_three.id == conversation.id
 
@@ -128,23 +128,14 @@ defmodule Pleroma.ConversationTest do
            end)
 
     assert Enum.find(conversation_three.participations, fn %{user_id: user_id} ->
-             jafnhar.id == user_id
-           end)
-
-    assert Enum.find(conversation_three.participations, fn %{user_id: user_id} ->
              tridi.id == user_id
            end)
 
-    assert Enum.find(conversation_three.users, fn %{id: user_id} ->
-             har.id == user_id
-           end)
+    expected_recipients = Enum.sort([har.id, tridi.id, jafnhar.id])
 
-    assert Enum.find(conversation_three.users, fn %{id: user_id} ->
-             jafnhar.id == user_id
-           end)
-
-    assert Enum.find(conversation_three.users, fn %{id: user_id} ->
-             tridi.id == user_id
+    assert Enum.all?(conversation_three.participations, fn %{recipients: recipients} ->
+             rids = Enum.map(recipients, & &1.id) |> Enum.sort()
+             assert rids == expected_recipients
            end)
   end
 
@@ -157,7 +148,13 @@ defmodule Pleroma.ConversationTest do
 
     {:ok, conversation} = Conversation.create_or_bump_for(activity)
 
-    assert length(conversation.participations) == 2
+    # only local users get participations
+    assert length(conversation.participations) == 1
+
+    # but all appear in recipients
+    [participation] = conversation.participations
+    participation = Repo.preload(participation, :recipients)
+    assert length(participation.recipients) == 2
 
     {:ok, activity} =
       CommonAPI.post(har, %{status: "Hey @#{jafnhar.nickname}", visibility: "public"})

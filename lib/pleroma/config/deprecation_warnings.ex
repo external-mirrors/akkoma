@@ -43,6 +43,22 @@ defmodule Pleroma.Config.DeprecationWarnings do
     end
   end
 
+  def check_truncated_nodeinfo_in_accounts do
+    if !Config.get!([:instance, :filter_embedded_nodeinfo]) do
+      Logger.warning("""
+      !!!BUG WORKAROUND DETECTED!!!
+      Your config is explicitly disabling filtering of nodeinfo data embedded in other Masto API responses
+
+        config :pleroma, :instance, filter_embedded_nodeinfo: false
+
+      This setting will soon be removed. Any usage of it merely serves as a temporary workaround.
+      Make sure to file a bug telling us which problems you encountered and circumvented by setting this!
+         https://akkoma.dev/AkkomaGang/akkoma/issues
+      We can’t fix bugs we don’t know about.
+      """)
+    end
+  end
+
   def check_exiftool_filter do
     filters = Config.get([Pleroma.Upload]) |> Keyword.get(:filters, [])
 

@@ -3495,7 +3495,7 @@ config :pleroma, :config_description, [
         key: :module,
         type: :module,
         description: "Translation module.",
-        suggestions: {:list_behaviour_implementations, Pleroma.Akkoma.Translator}
+        suggestions: {:list_behaviour_implementations, Pleroma.Akkoma.Translator.Provider}
       }
     ]
   },

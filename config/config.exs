@@ -249,6 +249,7 @@ config :pleroma, :instance,
   remote_post_retention_days: 90,
   skip_thread_containment: true,
   limit_to_local_content: :unauthenticated,
+  filter_embedded_nodeinfo: true,
   user_bio_length: 5000,
   user_name_length: 100,
   max_account_fields: 10,
@@ -903,7 +904,11 @@ config :pleroma, ConcurrentLimiter, [
   {Pleroma.Search, [max_running: 30, max_waiting: 50]}
 ]
 
-config :pleroma, Pleroma.Web.WebFinger, domain: nil, update_nickname_on_user_fetch: true
+config :pleroma, Pleroma.Web.WebFinger,
+  domain: nil,
+  # this _forces_ a nickname rediscovery and validation, otherwise only updates when detecting a change
+  # TODO: default this to false after the fallout from recent WebFinger bugs is healed
+  update_nickname_on_user_fetch: true
 
 config :pleroma, Pleroma.Search, module: Pleroma.Search.DatabaseSearch
 

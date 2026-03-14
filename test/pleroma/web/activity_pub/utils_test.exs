@@ -143,6 +143,7 @@ defmodule Pleroma.Web.ActivityPub.UtilsTest do
              "@context" => [
                "https://www.w3.org/ns/activitystreams",
                "http://localhost:4001/schemas/litepub-0.1.jsonld",
+               "https://purl.archive.org/socialweb/webfinger",
                %{
                  "@language" => "und",
                  "htmlMfm" => "https://w3id.org/fep/c16b#htmlMfm"

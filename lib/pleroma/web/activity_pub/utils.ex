@@ -101,6 +101,8 @@ defmodule Pleroma.Web.ActivityPub.Utils do
       "@context" => [
         "https://www.w3.org/ns/activitystreams",
         "#{Endpoint.url()}/schemas/litepub-0.1.jsonld",
+        # FEP-2c59
+        "https://purl.archive.org/socialweb/webfinger",
         %{
           "@language" => "und",
           "htmlMfm" => "https://w3id.org/fep/c16b#htmlMfm"
@@ -516,7 +518,7 @@ defmodule Pleroma.Web.ActivityPub.Utils do
       |> where([activity], fragment("?->>'content' = ?
         AND EXISTS (
           SELECT FROM jsonb_array_elements(?->'tag') elem
-          WHERE elem->>'id' ILIKE ?
+          WHERE COALESCE(elem->'icon'->>'url', '') ILIKE ?
         )", activity.data, ^emoji_pattern, activity.data, ^domain_pattern))
     else
       query

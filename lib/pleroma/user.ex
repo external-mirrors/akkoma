@@ -31,6 +31,7 @@ defmodule Pleroma.User do
   alias Pleroma.Registration
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.User.Fetcher
   alias Pleroma.UserRelationship
   alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.Builder
@@ -834,7 +835,7 @@ defmodule Pleroma.User do
     candidates = Config.get([:instance, :autofollowed_nicknames])
 
     autofollowed_users =
-      User.Query.build(%{nickname: candidates, local: true, is_active: true})
+      User.Query.build(%{nickname: candidates, local: true, deactivated: false})
       |> Repo.all()
 
     follow_all(user, autofollowed_users)
@@ -1103,16 +1104,6 @@ defmodule Pleroma.User do
     |> Repo.all()
   end
 
-  # This is mostly an SPC migration fix. This guesses the user nickname by taking the last part
-  # of the ap_id and the domain and tries to get that user
-  def get_by_guessed_nickname(ap_id) do
-    domain = URI.parse(ap_id).host
-    name = List.last(String.split(ap_id, "/"))
-    nickname = "#{name}@#{domain}"
-
-    get_cached_by_nickname(nickname)
-  end
-
   @spec set_cache(
           {:error, any}
           | {:ok, User.t()}
@@ -1211,14 +1202,18 @@ defmodule Pleroma.User do
   end
 
   def get_cached_by_nickname(nickname) do
-    key = "nickname:#{nickname}"
+    if String.valid?(nickname) do
+      key = "nickname:#{nickname}"
 
-    @cachex.fetch!(:user_cache, key, fn _ ->
-      case get_or_fetch_by_nickname(nickname) do
-        {:ok, user} -> {:commit, user}
-        {:error, _error} -> {:ignore, nil}
-      end
-    end)
+      @cachex.fetch!(:user_cache, key, fn _ ->
+        case get_or_fetch_by_nickname(nickname) do
+          {:ok, user} -> {:commit, user}
+          {:error, _error} -> {:ignore, nil}
+        end
+      end)
+    else
+      nil
+    end
   end
 
   def get_cached_by_nickname_or_id(nickname_or_id, opts \\ []) do
@@ -1241,10 +1236,14 @@ defmodule Pleroma.User do
 
   @spec get_by_nickname(String.t()) :: User.t() | nil
   def get_by_nickname(nickname) do
-    Repo.get_by(User, nickname: nickname) ||
-      if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
-        Repo.get_by(User, nickname: local_nickname(nickname))
-      end
+    if String.valid?(nickname) do
+      Repo.get_by(User, nickname: nickname) ||
+        if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
+          Repo.get_by(User, nickname: local_nickname(nickname))
+        end
+    else
+      nil
+    end
   end
 
   def get_by_email(email), do: Repo.get_by(User, email: email)
@@ -1253,7 +1252,7 @@ defmodule Pleroma.User do
     get_by_nickname(nickname_or_email) || get_by_email(nickname_or_email)
   end
 
-  def fetch_by_nickname(nickname), do: ActivityPub.make_user_from_nickname(nickname)
+  def fetch_by_nickname(nickname), do: Fetcher.make_user_from_nickname(nickname)
 
   def get_or_fetch_by_nickname(nickname) do
     with %User{} = user <- get_by_nickname(nickname) do
@@ -1269,72 +1268,54 @@ defmodule Pleroma.User do
     end
   end
 
-  @spec get_followers_query(User.t(), pos_integer() | nil) :: Ecto.Query.t()
-  def get_followers_query(%User{} = user, nil) do
-    User.Query.build(%{followers: user, is_active: true})
-  end
-
-  def get_followers_query(%User{} = user, page) do
-    user
-    |> get_followers_query(nil)
-    |> User.Query.paginate(page, 20)
-  end
-
   @spec get_followers_query(User.t()) :: Ecto.Query.t()
-  def get_followers_query(%User{} = user), do: get_followers_query(user, nil)
+  def get_followers_query(%User{} = user) do
+    User.Query.build(%{followers: user, deactivated: false})
+  end
 
-  @spec get_followers(User.t(), pos_integer() | nil) :: {:ok, list(User.t())}
-  def get_followers(%User{} = user, page \\ nil) do
+  @spec get_followers(User.t()) :: {:ok, list(User.t())}
+  def get_followers(%User{} = user) do
     user
-    |> get_followers_query(page)
+    |> get_followers_query()
     |> Repo.all()
   end
 
-  @spec get_external_followers(User.t(), pos_integer() | nil) :: {:ok, list(User.t())}
-  def get_external_followers(%User{} = user, page \\ nil) do
+  @spec get_external_followers(User.t()) :: {:ok, list(User.t())}
+  def get_external_followers(%User{} = user) do
     user
-    |> get_followers_query(page)
+    |> get_followers_query()
     |> User.Query.build(%{external: true})
     |> Repo.all()
   end
 
-  def get_followers_ids(%User{} = user, page \\ nil) do
+  def get_followers_ids(%User{} = user) do
     user
-    |> get_followers_query(page)
+    |> get_followers_query()
     |> select([u], u.id)
     |> Repo.all()
   end
 
-  @spec get_friends_query(User.t(), pos_integer() | nil) :: Ecto.Query.t()
-  def get_friends_query(%User{} = user, nil) do
+  @spec get_friends_query(User.t()) :: Ecto.Query.t()
+  def get_friends_query(%User{} = user) do
     User.Query.build(%{friends: user, deactivated: false})
   end
 
-  def get_friends_query(%User{} = user, page) do
+  def get_friends(%User{} = user) do
     user
-    |> get_friends_query(nil)
-    |> User.Query.paginate(page, 20)
-  end
-
-  @spec get_friends_query(User.t()) :: Ecto.Query.t()
-  def get_friends_query(%User{} = user), do: get_friends_query(user, nil)
-
-  def get_friends(%User{} = user, page \\ nil) do
-    user
-    |> get_friends_query(page)
+    |> get_friends_query()
     |> Repo.all()
   end
 
   def get_friends_ap_ids(%User{} = user) do
     user
-    |> get_friends_query(nil)
+    |> get_friends_query()
     |> select([u], u.ap_id)
     |> Repo.all()
   end
 
-  def get_friends_ids(%User{} = user, page \\ nil) do
+  def get_friends_ids(%User{} = user) do
     user
-    |> get_friends_query(page)
+    |> get_friends_query()
     |> select([u], u.id)
     |> Repo.all()
   end
@@ -1402,7 +1383,7 @@ defmodule Pleroma.User do
   end
 
   def fetch_follow_information(user) do
-    with {:ok, info} <- ActivityPub.fetch_follow_information_for_user(user) do
+    with {:ok, info} <- Fetcher.fetch_follow_information_for_user(user) do
       user
       |> follow_information_changeset(info)
       |> update_and_set_cache()
@@ -1454,7 +1435,7 @@ defmodule Pleroma.User do
   @spec get_users_from_set([String.t()], keyword()) :: [User.t()]
   def get_users_from_set(ap_ids, opts \\ []) do
     local_only = Keyword.get(opts, :local_only, true)
-    criteria = %{ap_id: ap_ids, is_active: true}
+    criteria = %{ap_id: ap_ids, deactivated: false}
     criteria = if local_only, do: Map.put(criteria, :local, true), else: criteria
 
     User.Query.build(criteria)
@@ -1465,7 +1446,7 @@ defmodule Pleroma.User do
   def get_recipients_from_activity(%Activity{recipients: to, actor: actor}) do
     to = [actor | to]
 
-    query = User.Query.build(%{recipients_from_activity: to, local: true, is_active: true})
+    query = User.Query.build(%{recipients_from_activity: to, local: true, deactivated: false})
 
     query
     |> Repo.all()
@@ -1977,12 +1958,16 @@ defmodule Pleroma.User do
 
   def html_filter_policy(_), do: Config.get([:markup, :scrub_policy])
 
-  def fetch_by_ap_id(ap_id), do: ActivityPub.make_user_from_ap_id(ap_id)
+  def fetch_by_ap_id(ap_id), do: Fetcher.make_user_from_ap_id(ap_id)
+
+  defp refetch_or_fetch_by_ap_id(%User{} = user, _), do: Fetcher.refetch_user(user)
+  defp refetch_or_fetch_by_ap_id(_, ap_id), do: Fetcher.make_user_from_ap_id(ap_id)
 
   def get_or_fetch_by_ap_id(ap_id, options \\ []) do
     cached_user = get_cached_by_ap_id(ap_id)
 
-    maybe_fetched_user = needs_update?(cached_user, options) && fetch_by_ap_id(ap_id)
+    maybe_fetched_user =
+      needs_update?(cached_user, options) && refetch_or_fetch_by_ap_id(cached_user, ap_id)
 
     case {cached_user, maybe_fetched_user} do
       {_, {:ok, %User{} = user}} ->
@@ -2070,7 +2055,7 @@ defmodule Pleroma.User do
     |> set_cache()
   end
 
-  defdelegate public_key(user), to: SigningKey
+  defdelegate public_key(user), to: SigningKey, as: :public_key_pem
 
   @doc "Gets or fetch a user by uri or nickname."
   @spec get_or_fetch(String.t()) :: {:ok, User.t()} | {:error, String.t()}
@@ -2203,7 +2188,7 @@ defmodule Pleroma.User do
 
   @spec all_superusers() :: [User.t()]
   def all_superusers do
-    User.Query.build(%{super_users: true, local: true, is_active: true})
+    User.Query.build(%{super_users: true, local: true, deactivated: false})
     |> Repo.all()
   end
 

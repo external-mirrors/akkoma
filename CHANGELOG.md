@@ -4,7 +4,55 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 2026.03
+
+### BREAKING
+- Elixir 1.14 is no longer suported, and it's EOL! Upgrade to Elixir 1.15+
+- `account` entities in API responses now only contain a cut down version of their servers nodeinfo.
+  TEMPORARILY a config option is provided to serve the full nodeinfo data again.
+  HOWEVER this option WILL be removed soon. If you encounter any issues with third-party clients fixed
+  by using this setting, tell us so we can include all actually needed keys by default.
+
+### REMOVED
+
+### Added
+- Mastodon-compatible translation endpoints are now supported too;
+    the older Akkoma endpoints are deprecated but no immediate plans for removal
+- `GET pleroma/conversation/:id/statuses` now supports `with_muted`
+- `POST /api/v1/statuses` accepts and now prefers the Mastodon-compatible `quoted_status_id` parameter for quoting a post
+- `status` API entities now expose non-shallow quotes in a manner also compatible with Mastodon clients
+- support for WebFinger backlinks in ActivityPub actors (FEP-2c59)
+
+### Fixed
+- pinning, muting or unmuting a status one is not allowed to access no longer leaks its content
+- revoking a favourite on a post one lost access to no longer leaks its content
+- user info updates again are actively federated to other servers;
+  this was accidentally broken in the previous release
+- it is no longer possible to reference posts one cannot access when reporting another user
+- streamed relationship updates no longer leak follow* counts for users who chose to hide their counts
+- WebFinger data and user nicknames no longer allow non-consential associations
+- Correctly setup custom WebFinger domains work again
+- fix paths of emojis added or updated at runtime and remove emoji from runtime when deleting an entire pack without requiring a full emoji reload
+- fix retraction of remote emoji reaction when id is not present or its domain differs from image host
+- fix AP ids declared with the canonical type being ignored in XML WebFinger responses
+- fix many, many bugs in the conversations API family
+- notifications about muted entities are no longer streamed out
+- non-UTF-8 usernames no longer lead to internal server errors in API endpoints
+- when SimplePolicy rules are configured but the MRF not enabled, it’s rules no longer interfere with fetching
+- fixed remote follow counter refresh on user (re)fetch
+- remote users whose follow* counts are private are now actually shown as such in API instead of represeneting them with public zero counters
+- fix local follow* collections counting and including AP IDs of deleted users
+
+### Changed
+- `PATCH /api/v1/pleroma/conversations/:id` now accepts update parameters via JSON body too
+- it is now possible to quote local and one’s own private posts provided a compatible scope is used
+- on final activity failures the error log now includes the afected activity
+- improved performance of `GET api/v1/custom_emoji`
+- outgoing HTTP requests now accept compressed responses
+- the system CA certificate store is now used by default
+- when refreshing remote follow* stats all fetch-related erros are now treated as stats being private;
+    this avoids spurious error logs and better matches the intent of implementations serving fallback HTML responses on the AP collection endpoints
+
 
 ## 2025.12
 
