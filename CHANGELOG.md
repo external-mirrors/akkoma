@@ -4,10 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 2026.03
 
 ### BREAKING
-- Elixir 1.14 is no longer suported, but EOL anyway. Upgrade to Elixir 1.15+
+- Elixir 1.14 is no longer suported, and it's EOL! Upgrade to Elixir 1.15+
 - `account` entities in API responses now only contain a cut down version of their servers nodeinfo.
   TEMPORARILY a config option is provided to serve the full nodeinfo data again.
   HOWEVER this option WILL be removed soon. If you encounter any issues with third-party clients fixed
@@ -44,7 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fix local follow* collections counting and including AP IDs of deleted users
 
 ### Changed
-- `PATCH /api/v1/pleroma/conversations/:id` now accepts updat parameters via JSON body too
+- `PATCH /api/v1/pleroma/conversations/:id` now accepts update parameters via JSON body too
 - it is now possible to quote local and one’s own private posts provided a compatible scope is used
 - on final activity failures the error log now includes the afected activity
 - improved performance of `GET api/v1/custom_emoji`
