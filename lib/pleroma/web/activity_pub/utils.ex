@@ -799,10 +799,14 @@ defmodule Pleroma.Web.ActivityPub.Utils do
     [actor | reported_activities] = activity.data["object"]
 
     stripped_activities =
-      Enum.map(reported_activities, fn
+      reported_activities
+      |> Enum.map(fn
         act when is_map(act) -> act["id"]
         act when is_binary(act) -> act
+        # Status ID is null sometimes.
+        _ -> nil
       end)
+      |> Enum.reject(&is_nil/1)
 
     new_data = put_in(activity.data, ["object"], [actor | stripped_activities])
 
