@@ -801,7 +801,8 @@ defmodule Pleroma.Web.ActivityPub.Utils do
       |> Enum.map(fn
         act when is_map(act) -> act["id"]
         act when is_binary(act) -> act
-        _ -> nil # Status ID is null sometimes.
+        # Status ID is null sometimes.
+        _ -> nil
       end)
       |> Enum.reject(&is_nil/1)
 
