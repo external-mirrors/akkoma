@@ -1239,7 +1239,8 @@ defmodule HttpRequestMock do
   end
 
   def get(
-        "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=acct:lain@zetsubou.xn--q9jyb4c",
+        "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=acct:lain@zetsubou.xn--q9jyb4c" =
+          url,
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -1247,13 +1248,15 @@ defmodule HttpRequestMock do
     {:ok,
      %Tesla.Env{
        status: 200,
+       url: url,
        body: File.read!("test/fixtures/lain.xml"),
        headers: [{"content-type", "application/xrd+xml"}]
      }}
   end
 
   def get(
-        "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=https://zetsubou.xn--q9jyb4c/users/lain",
+        "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=https://zetsubou.xn--q9jyb4c/users/lain" =
+          url,
         _,
         _,
         [{"accept", "application/xrd+xml,application/jrd+json"}]
@@ -1261,21 +1264,23 @@ defmodule HttpRequestMock do
     {:ok,
      %Tesla.Env{
        status: 200,
+       url: url,
        body: File.read!("test/fixtures/lain.xml"),
        headers: [{"content-type", "application/xrd+xml"}]
      }}
   end
 
-  def get("http://zetsubou.xn--q9jyb4c/.well-known/host-meta", _, _, _) do
+  def get("http://zetsubou.xn--q9jyb4c/.well-known/host-meta" = url, _, _, _) do
     {:ok,
      %Tesla.Env{
        status: 200,
+       url: url,
        body: File.read!("test/fixtures/host-meta-zetsubou.xn--q9jyb4c.xml")
      }}
   end
 
   def get(
-        "https://zetsubou.xn--q9jyb4c/.well-known/host-meta",
+        "https://zetsubou.xn--q9jyb4c/.well-known/host-meta" = url,
         _,
         _,
         _
@@ -1283,6 +1288,7 @@ defmodule HttpRequestMock do
     {:ok,
      %Tesla.Env{
        status: 200,
+       url: url,
        body: File.read!("test/fixtures/host-meta-zetsubou.xn--q9jyb4c.xml")
      }}
   end
@@ -1709,7 +1715,11 @@ defmodule HttpRequestMock do
   end
 
   Macros.mock_masto_webfinger(
-    "https://sub.mastodon.example/.well-known/webfinger?resource=acct:a@mastodon.example",
+    [
+      "https://sub.mastodon.example/.well-known/webfinger?resource=https://sub.mastodon.example/users/a",
+      "https://sub.mastodon.example/.well-known/webfinger?resource=acct:a@mastodon.example",
+      "https://mastodon.example/.well-known/webfinger?resource=acct:a@mastodon.example"
+    ],
     "a",
     "mastodon.example",
     "sub.mastodon.example"
@@ -1768,12 +1778,12 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get(
-        "https://sub.pleroma.example/.well-known/webfinger?resource=acct:a@pleroma.example" = url,
-        _,
-        _,
-        _
-      ) do
+  def get(url, _, _, _)
+      when url in [
+             "https://sub.pleroma.example/.well-known/webfinger?resource=https://sub.pleroma.example/users/a",
+             "https://sub.pleroma.example/.well-known/webfinger?resource=acct:a@pleroma.example",
+             "https://pleroma.example/.well-known/webfinger?resource=acct:a@pleroma.example"
+           ] do
     {:ok,
      %Tesla.Env{
        status: 200,

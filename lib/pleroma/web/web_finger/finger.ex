@@ -154,11 +154,9 @@ defmodule Pleroma.Web.WebFinger.Finger do
     query_uri = make_finger_uri(domain, resource)
     resp = HTTP.Backoff.get(query_uri, [{"accept", "application/xrd+xml,application/jrd+json"}])
 
-    with {:ok, %{url: resolved_uri, status: status} = resp_data} when status in 200..299 <- resp,
+    with {:ok, %{status: status} = resp_data} when status in 200..299 <- resp,
          {_, {:ok, parsed_data}} <- {:parse, parse_finger_response(resp_data)} do
-      resolved_domain = URI.parse(resolved_uri).host
-
-      {:ok, resolved_domain, parsed_data}
+      {:ok, parsed_data}
     else
       {:ok, %Tesla.Env{} = env} -> {:error, map_fetch_error_reason(env)}
       {:parse, {:error, _} = error} -> error
@@ -177,6 +175,47 @@ defmodule Pleroma.Web.WebFinger.Finger do
       [name, domain] -> {name, domain}
       [name] -> {name, nil}
       _ -> {nil, nil}
+    end
+  end
+
+  # Parsed WebFinger response data with the subject acct URI (and thus parsed_subject and normalised_subject)
+  # being verified to be authorised by the domain in which authority it lies
+  # (i.e. make sure an "acct:user@domain.example" is acknowlledged by domain.example)
+  # Does NOT verify the actor pointed at in "ap_id" agrees to the handle!
+  defp finger_data_with_domainauth(domain, resource, allow_refetch \\ true) do
+    with {:ok, %{"subject" => finger_subject} = preparsed_data} <-
+           finger_unverified_data(domain, resource),
+         handle <- normalise_webfinger_handle(finger_subject),
+         {nick_user, nick_domain} <- parse_handle(handle),
+         {_, false} <- {:no_domain, nick_domain == nil},
+         # We cannot reliably accepted redirects as auth for the final domain.
+         # Thus only accepted result if matching the _initial_ domain, else allow a single refetch
+         # (traversing longer redirect chains may risk getting stuck in loops)
+         {_, true, _} <-
+           {:domainauth, nick_domain == domain, {nick_domain, resource_from_mention(handle)}} do
+      parsed_data =
+        preparsed_data
+        |> Map.put("normalised_subject", handle)
+        |> Map.put("parsed_subject", {nick_user, nick_domain})
+
+      {:ok, parsed_data}
+    else
+      {:domainauth, _, {nick_domain, new_resource}} ->
+        if allow_refetch do
+          finger_data_with_domainauth(nick_domain, new_resource)
+        else
+          Logger.error(
+            "Spoofed WebFinger response: #{inspect(domain)} responded with subject from #{inspect(nick_domain)} when no alias was expected!"
+          )
+
+          {:error, :finger_domain_spoof}
+        end
+
+      {:no_domain, _} ->
+        {:error, :no_domain}
+
+      error ->
+        error
     end
   end
 
@@ -199,15 +238,10 @@ defmodule Pleroma.Web.WebFinger.Finger do
 
     with {_, false} <- {:no_domain, domain == nil || ap_domain == nil},
          {_, false} <- {:matching_domain, domain == ap_domain},
-         # We check for an exact match to the preferred handle which will ALWAYS
-         # belong to the initial query domain, thus we do not need to consider the final domain here.
-         # If the query domain delegates to another domain via host-meta or HTTP redirects on
-         # ./well-known/ paths (which ought to be directly controlled by the operator),
-         # this clearly indicates consent of the query domain to allow the final domain to manage this data
-         {_, {:ok, _, %{"ap_id" => fingered_ap_id, "subject" => finger_subject}}} <-
-           {:query, finger_unverified_data(domain, ap_id)},
+         # Since we already query the preferred domain, no refetches ought to be necessary
+         {_, {:ok, %{"ap_id" => fingered_ap_id, "normalised_subject" => finger_handle}}} <-
+           {:query, finger_data_with_domainauth(domain, ap_id, false)},
          {_, false} <- {:fingered_data_mismatch, ap_id != fingered_ap_id},
-         finger_handle <- normalise_webfinger_handle(finger_subject),
          {_, false} <- {:fingered_data_mismatch, preferred_handle != finger_handle} do
       {:ok, preferred_handle}
     else
@@ -226,18 +260,15 @@ defmodule Pleroma.Web.WebFinger.Finger do
     ap_domain = URI.parse(ap_id).host
 
     with {_, false} <- {:no_domain, ap_domain == nil},
-         {_, {:ok, finger_domain, %{"ap_id" => fingered_ap_id, "subject" => finger_subject}}} <-
-           {:query, finger_unverified_data(ap_domain, ap_id)},
+         {_,
+          {:ok,
+           %{
+             "ap_id" => fingered_ap_id,
+             "normalised_subject" => handle,
+             "parsed_subject" => {nick_user, _}
+           }}} <-
+           {:query, finger_data_with_domainauth(ap_domain, ap_id)},
          {_, false} <- {:fingered_data_mismatch, fingered_ap_id != ap_id},
-         handle <- normalise_webfinger_handle(finger_subject),
-         {nick_user, nick_domain} <- parse_handle(handle),
-         # Mastodon in its infinite wisdom encourages setups for custom WebFinger domains,
-         # such that the actual WebFinger response is _never_ served directly from the domain used in handles.
-         # Unlike in domain authority checks for AP IDs, here only fixed /.well-known URLs are queried,
-         # thus a redirect on this endpoint can be considered an approval from the redirecting domain
-         # (but not the redirected-to domain!) and it should be safe to accept both domain authorities here.
-         {_, false} <-
-           {:finger_domain_spoof, nick_domain != finger_domain && nick_domain != ap_domain},
          ap_name <- actor_data["preferredUsername"],
          {_, false} <- {:fingered_data_mismatch, ap_name != nil && ap_name != nick_user} do
       {:ok, handle}
@@ -305,16 +336,17 @@ defmodule Pleroma.Web.WebFinger.Finger do
     resource = resource_from_mention(mention_handle)
 
     with {_, false} <- {:invalid_handle, qname == nil || qdomain == nil},
-         {_, {:ok, finger_domain, %{"ap_id" => fingered_ap_id, "subject" => finger_subject}}} <-
-           {:query, finger_unverified_data(qdomain, resource)},
-         handle <- normalise_webfinger_handle(finger_subject),
-         {nick_user, nick_domain} <- parse_handle(handle),
-         # see comment in finger_actor for why both domains can and need to be accepted
-         {_, false} <-
-           {:finger_domain_spoof, nick_domain != finger_domain && nick_domain != qdomain},
+         {_,
+          {:ok,
+           %{
+             "ap_id" => fingered_ap_id,
+             "normalised_subject" => handle,
+             "parsed_subject" => {nick_user, nick_domain}
+           }}} <-
+           {:query, finger_data_with_domainauth(qdomain, resource)},
          {_, {:ok, data}} <-
            {:fetch, Fetcher.fetch_and_contain_remote_object_from_id(fingered_ap_id)} do
-      verify_ap_data_from_finger(data, handle, finger_domain, nick_user)
+      verify_ap_data_from_finger(data, handle, nick_domain, nick_user)
     else
       {:query, error} -> error
       {:fetch, error} -> error
@@ -339,7 +371,7 @@ defmodule Pleroma.Web.WebFinger.Finger do
       end
 
     with {_, domain} when is_binary(domain) <- {:domain, domain},
-         {:ok, _, data} <- finger_unverified_data(domain, resource) do
+         {:ok, data} <- finger_unverified_data(domain, resource) do
       {:ok, data}
     else
       {:domain, _} -> {:error, :no_domain}
