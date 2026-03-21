@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 ### Fixed
+- fix WebFinger validation even more.  
+    While actor consent was now properly taken into account after the previous release, some scenarios still allowed bypassing domain consent
+- fix posts being federated to us with explicit zero extents crashing the status renderer
 - fix pagination parameters being ignored on hashtag timelines
 
 ## 2026.03
