@@ -727,6 +727,8 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok,
          %Tesla.Env{
            status: 200,
+           url:
+             "https://mastodon.social/.well-known/webfinger?resource=acct:emelie@mastodon.social",
            body: File.read!("test/fixtures/tesla_mock/webfinger_emelie.json"),
            headers: [{"content-type", "application/jrd+json"}]
          }}
@@ -735,6 +737,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok,
          %Tesla.Env{
            status: 200,
+           url: "https://mastodon.social/.well-known/host-meta",
            body: File.read!("test/fixtures/tesla_mock/mastodon.social_host_meta")
          }}
     end)
@@ -750,6 +753,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok,
          %Tesla.Env{
            status: 200,
+           url: "https://pawoo.net/.well-known/webfinger?resource=acct:pekorino@pawoo.net",
            body: File.read!("test/fixtures/tesla_mock/https___pawoo.net_users_pekorino.xml"),
            headers: [{"content-type", "application/xrd+xml"}]
          }}
@@ -758,6 +762,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok,
          %Tesla.Env{
            status: 200,
+           url: "https://pawoo.net/.well-known/host-meta",
            body: File.read!("test/fixtures/tesla_mock/pawoo.net_host_meta")
          }}
     end)
@@ -773,6 +778,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok,
          %Tesla.Env{
            status: 200,
+           url: "https://bad.com/.well-known/webfinger?resource=acct:meanie@bad.com",
            body: File.read!("test/fixtures/tesla_mock/webfinger_spoof.json"),
            headers: [{"content-type", "application/jrd+json"}]
          }}
@@ -781,6 +787,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
         {:ok,
          %Tesla.Env{
            status: 200,
+           url: "https://bad.com/.well-known/host-meta",
            body: File.read!("test/fixtures/tesla_mock/bad.com_host_meta")
          }}
     end)
@@ -790,11 +797,11 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
 
   test "prevents forgeries" do
     Tesla.Mock.mock(fn
-      %{url: "https://bad.com/.well-known/webfinger?resource=acct:meanie@bad.com"} ->
+      %{url: "https://bad.com/.well-known/webfinger?resource=acct:meanie@bad.com" = url} ->
         fake_webfinger =
           File.read!("test/fixtures/webfinger/imposter-webfinger.json") |> Jason.decode!()
 
-        Tesla.Mock.json(fake_webfinger)
+        Tesla.Mock.json(fake_webfinger, url: url)
 
       %{url: "https://bad.com/.well-known/host-meta"} ->
         {:ok, %Tesla.Env{status: 404}}
