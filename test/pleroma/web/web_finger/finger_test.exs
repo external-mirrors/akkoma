@@ -103,6 +103,59 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
       {:ok, "user@example.com", _} = Finger.finger_mention("user@fedi.example.com")
     end
 
+    test "follows at most one level of refetches" do
+      # Not FEP-2c59, but otherwise one possible sane setup
+      Tesla.Mock.mock(fn
+        %{
+          url:
+            "https://fedi.example.com/.well-known/webfinger?resource=acct:user@fedi.example.com" =
+                url
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: url,
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.com")
+           }}
+
+        %{url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com" = url} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: url,
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "shiny.example")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.com")
+           }}
+
+        # Must not be called!
+        %{url: "https://shiny.example/.well-known/webfinger" <> _} ->
+          raise "No shiny.example WebFinger lookup must occur!"
+
+        %{url: url}
+        when url in [
+               "https://fedi.example.com/.well-known/host-meta",
+               "https://example.com/.well-known/host-meta",
+               "https://shiny.example/.well-known/host-meta"
+             ] ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             url: url
+           }}
+      end)
+
+      {:error, :finger_domain_spoof} = Finger.finger_mention("user@fedi.example.com")
+    end
+
     test "rejects spoof attempt via redirect to untrusted cross-domain path when handle does not exist on authorative domain" do
       Tesla.Mock.mock(fn
         %{
@@ -803,8 +856,6 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                })
     end
 
-    require Logger
-
     test "enusures final WebFinger response actually links back to inital actor (with FEP-2c59)" do
       Tesla.Mock.mock(fn
         %{
@@ -843,7 +894,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                })
     end
 
-    test "enusures final WebFinger response actually links back to inital acotr (without FEP-2c59)" do
+    test "enusures final WebFinger response actually links back to inital actor (without FEP-2c59)" do
       Tesla.Mock.mock(fn
         %{
           url:
@@ -896,6 +947,64 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
                Finger.finger_actor(%{
                  "id" => "https://example.com/users/user"
                })
+    end
+
+    test "follows at most one level of refetches without FEP-2c59" do
+      Tesla.Mock.mock(fn
+        %{
+          url:
+            "https://fedi.example.com/.well-known/webfinger?resource=https://fedi.example.com/users/user" =
+                url
+        } ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: url,
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "example.com")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.com")
+           }}
+
+        %{url: "https://example.com/.well-known/webfinger?resource=acct:user@example.com" = url} ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             url: url,
+             headers: [{"content-type", "application/jrd+json"}],
+             body:
+               File.read!("test/fixtures/webfinger/pleroma-webfinger.json")
+               |> String.replace("{{domain}}", "shiny.example")
+               |> String.replace("{{nickname}}", "user")
+               |> String.replace("{{subdomain}}", "fedi.example.com")
+           }}
+
+        # Must not be called!
+        %{url: "https://shiny.example/.well-known/webfinger" <> _} ->
+          raise "No shiny.example WebFinger lookup must occur!"
+
+        %{url: url}
+        when url in [
+               "https://fedi.example.com/.well-known/host-meta",
+               "https://example.com/.well-known/host-meta",
+               "https://shiny.example/.well-known/host-meta"
+             ] ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             url: url
+           }}
+      end)
+
+      {:error, :finger_domain_spoof} =
+        Finger.finger_actor(%{
+          "id" => "https://fedi.example.com/users/user",
+          "type" => "Person",
+          "inbox" => "https://fedi.example.com/users/user/inbox",
+          "outpbox" => "https://fedi.example.com/users/user/outbox"
+        })
     end
   end
 
@@ -1056,7 +1165,7 @@ defmodule Pleroma.Web.WebFinger.FingerTest do
 
         Tesla.Mock.json(fake_webfinger, url: url)
 
-      # the AP id from fake WebFInger response
+      # the AP id from fake WebFinger response
       %{url: "https://bad.com/webfingertest" = url} ->
         {:ok,
          %Tesla.Env{

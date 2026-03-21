@@ -202,7 +202,7 @@ defmodule Pleroma.Web.WebFinger.Finger do
     else
       {:domainauth, _, {nick_domain, new_resource}} ->
         if allow_refetch do
-          finger_data_with_domainauth(nick_domain, new_resource)
+          finger_data_with_domainauth(nick_domain, new_resource, false)
         else
           Logger.error(
             "Spoofed WebFinger response: #{inspect(domain)} responded with subject from #{inspect(nick_domain)} when no alias was expected!"
@@ -273,6 +273,10 @@ defmodule Pleroma.Web.WebFinger.Finger do
          {_, false} <- {:fingered_data_mismatch, ap_name != nil && ap_name != nick_user} do
       {:ok, handle}
     else
+      {:query, {:error, reason} = e} when reason in [:finger_domain_spoof, :no_domain] ->
+        # These one are critical and should get a bit more visibility
+        e
+
       {:query, _} ->
         # Instance either doesn’t use WebFinger or WebFinger setup temporarily unreachable.
         # This is no error (WebFinger isn’t mandatory for AP); we just have no WebFinger handle to report.
