@@ -47,9 +47,10 @@ Akkoma strongly encourages ActivityPub implementations to include
 a FEP-2c59-compliant WebFinger backlink in their actor documents.
 
 Without FEP-2c59 and if different domains are used for ActivityPub and the Webfinger subject,
-Akkoma relies on the presence of an host-meta LRDD template on the ActivityPub domain
-or a HTTP redirect from the ActivityPub domain’s `/.well-known/webfinger` to an equivalent endpoint
-on the domain used in the `subject` to discover and validate the domain association.  
+Akkoma relies on either the presence of an host-meta LRDD template on the ActivityPub domain
+or a working WebFinger endpoint on the ActivityPub domain. Additionally all WebFinger endpoints
+related to the ActivityPub and canonical WebFinger domain SHOULD also respond to queries about
+an alternative acct URI constructed with the WebFinger domain passed as the resource.  
 Without FEP-2c59 Akkoma may not become aware of changes to the
 preferred WebFinger `subject` domain for already discovered users.
 

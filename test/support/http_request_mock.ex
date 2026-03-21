@@ -1715,7 +1715,11 @@ defmodule HttpRequestMock do
   end
 
   Macros.mock_masto_webfinger(
-    "https://sub.mastodon.example/.well-known/webfinger?resource=acct:a@mastodon.example",
+    [
+      "https://sub.mastodon.example/.well-known/webfinger?resource=https://sub.mastodon.example/users/a",
+      "https://sub.mastodon.example/.well-known/webfinger?resource=acct:a@mastodon.example",
+      "https://mastodon.example/.well-known/webfinger?resource=acct:a@mastodon.example"
+    ],
     "a",
     "mastodon.example",
     "sub.mastodon.example"
@@ -1774,12 +1778,12 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get(
-        "https://sub.pleroma.example/.well-known/webfinger?resource=acct:a@pleroma.example" = url,
-        _,
-        _,
-        _
-      ) do
+  def get(url, _, _, _)
+      when url in [
+             "https://sub.pleroma.example/.well-known/webfinger?resource=https://sub.pleroma.example/users/a",
+             "https://sub.pleroma.example/.well-known/webfinger?resource=acct:a@pleroma.example",
+             "https://pleroma.example/.well-known/webfinger?resource=acct:a@pleroma.example"
+           ] do
     {:ok,
      %Tesla.Env{
        status: 200,
