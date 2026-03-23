@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Object.Updater do
+  alias Pleroma.Maps
   require Pleroma.Constants
 
   def update_content_fields(orig_object_data, updated_object) do
@@ -110,6 +111,7 @@ defmodule Pleroma.Object.Updater do
       # Choices are the same, but counts are different
       to_be_updated
       |> Map.put(key, updated_object[key])
+      |> Maps.put_if_present("votersCount", updated_object["votersCount"])
     else
       # Choices (or vote type) have changed, do not allow this
       _ -> to_be_updated

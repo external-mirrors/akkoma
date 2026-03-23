@@ -157,6 +157,7 @@ defmodule Pleroma.Web.CommonAPI.Utils do
         "type" => "Question",
         key => option_notes,
         "closed" => end_time,
+        "votersCount" => 0,
         "nonAnonymous" => false
       }
 

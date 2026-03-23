@@ -85,6 +85,8 @@ defmodule Pleroma.Web.MastodonAPI.PollView do
     nil
   end
 
+  defp voters_count(_multiple, %{data: %{"votersCount" => count}}), do: count
+
   defp voters_count(_multiple, %{data: %{"voters" => voters}}) when is_list(voters) do
     length(voters)
   end

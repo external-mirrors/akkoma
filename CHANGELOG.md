@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+## Added
+- federated voter count of polls is now parsed and federated out too;
+    this fixes vote percetanges for new and refreshed remote multi-selection polls
+
+
 ## 2026.05 (3.19.0)
 
 ### General note
