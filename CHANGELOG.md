@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Fixed
+- fix date-time format in `* /api/v1/markers` to strictly conform to Mastodon’s ISO 8061 subset
+
 ## 2026.03.1
 
 ### Fixed
