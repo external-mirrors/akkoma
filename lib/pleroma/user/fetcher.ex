@@ -197,7 +197,7 @@ defmodule Pleroma.User.Fetcher do
     end
   end
 
-  defp eval_collection_counter(_), do: {true, 0}
+  defp eval_collection_counter(_), do: {true, true, 0}
 
   def fetch_follow_information_for_user(user) do
     {hide_follows, hide_follows_count, following_count} =
