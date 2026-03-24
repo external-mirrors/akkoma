@@ -398,6 +398,24 @@ defmodule Pleroma.User.FetcherTest do
       assert follow_info.hide_follows == true
       assert follow_info.following_count == 0
     end
+
+    test "treats missing follow* addresses as a private collection" do
+      user =
+        insert(:user,
+          local: false,
+          follower_address: nil,
+          following_address: nil
+        )
+
+      {:ok, follow_info} = Fetcher.fetch_follow_information_for_user(user)
+
+      assert follow_info.hide_followers == true
+      assert follow_info.hide_followers_count == true
+      assert follow_info.follower_count == 0
+      assert follow_info.hide_follows == true
+      assert follow_info.hide_follows_count == true
+      assert follow_info.following_count == 0
+    end
   end
 
   describe "maybe_update_follow_information/1" do
