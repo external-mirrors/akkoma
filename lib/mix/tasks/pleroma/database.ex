@@ -296,7 +296,7 @@ defmodule Mix.Tasks.Pleroma.Database do
 
     Repo.transaction(
       fn ->
-        from(u in User, select: u)
+        from(u in User, select: u, where: u.local or u.is_active)
         |> Repo.stream()
         |> Stream.each(&User.update_follower_count/1)
         |> Stream.run()
