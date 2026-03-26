@@ -307,8 +307,11 @@ To add your own configuration for akkoma-fe, use it like this:
 config :pleroma, :frontend_configurations,
   pleroma_fe: %{
     theme: "pleroma-dark",
-    # ... see /priv/static/static/config.json for the available keys.
-},
+    backendCommitUrl: 'https://akkoma.dev/AkkomaGang/akkoma/commit/',
+    frontendCommitUrl: 'https://akkoma.dev/AkkomaGang/akkoma-fe/commit/',
+    # ... see all available keys at Akkoma-FE’s /static/config.json and
+    # https://akkoma.dev/AkkomaGang/akkoma-fe/src/commit/develop/src/boot/after_store.js :: setSettings
+  },
   masto_fe: %{
     showInstanceSpecificPanel: true
   }
