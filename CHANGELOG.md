@@ -17,6 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## 2026.03.1
 
+### Update notes
+- If you experience degraded performance of database queries after upgrading,
+    try running `VACUUM ANALYZE;` either manually with `psql` or via the
+    [database vacuum analyze mix task](https://docs.akkoma.dev/develop/administration/CLI_tasks/database/#analyze).
+    This will force the planner to pick up index changes if it didn’t do so on its own.
+
 ### Fixed
 - fix WebFinger validation even more.  
     While actor consent was now properly taken into account after the previous release, some scenarios still allowed bypassing domain consent
