@@ -68,8 +68,19 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
       result
     else
       {_post_result, response} ->
-        unless params["unreachable_since"], do: Instances.set_unreachable(inbox)
-        {:error, format_error_response(response)}
+        fmt_error = format_error_response(response)
+
+        case fmt_error do
+          # Instance does not support federation
+          # (see AP spec section 5.2)
+          {:http_error, 405, _} ->
+            Instances.set_consistently_unreachable(inbox)
+
+          _ ->
+            unless params["unreachable_since"], do: Instances.set_unreachable(inbox)
+        end
+
+        {:error, fmt_error}
     end
   end
 

@@ -151,6 +151,32 @@ defmodule Pleroma.Web.ActivityPub.PublisherTest do
       refute called(Instances.set_reachable(inbox))
     end
 
+    test_with_mock "calls `Instances.set_consistently_unreachable` when target inbox returns a 405 HTTP response",
+                   Instances,
+                   [:passthrough],
+                   [] do
+      actor =
+        insert(:user)
+        |> with_signing_key()
+
+      inbox = "http://405.site/users/nick1/inbox"
+
+      Tesla.Mock.mock(fn
+        %{url: ^inbox} ->
+          {:ok, %Tesla.Env{status: 405, url: inbox}}
+      end)
+
+      assert {:error, {:http_error, 405, _}} =
+               Publisher.publish_one(%{
+                 "inbox" => inbox,
+                 "json" => "{}",
+                 "actor" => actor,
+                 "id" => 1
+               })
+
+      assert called(Instances.set_consistently_unreachable(inbox))
+    end
+
     test_with_mock "calls `Instances.set_unreachable` on target inbox on non-2xx HTTP response code",
                    Instances,
                    [:passthrough],
