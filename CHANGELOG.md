@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fix response content-type and styling for the `/embed` endpoint
 - do not crash handler when attempting to refresh remote follow stats for users without follow* addresses
 - list timelines now include reblogs of users in the list matching Mastodon
+- non-federating instances now return a 405 response on inbox `POST`s, matching AP spec
 
 ### Changed
 - our Docker container now sets a default `nofile` `ulimit` to avoid issues on some systems.
