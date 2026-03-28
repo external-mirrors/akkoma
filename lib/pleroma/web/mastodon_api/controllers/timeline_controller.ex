@@ -251,7 +251,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineController do
     with %Pleroma.List{title: _title, following: following} <- Pleroma.List.get(id, user) do
       params =
         params
-        |> Map.put(:type, "Create")
+        |> Map.put(:type, ["Create", "Announce"])
         |> Map.put(:blocking_user, user)
         |> Map.put(:user, user)
         |> Map.put(:muting_user, user)
