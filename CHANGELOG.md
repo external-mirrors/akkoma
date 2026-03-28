@@ -6,10 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+- `{POST,PUT} api/v1/lists` now accepts the `exclusive` parameter from Mastodon allowing followed users in the list to be removed from the home timeline
+
 ### Fixed
 - fix date-time format in `* /api/v1/markers` to strictly conform to Mastodon’s ISO 8061 subset
 - fix response content-type and styling for the `/embed` endpoint
 - do not crash handler when attempting to refresh remote follow stats for users without follow* addresses
+- list timelines now include reblogs of users in the list matching Mastodon
 
 ### Changed
 - our Docker container now sets a default `nofile` `ulimit` to avoid issues on some systems.

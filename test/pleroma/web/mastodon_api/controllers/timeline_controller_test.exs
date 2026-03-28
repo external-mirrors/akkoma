@@ -151,6 +151,31 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
              |> get("/api/v1/timelines/home?remote=true&local=true")
              |> json_response_and_validate_schema(200) == []
     end
+
+    test "the home timeline excludes posts from users in exclusive lists", %{
+      user: user,
+      conn: conn
+    } do
+      other_user1 = insert(:user)
+      other_user2 = insert(:user)
+
+      {:ok, user, other_user1} = User.follow(user, other_user1)
+      {:ok, user, other_user2} = User.follow(user, other_user2)
+
+      {:ok, list} = Pleroma.List.create(%{title: "foo", exclusive: true}, user)
+      {:ok, _list} = Pleroma.List.follow(list, other_user1)
+
+      {:ok, _activity} = CommonAPI.post(other_user1, %{status: "hi"})
+      {:ok, %{id: activity2_id}} = CommonAPI.post(other_user2, %{status: "hi too"})
+
+      response =
+        conn
+        |> assign(:user, user)
+        |> get("/api/v1/timelines/home")
+        |> json_response_and_validate_schema(200)
+
+      assert [%{"id" => ^activity2_id}] = response
+    end
   end
 
   describe "public" do
@@ -621,25 +646,27 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
   describe "list" do
     setup do: oauth_access(["read:lists"])
 
-    test "does not contain retoots", %{user: user, conn: conn} do
+    test "includes retoots", %{user: user, conn: conn} do
       other_user = insert(:user)
       {:ok, activity_one} = CommonAPI.post(user, %{status: "Marisa is cute."})
       {:ok, activity_two} = CommonAPI.post(other_user, %{status: "Marisa is stupid."})
-      {:ok, _} = CommonAPI.repeat(activity_one.id, other_user)
+      {:ok, activity_repeat} = CommonAPI.repeat(activity_one.id, other_user)
 
-      {:ok, list} = Pleroma.List.create("name", user)
+      {:ok, list} = Pleroma.List.create(%{title: "name"}, user)
       {:ok, list} = Pleroma.List.follow(list, other_user)
 
       conn = get(conn, "/api/v1/timelines/list/#{list.id}")
 
-      assert [%{"id" => id}] = json_response_and_validate_schema(conn, :ok)
+      assert [%{"id" => id_repeat}, %{"id" => id_note}] =
+               json_response_and_validate_schema(conn, :ok)
 
-      assert id == to_string(activity_two.id)
+      assert id_repeat == to_string(activity_repeat.id)
+      assert id_note == to_string(activity_two.id)
     end
 
     test "works with pagination", %{user: user, conn: conn} do
       other_user = insert(:user)
-      {:ok, list} = Pleroma.List.create("name", user)
+      {:ok, list} = Pleroma.List.create(%{title: "name"}, user)
       {:ok, list} = Pleroma.List.follow(list, other_user)
 
       Enum.each(1..30, fn i ->
@@ -665,7 +692,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
       other_user = insert(:user)
       {:ok, _activity_one} = CommonAPI.post(user, %{status: "Marisa is cute."})
       {:ok, activity_two} = CommonAPI.post(other_user, %{status: "Marisa is cute."})
-      {:ok, list} = Pleroma.List.create("name", user)
+      {:ok, list} = Pleroma.List.create(%{title: "name"}, user)
       {:ok, list} = Pleroma.List.follow(list, other_user)
 
       conn = get(conn, "/api/v1/timelines/list/#{list.id}")
@@ -688,7 +715,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
           visibility: "private"
         })
 
-      {:ok, list} = Pleroma.List.create("name", user)
+      {:ok, list} = Pleroma.List.create(%{title: "name"}, user)
       {:ok, list} = Pleroma.List.follow(list, other_user)
 
       conn = get(conn, "/api/v1/timelines/list/#{list.id}")
@@ -706,7 +733,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
       {:ok, _} = CommonAPI.react_with_emoji(activity.id, user3, "🎅")
       User.mute(user, user3)
 
-      {:ok, list} = Pleroma.List.create("name", user)
+      {:ok, list} = Pleroma.List.create(%{title: "name"}, user)
       {:ok, list} = Pleroma.List.follow(list, user2)
 
       result =
@@ -737,7 +764,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
     end
 
     test "filtering", %{user: user, conn: conn} do
-      {:ok, list} = Pleroma.List.create("name", user)
+      {:ok, list} = Pleroma.List.create(%{title: "name"}, user)
 
       local_user = insert(:user)
       {:ok, local_activity} = CommonAPI.post(local_user, %{status: "Marisa is stupid."})

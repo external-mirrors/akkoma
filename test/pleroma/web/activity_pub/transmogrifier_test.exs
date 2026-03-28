@@ -500,7 +500,7 @@ defmodule Pleroma.Web.ActivityPub.TransmogrifierTest do
 
     test "it strips BCC field" do
       user = insert(:user)
-      {:ok, list} = Pleroma.List.create("foo", user)
+      {:ok, list} = Pleroma.List.create(%{title: "foo"}, user)
 
       {:ok, activity} = CommonAPI.post(user, %{status: "foobar", visibility: "list:#{list.id}"})
 
