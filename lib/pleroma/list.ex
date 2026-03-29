@@ -156,7 +156,8 @@ defmodule Pleroma.List do
     |> where([l], l.user_id == ^user_id)
     |> where([l], l.exclusive == true)
     |> join(:cross_lateral, [l], fragment("UNNEST(?)", l.following))
-    |> select([_l, r], fragment("ARRAY_AGG(DISTINCT ?)", r))
-    |> Repo.one() || []
+    |> select([_l, r], fragment("?", r))
+    |> distinct(true)
+    |> Repo.all()
   end
 end
