@@ -290,6 +290,10 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     |> Map.drop(["conversation"])
   end
 
+  defp is_valid_mime(mimestr) do
+    is_binary(mimestr) && MIME.extensions(mimestr) != []
+  end
+
   def fix_attachments(%{"attachment" => attachment} = object) when is_list(attachment) do
     attachments =
       Enum.map(attachment, fn data ->
@@ -302,13 +306,13 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
 
         media_type =
           cond do
-            is_map(url) && MIME.extensions(url["mediaType"]) != [] ->
+            is_map(url) && is_valid_mime(url["mediaType"]) ->
               url["mediaType"]
 
-            is_bitstring(data["mediaType"]) && MIME.extensions(data["mediaType"]) != [] ->
+            is_valid_mime(data["mediaType"]) ->
               data["mediaType"]
 
-            is_bitstring(data["mimeType"]) && MIME.extensions(data["mimeType"]) != [] ->
+            is_valid_mime(data["mimeType"]) ->
               data["mimeType"]
 
             true ->
