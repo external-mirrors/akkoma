@@ -311,7 +311,8 @@ defmodule Pleroma.Web.Telemetry do
       last_value("pleroma.remote_users.total"),
       counter("akkoma.ap.delivery.fail.final", tags: [:target, :reason]),
       last_value("akkoma.job.queue.scheduled", tags: [:queue_name]),
-      last_value("akkoma.job.queue.available", tags: [:queue_name])
+      last_value("akkoma.job.queue.available", tags: [:queue_name]),
+      last_value("akkoma.job.queue.retryable", tags: [:queue_name])
     ]
   end
 
@@ -347,13 +348,17 @@ defmodule Pleroma.Web.Telemetry do
     query =
       from(j in Oban.Job,
         select: %{queue: j.queue, state: j.state, count: count()},
-        where: j.state in ["scheduled", "available"],
+        where: j.state in ["scheduled", "available", "retryable"],
         group_by: [j.queue, j.state]
       )
 
     conf = Oban.Config.new(Config.get!(Oban))
     qres = Oban.Repo.all(conf, query)
-    acc = Enum.into(conf.queues, %{}, fn {x, _} -> {x, %{available: 0, scheduled: 0}} end)
+
+    acc =
+      Enum.into(conf.queues, %{}, fn {x, _} ->
+        {x, %{available: 0, retryable: 0, scheduled: 0}}
+      end)
 
     acc =
       Enum.reduce(qres, acc, fn %{queue: q, state: state, count: count}, acc ->
