@@ -4,7 +4,7 @@
 
 ![English OK](https://img.shields.io/badge/English-OK-blueviolet) ![日本語OK](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-OK-blueviolet)
 
-Before Submitting a Pull Request, please read [the contribution guidelines](./CONTRIBUTORS.md)
+Before Submitting a Pull Request, please read [the contribution guidelines](./CONTRIBUTING.md)
 
 ## About 
 
