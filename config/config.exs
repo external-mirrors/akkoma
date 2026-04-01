@@ -566,6 +566,15 @@ config :pleroma, Pleroma.User,
   ],
   email_blacklist: []
 
+config :pleroma, :database_config_whitelist, [
+  {:pleroma},
+  {:cors_plug},
+  {:ex_aws, :s3},
+  {:mime},
+  {:web_push_encryption, :vapid_details},
+  {:logger}
+]
+
 config :pleroma, Oban,
   repo: Pleroma.Repo,
   log: false,
