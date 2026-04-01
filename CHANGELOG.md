@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - our Docker container now sets a default `nofile` `ulimit` to avoid issues on some systems.
     Methods to customise this are documented under Configuration - General Optimisation.
+- Add reasonable defaults for `:database_config_whitelist`
+
 
 ## 2026.03.1
 
