@@ -617,49 +617,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_visibility(query, _visibility), do: query
 
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when is_list(visibility) do
-    if Enum.all?(visibility, &(&1 in @valid_visibilities)) do
-      from(
-        a in query,
-        where:
-          not fragment(
-            "activity_visibility(?, ?, ?) = ANY (?)",
-            a.actor,
-            a.recipients,
-            a.data,
-            ^visibility
-          )
-      )
-    else
-      Logger.error("Could not exclude visibility to #{visibility}")
-      query
-    end
-  end
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when visibility in @valid_visibilities do
-    from(
-      a in query,
-      where:
-        not fragment(
-          "activity_visibility(?, ?, ?) = ?",
-          a.actor,
-          a.recipients,
-          a.data,
-          ^visibility
-        )
-    )
-  end
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when visibility not in [nil | @valid_visibilities] do
-    Logger.error("Could not exclude visibility to #{visibility}")
-    query
-  end
-
-  defp exclude_visibility(query, _visibility), do: query
-
   defp restrict_thread_visibility(query, _, %{skip_thread_containment: true} = _),
     do: query
 
@@ -1456,7 +1413,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       |> maybe_restrict_deactivated_users(opts)
       |> exclude_poll_votes(opts)
       |> exclude_invisible_actors(opts)
-      |> exclude_visibility(opts)
 
     if Config.feature_enabled?(:improved_hashtag_timeline) do
       query
