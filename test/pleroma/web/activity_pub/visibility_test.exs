@@ -5,7 +5,6 @@
 defmodule Pleroma.Web.ActivityPub.VisibilityTest do
   use Pleroma.DataCase, async: true
 
-  alias Pleroma.Activity
   alias Pleroma.Object
   alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.CommonAPI
@@ -19,6 +18,7 @@ defmodule Pleroma.Web.ActivityPub.VisibilityTest do
     remote = insert(:user, local: false)
     {:ok, following, user} = Pleroma.User.follow(following, user)
     {:ok, list} = Pleroma.List.create(%{title: "foo"}, user)
+    list_ap_id = user.ap_id <> "/lists/" <> to_string(list.id)
 
     Pleroma.List.follow(list, unrelated)
 
@@ -45,7 +45,7 @@ defmodule Pleroma.Web.ActivityPub.VisibilityTest do
       })
 
     list_object = Object.normalize(list_activity)
-    {:ok, list_object} = Object.update_data(list_object, %{"listMessage" => list.ap_id})
+    {:ok, list_object} = Object.update_data(list_object, %{"listMessage" => list_ap_id})
     list_activity = %{list_activity | object: list_object}
 
     %{

@@ -560,12 +560,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   def fetch_activities(recipients, opts \\ %{}, pagination \\ :keyset) do
-    list_memberships = Pleroma.List.memberships(opts[:user])
-
-    fetch_activities_query(recipients ++ list_memberships, opts)
+    fetch_activities_query(recipients, opts)
     |> fetch_paginated_optimized(opts, pagination)
     |> Enum.reverse()
-    |> maybe_update_cc(list_memberships, opts[:user])
   end
 
   @spec fetch_public_or_unlisted_activities(map(), Pagination.type()) :: [Activity.t()]
@@ -1395,22 +1392,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> select([like, object, create], %{id: like.id, entry: %{create | object: object}})
     |> Pagination.fetch_paginated(params, :keyset)
   end
-
-  defp maybe_update_cc(activities, [_ | _] = list_memberships, %User{ap_id: user_ap_id}) do
-    Enum.map(activities, fn
-      %{data: %{"bcc" => [_ | _] = bcc}} = activity ->
-        if Enum.any?(bcc, &(&1 in list_memberships)) do
-          update_in(activity.data["cc"], &[user_ap_id | &1])
-        else
-          activity
-        end
-
-      activity ->
-        activity
-    end)
-  end
-
-  defp maybe_update_cc(activities, _, _), do: activities
 
   defp fetch_activities_bounded_query(query, recipients, recipients_with_public) do
     from(activity in query,
