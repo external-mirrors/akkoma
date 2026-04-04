@@ -326,7 +326,6 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
         hide_follows: user.hide_follows,
         hide_favorites: user.hide_favorites,
         relationship: relationship,
-        skip_thread_containment: user.skip_thread_containment,
         background_image: image_url(user.background) |> MediaProxy.url(),
         background_image_description: User.image_description(user.background, ""),
         favicon: favicon

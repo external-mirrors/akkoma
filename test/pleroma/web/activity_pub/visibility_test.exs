@@ -268,47 +268,4 @@ defmodule Pleroma.Web.ActivityPub.VisibilityTest do
   test "get_visibility treats legacy list messages as direct" do
     assert Visibility.get_visibility(%{data: %{"listMessage" => ""}}) == "direct"
   end
-
-  describe "entire_thread_visible_for_user?/2" do
-    test "returns false if not found activity", %{user: user} do
-      refute Visibility.entire_thread_visible_for_user?(%Activity{}, user)
-    end
-
-    test "returns true if activity hasn't 'Create' type", %{user: user} do
-      activity = insert(:like_activity)
-      assert Visibility.entire_thread_visible_for_user?(activity, user)
-    end
-
-    test "returns false when invalid recipients", %{user: user} do
-      author = insert(:user)
-
-      activity =
-        insert(:note_activity,
-          note:
-            insert(:note,
-              user: author,
-              data: %{"to" => ["test-user"]}
-            )
-        )
-
-      refute Visibility.entire_thread_visible_for_user?(activity, user)
-    end
-
-    test "returns true if user following to author" do
-      author = insert(:user)
-      user = insert(:user)
-      Pleroma.User.follow(user, author)
-
-      activity =
-        insert(:note_activity,
-          note:
-            insert(:note,
-              user: author,
-              data: %{"to" => [user.ap_id]}
-            )
-        )
-
-      assert Visibility.entire_thread_visible_for_user?(activity, user)
-    end
-  end
 end

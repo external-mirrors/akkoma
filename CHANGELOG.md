@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Removed
+- as announced in 2025.12 (3.17) and since no complaints were raised, the semi-broken, seemingly unused and improvement-blocking thread containment feature is now removed. This entails the following API changes:
+    - dropped `PATCH /api/v1/accounts/update_credentials` input parameter `skip_thread_containment`
+    - dropped `GET /api/v1/accounts/:id` response key `pleroma.skip_thread_containment`
+    - dropped `GET /api/v1/pleroma/admin/users/:nickname/credentials` response key `skip_thread_containment`
+    - dropped the `skipThreadContainment` key from nodeinfo’s `metadata` object
+
 ### Added
 - `{POST,PUT} api/v1/lists` now accepts the `exclusive` parameter from Mastodon allowing followed users in the list to be removed from the home timeline
 - User profile media now (can) have federated alt text; to this end:

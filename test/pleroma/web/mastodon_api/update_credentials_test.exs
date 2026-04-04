@@ -162,16 +162,6 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
       assert user_data["pleroma"]["hide_follows_count"] == true
     end
 
-    test "updates the user's skip_thread_containment option", %{user: user, conn: conn} do
-      response =
-        conn
-        |> patch("/api/v1/accounts/update_credentials", %{skip_thread_containment: "true"})
-        |> json_response_and_validate_schema(200)
-
-      assert response["pleroma"]["skip_thread_containment"] == true
-      assert refresh_record(user).skip_thread_containment
-    end
-
     test "updates the user's hide_follows status", %{conn: conn} do
       conn = patch(conn, "/api/v1/accounts/update_credentials", %{hide_follows: "true"})
 

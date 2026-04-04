@@ -617,23 +617,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_visibility(query, _visibility), do: query
 
-  defp restrict_thread_visibility(query, _, %{skip_thread_containment: true} = _),
-    do: query
-
-  defp restrict_thread_visibility(query, %{user: %User{skip_thread_containment: true}}, _),
-    do: query
-
-  defp restrict_thread_visibility(query, %{user: %User{ap_id: ap_id}}, _) do
-    local_public = as_local_public()
-
-    from(
-      a in query,
-      where: fragment("thread_visibility(?, (?)->>'id', ?) = true", ^ap_id, a.data, ^local_public)
-    )
-  end
-
-  defp restrict_thread_visibility(query, _, _), do: query
-
   def fetch_user_abstract_activities(user, reading_user, params \\ %{}) do
     params =
       params
@@ -1378,10 +1361,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     {restrict_blocked_opts, restrict_muted_opts, restrict_muted_reblogs_opts} =
       fetch_activities_query_ap_ids_ops(opts)
 
-    config = %{
-      skip_thread_containment: Config.get([:instance, :skip_thread_containment])
-    }
-
     query =
       Activity
       |> maybe_preload_objects(opts)
@@ -1404,7 +1383,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       |> restrict_filtered(opts)
       |> restrict_media(opts)
       |> restrict_visibility(opts)
-      |> restrict_thread_visibility(opts, config)
       |> restrict_reblogs(opts)
       |> restrict_pinned(opts)
       |> restrict_muted_reblogs(restrict_muted_reblogs_opts)
@@ -1496,16 +1474,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   defp sanitize_upload_file(upload), do: upload
-
-  # filter out broken threads
-  defp contain_broken_threads(%Activity{} = activity, %User{} = user) do
-    entire_thread_visible_for_user?(activity, user)
-  end
-
-  # do post-processing on a specific activity
-  def contain_activity(%Activity{} = activity, %User{} = user) do
-    contain_broken_threads(activity, user)
-  end
 
   def fetch_direct_messages_query do
     Activity
