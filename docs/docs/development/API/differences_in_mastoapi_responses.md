@@ -49,6 +49,15 @@ Has these additional fields under the `pleroma` object:
 - `parent_visible`: If the parent of this post is visible to the user or not.
 - `pinned_at`: a datetime (iso8601) when status was pinned, `null` otherwise.
 
+Furthermore, has the following additional attributes under the `poll.akkoma` object *(if `poll` is non-null)*:
+- `anonymous`: relays whether the poll creator promised to process votes anonymously *(`true`)*,
+    publishes votes with voter identity to some parties or the public *(`false`)*
+    or did not indicate how votes are processed (`null`).   
+    Note this assumes any remote’s claim about its process are true and
+    even if this is truthfully set to `true`, while no regular users ought to have access to voter identities,
+    the server operator of the poll’s home instance may in principle still be able to
+    extract voter identites via the database or side channels.
+
 The `GET /api/v1/statuses/:id/source` endpoint additionally has the following attributes:
 
 - `content_type`: The content type of the status source.
