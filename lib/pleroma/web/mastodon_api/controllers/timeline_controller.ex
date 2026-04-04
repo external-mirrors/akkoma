@@ -9,7 +9,6 @@ defmodule Pleroma.Web.MastodonAPI.TimelineController do
     only: [add_link_headers: 2, add_link_headers: 3]
 
   alias Pleroma.Config
-  alias Pleroma.Pagination
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.Plugs.OAuthScopesPlug
@@ -82,35 +81,6 @@ defmodule Pleroma.Web.MastodonAPI.TimelineController do
       for: user,
       as: :activity,
       with_muted: Map.get(params, :with_muted, false)
-    )
-  end
-
-  # GET /api/v1/timelines/direct
-  def direct(%{assigns: %{user: user}} = conn, params) do
-    Logger.debug("TimelineController.direct: #{user.nickname}")
-
-    params =
-      params
-      |> Map.put(:type, "Create")
-      |> Map.put(:blocking_user, user)
-      |> Map.put(:user, user)
-      |> Map.put(:visibility, "direct")
-
-    Logger.debug("TimelineController.direct: #{user.nickname} - fetching activities")
-
-    activities =
-      [user.ap_id]
-      |> ActivityPub.fetch_activities_query(params)
-      |> Pagination.fetch_paginated(params)
-
-    Logger.debug("TimelineController.direct: #{user.nickname} - rendering")
-
-    conn
-    |> add_link_headers(activities)
-    |> render("index.json",
-      activities: activities,
-      for: user,
-      as: :activity
     )
   end
 
