@@ -105,7 +105,9 @@ defmodule Pleroma.Web.ActivityPub.Utils do
         "https://purl.archive.org/socialweb/webfinger",
         %{
           "@language" => "und",
-          "htmlMfm" => "https://w3id.org/fep/c16b#htmlMfm"
+          "htmlMfm" => "https://w3id.org/fep/c16b#htmlMfm",
+          "sm" => "http://smithereen.software/ns#",
+          "nonAnonymous" => "sm:nonAnonymous"
         }
       ]
     }

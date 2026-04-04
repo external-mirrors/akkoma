@@ -45,7 +45,8 @@ defmodule Pleroma.Web.MastodonAPI.PollViewTest do
       votes_count: 0,
       voters_count: nil,
       akkoma: %{
-        anonymous: nil
+        # locally created polls are always anonymous
+        anonymous: true
       }
     }
 
