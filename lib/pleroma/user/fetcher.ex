@@ -31,11 +31,22 @@ defmodule Pleroma.User.Fetcher do
 
   defp get_actor_url(_url), do: nil
 
-  defp normalize_image(%{"url" => url}) do
+  defp maybe_put_description(map, %{"summary" => description}) when is_binary(description) do
+    Map.put(map, "name", description)
+  end
+
+  defp maybe_put_description(map, %{"name" => description}) when is_binary(description) do
+    Map.put(map, "name", description)
+  end
+
+  defp maybe_put_description(map, _), do: map
+
+  defp normalize_image(%{"url" => url} = data) do
     %{
       "type" => "Image",
       "url" => [%{"href" => url}]
     }
+    |> maybe_put_description(data)
   end
 
   defp normalize_image(urls) when is_list(urls), do: urls |> List.first() |> normalize_image()

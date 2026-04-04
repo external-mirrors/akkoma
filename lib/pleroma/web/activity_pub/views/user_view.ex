@@ -108,10 +108,20 @@ defmodule Pleroma.Web.ActivityPub.UserView do
       "alsoKnownAs" => user.also_known_as
     }
     |> maybe_put_webfinger(user)
-    |> Map.merge(maybe_make_image(&User.avatar_url/2, "icon", user))
-    |> Map.merge(maybe_make_image(&User.banner_url/2, "image", user))
+    |> Map.merge(
+      maybe_make_image(&User.avatar_url/2, User.image_description(user.avatar), "icon", user)
+    )
+    |> Map.merge(
+      maybe_make_image(&User.banner_url/2, User.image_description(user.banner), "image", user)
+    )
     # Yes, the key is named ...Url eventhough it is a whole 'Image' object
-    |> Map.merge(maybe_insert_image("backgroundUrl", User.background_url(user)))
+    |> Map.merge(
+      maybe_insert_image(
+        "backgroundUrl",
+        User.background_url(user),
+        User.image_description(user.background)
+      )
+    )
     |> Map.merge(Utils.make_json_ld_header())
   end
 
@@ -314,18 +324,20 @@ defmodule Pleroma.Web.ActivityPub.UserView do
 
   defp maybe_put_webfinger(data, _), do: data
 
-  defp maybe_make_image(func, key, user) do
+  defp maybe_make_image(func, description, key, user) do
     image = func.(user, no_default: true)
-    maybe_insert_image(key, image)
+    maybe_insert_image(key, image, description)
   end
 
-  defp maybe_insert_image(key, image) do
+  defp maybe_insert_image(key, image, description) do
     if image do
       %{
-        key => %{
-          "type" => "Image",
-          "url" => image
-        }
+        key =>
+          %{
+            "type" => "Image",
+            "url" => image
+          }
+          |> maybe_put("name", description)
       }
     else
       %{}
