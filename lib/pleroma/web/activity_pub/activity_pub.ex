@@ -263,10 +263,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       conversation = Repo.preload(conversation, :participations)
 
       last_activity_id =
-        fetch_latest_direct_activity_id_for_context(conversation.ap_id, %{
-          user: user,
-          blocking_user: user
-        })
+        fetch_latest_direct_activity_id_for_context(conversation.ap_id, user)
 
       if last_activity_id do
         stream_out_participations(conversation.participations)
@@ -467,12 +464,14 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   def fetch_activities_for_context_query(context, opts) do
-    public = [Constants.as_public()]
+    public = Constants.as_public()
 
     recipients =
-      if opts[:user],
-        do: [opts[:user].ap_id | User.following(opts[:user])] ++ public,
-        else: public
+      cond do
+        opts[:custom_recipients] != nil -> opts[:custom_recipients]
+        opts[:user] != nil -> [public, opts[:user].ap_id | User.following(opts[:user])]
+        true -> [public]
+      end
 
     from(activity in Activity)
     |> maybe_preload_objects(opts)
@@ -526,12 +525,27 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> Pagination.fetch_paginated(opts, :keyset)
   end
 
-  @spec fetch_latest_direct_activity_id_for_context(String.t(), keyword() | map()) ::
+  @spec fetch_latest_direct_activity_id_for_context(String.t(), User.t()) ::
           FlakeId.Ecto.CompatType.t() | nil
-  def fetch_latest_direct_activity_id_for_context(context, opts \\ %{}) do
+  def fetch_latest_direct_activity_id_for_context(context, user) do
+    opts = %{
+      skip_preload: true,
+      user: user,
+      blocking_user: user,
+      # only want directly addressed activities
+      custom_recipients: [user.ap_id]
+    }
+
+    # to filter out non-direct mentions other than follower-only
+    nodm_scope = [Constants.as_public(), as_local_public()]
+
     context
-    |> fetch_activities_for_context_query(Map.merge(%{skip_preload: true}, opts))
-    |> restrict_visibility(%{visibility: "direct"})
+    |> fetch_activities_for_context_query(opts)
+    # filter out publicly visible and local-only posts
+    |> where([a], fragment("NOT (? && ?)", a.recipients, ^nodm_scope))
+    # filter out followers-only
+    |> join(:inner, [a], u in User, as: :actor_user, on: a.actor == u.ap_id)
+    |> where([a, actor_user: u], u.follower_address not in a.recipients)
     |> limit(1)
     |> select([a], a.id)
     |> Repo.one()
