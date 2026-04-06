@@ -1043,10 +1043,38 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_muted_threads(query, _), do: query
 
-  defp restrict_blocked(query, %{blocking_user: %User{} = user} = opts) do
-    blocked_ap_ids = opts[:blocked_users_ap_ids] || User.blocked_users_ap_ids(user)
-    domain_blocks = user.domain_blocks || []
+  defp restrict_blocked_users(query, _, []), do: query
 
+  defp restrict_blocked_users(query, user, blocked_ap_ids) do
+    query
+    # You don't block the author
+    |> where([activity], fragment("not (? = ANY(?))", activity.actor, ^blocked_ap_ids))
+    # You don't block any recipients, and didn't author the post
+    |> where(
+      [activity],
+      fragment(
+        "((not (? && ?)) or ? = ?)",
+        activity.recipients,
+        ^blocked_ap_ids,
+        activity.actor,
+        ^user.ap_id
+      )
+    )
+    # It's not a boost of a user you block
+    |> where(
+      [activity],
+      fragment(
+        "not (?->>'type' = 'Announce' and ?->'to' \\?| ?)",
+        activity.data,
+        activity.data,
+        ^blocked_ap_ids
+      )
+    )
+  end
+
+  defp restrict_blocked_domains(query, _, []), do: query
+
+  defp restrict_blocked_domains(query, user, domain_blocks) do
     following_ap_ids = User.get_friends_ap_ids(user)
 
     query =
@@ -1054,19 +1082,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
     from(
       [activity, object: o] in query,
-      # You don't block the author
-      where: fragment("not (? = ANY(?))", activity.actor, ^blocked_ap_ids),
-
-      # You don't block any recipients, and didn't author the post
-      where:
-        fragment(
-          "((not (? && ?)) or ? = ?)",
-          activity.recipients,
-          ^blocked_ap_ids,
-          activity.actor,
-          ^user.ap_id
-        ),
-
       # You don't block the domain of any recipients, and didn't author the post
       where:
         fragment(
@@ -1075,15 +1090,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
           ^domain_blocks,
           activity.actor,
           ^user.ap_id
-        ),
-
-      # It's not a boost of a user you block
-      where:
-        fragment(
-          "not (?->>'type' = 'Announce' and ?->'to' \\?| ?)",
-          activity.data,
-          activity.data,
-          ^blocked_ap_ids
         ),
 
       # You don't block the author's domain, and also don't follow the author
@@ -1108,14 +1114,21 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     )
   end
 
+  defp restrict_blocked(query, %{blocking_user: %User{} = user} = opts) do
+    blocked_ap_ids = opts[:blocked_users_ap_ids] || User.blocked_users_ap_ids(user)
+    domain_blocks = user.domain_blocks || []
+
+    query
+    |> restrict_blocked_users(user, blocked_ap_ids)
+    |> restrict_blocked_domains(user, domain_blocks)
+  end
+
   defp restrict_blocked(query, _), do: query
 
   defp restrict_blockers_visibility(query, %{blocking_user: %User{} = user}) do
-    if Config.get([:activitypub, :blockers_visible]) == true do
-      query
-    else
-      blocker_ap_ids = User.incoming_relationships_ungrouped_ap_ids(user, [:block])
-
+    with false <- Config.get([:activitypub, :blockers_visible]),
+         blocker_ap_ids <- User.incoming_relationships_ungrouped_ap_ids(user, [:block]),
+         false <- blocker_ap_ids == [] do
       from(
         activity in query,
         # The author doesn't block you
@@ -1130,6 +1143,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
             ^blocker_ap_ids
           )
       )
+    else
+      _ -> query
     end
   end
 
