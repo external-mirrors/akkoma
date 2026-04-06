@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### General note
+- backup restore instructions very slightly changed but in an important way.  
+    It is no longer necessary to force sequential, single-transaction mode.
+    Now indexes can and are recommended to be restored in parallel significantly speeding up the overall process.
+   *(If ignoring instructions and using parallel mode before we got rid of index interdependence, `pg_restore` started restoring some indexes before other indexes they heavily depend on were done. Ironically leading to **much** worse restore times than pure sequential mode)*
+
 ### Removed
 - as announced in 2025.12 (3.17) and since no complaints were raised, the semi-broken, seemingly unused and improvement-blocking thread containment feature is now removed. This entails the following API changes:
     - dropped `PATCH /api/v1/accounts/update_credentials` input parameter `skip_thread_containment`

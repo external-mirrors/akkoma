@@ -594,43 +594,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> fetch_public_or_unlisted_activities(pagination)
   end
 
-  @valid_visibilities ~w[direct unlisted public private]
-
-  defp restrict_visibility(query, %{visibility: visibility})
-       when is_list(visibility) do
-    if Enum.all?(visibility, &(&1 in @valid_visibilities)) do
-      from(
-        a in query,
-        where:
-          fragment(
-            "activity_visibility(?, ?, ?) = ANY (?)",
-            a.actor,
-            a.recipients,
-            a.data,
-            ^visibility
-          )
-      )
-    else
-      Logger.error("Could not restrict visibility to #{visibility}")
-    end
-  end
-
-  defp restrict_visibility(query, %{visibility: visibility})
-       when visibility in @valid_visibilities do
-    from(
-      a in query,
-      where:
-        fragment("activity_visibility(?, ?, ?) = ?", a.actor, a.recipients, a.data, ^visibility)
-    )
-  end
-
-  defp restrict_visibility(_query, %{visibility: visibility})
-       when visibility not in @valid_visibilities do
-    Logger.error("Could not restrict visibility to #{visibility}")
-  end
-
-  defp restrict_visibility(query, _visibility), do: query
-
   def fetch_user_abstract_activities(user, reading_user, params \\ %{}) do
     params =
       params
@@ -1396,7 +1359,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       |> restrict_muted(restrict_muted_opts)
       |> restrict_filtered(opts)
       |> restrict_media(opts)
-      |> restrict_visibility(opts)
       |> restrict_reblogs(opts)
       |> restrict_pinned(opts)
       |> restrict_muted_reblogs(restrict_muted_reblogs_opts)
@@ -1488,13 +1450,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   defp sanitize_upload_file(upload), do: upload
-
-  def fetch_direct_messages_query do
-    Activity
-    |> restrict_type(%{type: "Create"})
-    |> restrict_visibility(%{visibility: "direct"})
-    |> order_by([activity], asc: activity.id)
-  end
 
   defp maybe_restrict_deactivated_users(activity, %{type: "Flag"}), do: activity
 

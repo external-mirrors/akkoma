@@ -73,46 +73,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
     end
   end
 
-  describe "fetching restricted by visibility" do
-    test "it restricts by the appropriate visibility" do
-      user = insert(:user)
-
-      {:ok, public_activity} = CommonAPI.post(user, %{status: ".", visibility: "public"})
-
-      {:ok, direct_activity} = CommonAPI.post(user, %{status: ".", visibility: "direct"})
-
-      {:ok, unlisted_activity} = CommonAPI.post(user, %{status: ".", visibility: "unlisted"})
-
-      {:ok, private_activity} = CommonAPI.post(user, %{status: ".", visibility: "private"})
-
-      activities = ActivityPub.fetch_activities([], %{visibility: "direct", actor_id: user.ap_id})
-
-      assert activities == [direct_activity]
-
-      activities =
-        ActivityPub.fetch_activities([], %{visibility: "unlisted", actor_id: user.ap_id})
-
-      assert activities == [unlisted_activity]
-
-      activities =
-        ActivityPub.fetch_activities([], %{visibility: "private", actor_id: user.ap_id})
-
-      assert activities == [private_activity]
-
-      activities = ActivityPub.fetch_activities([], %{visibility: "public", actor_id: user.ap_id})
-
-      assert activities == [public_activity]
-
-      activities =
-        ActivityPub.fetch_activities([], %{
-          visibility: ~w[private public],
-          actor_id: user.ap_id
-        })
-
-      assert activities == [public_activity, private_activity]
-    end
-  end
-
   test "it fetches the appropriate tag-restricted posts" do
     user = insert(:user)
 

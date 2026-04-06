@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Mix.Tasks.Pleroma.Database do
-  alias Pleroma.Conversation
   alias Pleroma.Maintenance
   alias Pleroma.Object
   alias Pleroma.Repo
@@ -284,11 +283,6 @@ defmodule Mix.Tasks.Pleroma.Database do
     if Keyword.get(options, :vacuum) do
       Maintenance.vacuum("full")
     end
-  end
-
-  def run(["bump_all_conversations"]) do
-    start_pleroma()
-    Conversation.bump_for_all_activities()
   end
 
   def run(["update_users_following_followers_counts"]) do
