@@ -2211,6 +2211,38 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
            } = response
   end
 
+  test "context works for local-only posts not referencing API user" do
+    poster = insert(:user, local: true)
+    viewer = insert(:user, local: true)
+
+    {:ok, %{id: id1}} = CommonAPI.post(poster, %{status: "1", visibility: "local"})
+
+    {:ok, %{id: id2}} =
+      CommonAPI.post(poster, %{status: "2", visibility: "local", in_reply_to_status_id: id1})
+
+    {:ok, %{id: id3}} =
+      CommonAPI.post(poster, %{status: "3", visibility: "local", in_reply_to_status_id: id2})
+
+    # local-only must not be visible without authenticated API user
+    build_conn()
+    |> get("/api/v1/statuses/ZZZZ_ZZD_G/context")
+    |> json_response_and_validate_schema(404)
+
+    build_conn()
+    |> get("/api/v1/statuses/#{id2}/context")
+    |> json_response_and_validate_schema(404)
+
+    %{conn: conn} = oauth_access(["read:statuses"], user: viewer)
+
+    auth_resp =
+      conn
+      |> get("/api/v1/statuses/#{id2}/context")
+      |> json_response_and_validate_schema(200)
+
+    [%{"id" => ^id1}] = auth_resp["ancestors"]
+    [%{"id" => ^id3}] = assert auth_resp["descendants"]
+  end
+
   test "context doesn't leak priv posts" do
     %{user: user, conn: conn} = oauth_access(["read:statuses"])
     stranger = insert(:user)

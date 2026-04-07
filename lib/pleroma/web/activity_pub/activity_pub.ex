@@ -465,12 +465,21 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   def fetch_activities_for_context_query(context, opts) do
     public = Constants.as_public()
+    user = opts[:user]
 
     recipients =
       cond do
-        opts[:custom_recipients] != nil -> opts[:custom_recipients]
-        opts[:user] != nil -> [public, opts[:user].ap_id | User.following(opts[:user])]
-        true -> [public]
+        opts[:custom_recipients] != nil ->
+          opts[:custom_recipients]
+
+        user && user.local ->
+          [public, as_local_public(), opts[:user].ap_id | User.following(opts[:user])]
+
+        user != nil ->
+          [public, opts[:user].ap_id | User.following(opts[:user])]
+
+        true ->
+          [public]
       end
 
     from(activity in Activity)
@@ -479,7 +488,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> restrict_blocked(opts)
     |> restrict_blockers_visibility(opts)
     |> restrict_muted_users(opts)
-    |> restrict_recipients(recipients, opts[:user])
+    |> restrict_recipients(recipients, user)
     |> restrict_filtered(opts)
     |> where(
       [activity],
