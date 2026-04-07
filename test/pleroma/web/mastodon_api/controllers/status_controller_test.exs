@@ -2239,6 +2239,12 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
            )
   end
 
+  test "context 404 if post doesn’t exist" do
+    build_conn()
+    |> get("/api/v1/statuses/q_q/context")
+    |> json_response_and_validate_schema(404)
+  end
+
   test "context when restrict_unauthenticated is on" do
     user = insert(:user)
     remote_user = insert(:user, local: false)
@@ -2261,15 +2267,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
 
     clear_config([:restrict_unauthenticated, :activities, :local], true)
 
-    response =
-      build_conn()
-      |> get("/api/v1/statuses/#{id2}/context")
-      |> json_response_and_validate_schema(:ok)
-
-    assert %{
-             "ancestors" => [],
-             "descendants" => []
-           } = response
+    build_conn()
+    |> get("/api/v1/statuses/#{id2}/context")
+    |> json_response_and_validate_schema(404)
   end
 
   test "favorites paginate correctly" do
