@@ -128,7 +128,6 @@ defmodule Pleroma.Notification do
     |> exclude_blocked(user, exclude_blocked_opts)
     |> exclude_blockers(user)
     |> exclude_filtered(user)
-    |> exclude_visibility(opts)
   end
 
   # Excludes blocked users and non-followed domain-blocked users
@@ -199,67 +198,6 @@ defmodule Pleroma.Notification do
         )
     end
   end
-
-  @valid_visibilities ~w[direct unlisted public private]
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when is_list(visibility) do
-    if Enum.all?(visibility, &(&1 in @valid_visibilities)) do
-      query
-      |> join(:left, [n, a], mutated_activity in Pleroma.Activity,
-        on:
-          fragment(
-            "COALESCE((?->'object')->>'id', ?->>'object')",
-            a.data,
-            a.data
-          ) ==
-            fragment(
-              "COALESCE((?->'object')->>'id', ?->>'object')",
-              mutated_activity.data,
-              mutated_activity.data
-            ) and
-            fragment("(?->>'type' = 'Like' or ?->>'type' = 'Announce')", a.data, a.data) and
-            fragment("?->>'type'", mutated_activity.data) == "Create",
-        as: :mutated_activity
-      )
-      |> where(
-        [n, a, mutated_activity: mutated_activity],
-        not fragment(
-          """
-          CASE WHEN (?->>'type') = 'Like' or (?->>'type') = 'Announce'
-            THEN (activity_visibility(?, ?, ?) = ANY (?))
-            ELSE (activity_visibility(?, ?, ?) = ANY (?)) END
-          """,
-          a.data,
-          a.data,
-          mutated_activity.actor,
-          mutated_activity.recipients,
-          mutated_activity.data,
-          ^visibility,
-          a.actor,
-          a.recipients,
-          a.data,
-          ^visibility
-        )
-      )
-    else
-      Logger.error("Could not exclude visibility to #{visibility}")
-      query
-    end
-  end
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when visibility in @valid_visibilities do
-    exclude_visibility(query, [visibility])
-  end
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when visibility not in @valid_visibilities do
-    Logger.error("Could not exclude visibility to #{visibility}")
-    query
-  end
-
-  defp exclude_visibility(query, _visibility), do: query
 
   def for_user(user, opts \\ %{}) do
     user

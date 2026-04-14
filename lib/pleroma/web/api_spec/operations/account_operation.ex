@@ -699,11 +699,6 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
           nullable: true,
           description: "Opaque user settings to be saved on the backend."
         },
-        skip_thread_containment: %Schema{
-          allOf: [BooleanLike],
-          nullable: true,
-          description: "Skip filtering out broken threads"
-        },
         allow_following_move: %Schema{
           allOf: [BooleanLike],
           nullable: true,
@@ -770,7 +765,6 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
         show_role: false,
         default_scope: "private",
         pleroma_settings_store: %{"pleroma-fe" => %{"key" => "val"}},
-        skip_thread_containment: false,
         allow_following_move: false,
         also_known_as: ["https://foo.bar/users/foo"],
         discoverable: false,

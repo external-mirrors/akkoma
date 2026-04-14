@@ -16,7 +16,6 @@ defmodule Pleroma.List do
     belongs_to(:user, User, type: FlakeId.Ecto.CompatType)
     field(:title, :string)
     field(:following, {:array, :string}, default: [])
-    field(:ap_id, :string)
     field(:exclusive, :boolean, default: false)
 
     timestamps()
@@ -55,10 +54,6 @@ defmodule Pleroma.List do
       )
 
     Repo.one(query)
-  end
-
-  def get_by_ap_id(ap_id) do
-    Repo.get_by(__MODULE__, ap_id: ap_id)
   end
 
   def get_following(%Pleroma.List{following: following} = _list) do
@@ -102,13 +97,7 @@ defmodule Pleroma.List do
     changeset = update_changeset(%Pleroma.List{user_id: creator.id}, params)
 
     if changeset.valid? do
-      Repo.transaction(fn ->
-        list = Repo.insert!(changeset)
-
-        list
-        |> change(ap_id: "#{creator.ap_id}/lists/#{list.id}")
-        |> Repo.update!()
-      end)
+      Repo.insert(changeset)
     else
       {:error, changeset}
     end
@@ -135,15 +124,6 @@ defmodule Pleroma.List do
     |> follow_changeset(attrs)
     |> Repo.update()
   end
-
-  def memberships(%User{follower_address: follower_address}) do
-    Pleroma.List
-    |> where([l], ^follower_address in l.following)
-    |> select([l], l.ap_id)
-    |> Repo.all()
-  end
-
-  def memberships(_), do: []
 
   def member?(%Pleroma.List{following: following}, %User{follower_address: follower_address}) do
     Enum.member?(following, follower_address)

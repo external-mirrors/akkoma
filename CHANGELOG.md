@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### General note
+- backup restore instructions very slightly changed but in an important way.  
+    It is no longer necessary to force sequential, single-transaction mode.
+    Now indexes can and are recommended to be restored in parallel significantly speeding up the overall process.
+   *(If ignoring instructions and using parallel mode before we got rid of index interdependence, `pg_restore` started restoring some indexes before other indexes they heavily depend on were done. Ironically leading to **much** worse restore times than pure sequential mode)*
+
+### Removed
+- as announced in 2025.12 (3.17) and since no complaints were raised, the semi-broken, seemingly unused and improvement-blocking thread containment feature is now removed. This entails the following API changes:
+    - dropped `PATCH /api/v1/accounts/update_credentials` input parameter `skip_thread_containment`
+    - dropped `GET /api/v1/accounts/:id` response key `pleroma.skip_thread_containment`
+    - dropped `GET /api/v1/pleroma/admin/users/:nickname/credentials` response key `skip_thread_containment`
+    - dropped the `skipThreadContainment` key from nodeinfo’s `metadata` object
+- for the same reason `GET /api/v1/timelines/direct` was removed too
+
 ### Added
 - `{POST,PUT} api/v1/lists` now accepts the `exclusive` parameter from Mastodon allowing followed users in the list to be removed from the home timeline
 - User profile media now (can) have federated alt text; to this end:
@@ -22,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - do not crash handler when attempting to refresh remote follow stats for users without follow* addresses
 - list timelines now include reblogs of users in the list matching Mastodon
 - non-federating instances now return a 405 response on inbox `POST`s, matching AP spec
+- fixed `GET /api/v1/statuses/:id/context` omitting most local-only posts for authenticated users
 
 ### Changed
 - our Docker container now sets a default `nofile` `ulimit` to avoid issues on some systems.

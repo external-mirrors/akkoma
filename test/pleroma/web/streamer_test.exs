@@ -15,8 +15,6 @@ defmodule Pleroma.Web.StreamerTest do
 
   @moduletag needs_streamer: true, capture_log: true
 
-  setup do: clear_config([:instance, :skip_thread_containment])
-
   describe "get_topic/_ (unauthenticated)" do
     test "allows public" do
       assert {:ok, "public"} = Streamer.get_topic("public", nil, nil)
@@ -606,74 +604,6 @@ defmodule Pleroma.Web.StreamerTest do
       assert %{"event" => "status.update", "payload" => payload} = Jason.decode!(event)
       assert %{"id" => ^activity_id, "content" => "mew mew 2"} = Jason.decode!(payload)
       refute Streamer.filtered_by_user?(sender, edited)
-    end
-  end
-
-  describe "thread_containment/2" do
-    test "it filters to user if recipients invalid and thread containment is enabled" do
-      clear_config([:instance, :skip_thread_containment], false)
-      author = insert(:user)
-      %{user: user, token: oauth_token} = oauth_access(["read"])
-      User.follow(user, author, :follow_accept)
-
-      activity =
-        insert(:note_activity,
-          note:
-            insert(:note,
-              user: author,
-              data: %{"to" => ["TEST-FFF"]}
-            )
-        )
-
-      Streamer.get_topic_and_add_socket("public", user, oauth_token)
-      Streamer.stream("public", activity)
-      assert_receive {:render_with_user, _, _, ^activity, "public"}
-      assert Streamer.filtered_by_user?(user, activity)
-    end
-
-    test "it sends message if recipients invalid and thread containment is disabled" do
-      clear_config([:instance, :skip_thread_containment], true)
-      author = insert(:user)
-      %{user: user, token: oauth_token} = oauth_access(["read"])
-      User.follow(user, author, :follow_accept)
-
-      activity =
-        insert(:note_activity,
-          note:
-            insert(:note,
-              user: author,
-              data: %{"to" => ["TEST-FFF"]}
-            )
-        )
-
-      Streamer.get_topic_and_add_socket("public", user, oauth_token)
-      Streamer.stream("public", activity)
-
-      assert_receive {:render_with_user, _, _, ^activity, "public"}
-      refute Streamer.filtered_by_user?(user, activity)
-    end
-
-    test "it sends message if recipients invalid and thread containment is enabled but user's thread containment is disabled" do
-      clear_config([:instance, :skip_thread_containment], false)
-      author = insert(:user)
-      user = insert(:user, skip_thread_containment: true)
-      %{token: oauth_token} = oauth_access(["read"], user: user)
-      User.follow(user, author, :follow_accept)
-
-      activity =
-        insert(:note_activity,
-          note:
-            insert(:note,
-              user: author,
-              data: %{"to" => ["TEST-FFF"]}
-            )
-        )
-
-      Streamer.get_topic_and_add_socket("public", user, oauth_token)
-      Streamer.stream("public", activity)
-
-      assert_receive {:render_with_user, _, _, ^activity, "public"}
-      refute Streamer.filtered_by_user?(user, activity)
     end
   end
 

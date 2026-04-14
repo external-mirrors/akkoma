@@ -149,7 +149,6 @@ defmodule Pleroma.User do
     field(:is_discoverable, :boolean, default: false)
     field(:invisible, :boolean, default: false)
     field(:allow_following_move, :boolean, default: true)
-    field(:skip_thread_containment, :boolean, default: false)
     field(:actor_type, :string, default: "Person")
     field(:also_known_as, {:array, ObjectValidators.ObjectID}, default: [])
     field(:inbox, :string)
@@ -551,7 +550,6 @@ defmodule Pleroma.User do
         :also_known_as,
         :background,
         :show_role,
-        :skip_thread_containment,
         :fields,
         :raw_fields,
         :pleroma_settings_store,

@@ -864,11 +864,6 @@ config :pleroma, :config_description, [
         ]
       },
       %{
-        key: :skip_thread_containment,
-        type: :boolean,
-        description: "Skip filtering out broken threads. Default: enabled."
-      },
-      %{
         key: :limit_to_local_content,
         type: {:dropdown, :atom},
         description:

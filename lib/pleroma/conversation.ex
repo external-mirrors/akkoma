@@ -91,21 +91,4 @@ defmodule Pleroma.Conversation do
       e -> {:error, e}
     end
   end
-
-  @doc """
-  This is only meant to be run by a mix task. It creates conversations/participations for all direct messages in the database.
-  """
-  def bump_for_all_activities do
-    stream =
-      Pleroma.Web.ActivityPub.ActivityPub.fetch_direct_messages_query()
-      |> Repo.stream()
-
-    Repo.transaction(
-      fn ->
-        stream
-        |> Enum.each(fn a -> create_or_bump_for(a, read: true) end)
-      end,
-      timeout: :infinity
-    )
-  end
 end

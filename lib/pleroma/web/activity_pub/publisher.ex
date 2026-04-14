@@ -157,7 +157,7 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
           []
       end
 
-    Pleroma.Web.Federator.Publisher.remote_users(actor, activity) ++ followers ++ fetchers
+    Pleroma.Web.Federator.Publisher.remote_users(activity) ++ followers ++ fetchers
   end
 
   defp get_cc_ap_ids(ap_id, recipients) do

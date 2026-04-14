@@ -189,7 +189,6 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
         :hide_follows,
         :hide_favorites,
         :show_role,
-        :skip_thread_containment,
         :allow_following_move,
         :also_known_as
       ]

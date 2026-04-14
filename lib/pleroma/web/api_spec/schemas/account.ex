@@ -80,7 +80,6 @@ defmodule Pleroma.Web.ApiSpec.Schemas.Account do
             type: :boolean,
             description: "whether the user is a moderator of the local instance"
           },
-          skip_thread_containment: %Schema{type: :boolean},
           tags: %Schema{
             type: :array,
             items: %Schema{type: :string},
@@ -195,7 +194,6 @@ defmodule Pleroma.Web.ApiSpec.Schemas.Account do
         "hide_follows_count" => false,
         "is_admin" => false,
         "is_moderator" => false,
-        "skip_thread_containment" => false,
         "unread_conversation_count" => 0,
         "tags" => [],
         "notification_settings" => %{

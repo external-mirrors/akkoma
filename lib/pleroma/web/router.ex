@@ -626,7 +626,6 @@ defmodule Pleroma.Web.Router do
     delete("/suggestions/:account_id", SuggestionController, :dismiss)
 
     get("/timelines/home", TimelineController, :home)
-    get("/timelines/direct", TimelineController, :direct)
     get("/timelines/list/:list_id", TimelineController, :list)
 
     get("/announcements", AnnouncementController, :index)

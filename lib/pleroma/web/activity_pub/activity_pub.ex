@@ -263,10 +263,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       conversation = Repo.preload(conversation, :participations)
 
       last_activity_id =
-        fetch_latest_direct_activity_id_for_context(conversation.ap_id, %{
-          user: user,
-          blocking_user: user
-        })
+        fetch_latest_direct_activity_id_for_context(conversation.ap_id, user)
 
       if last_activity_id do
         stream_out_participations(conversation.participations)
@@ -467,12 +464,23 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   def fetch_activities_for_context_query(context, opts) do
-    public = [Constants.as_public()]
+    public = Constants.as_public()
+    user = opts[:user]
 
     recipients =
-      if opts[:user],
-        do: [opts[:user].ap_id | User.following(opts[:user])] ++ public,
-        else: public
+      cond do
+        opts[:custom_recipients] != nil ->
+          opts[:custom_recipients]
+
+        user && user.local ->
+          [public, as_local_public(), opts[:user].ap_id | User.following(opts[:user])]
+
+        user != nil ->
+          [public, opts[:user].ap_id | User.following(opts[:user])]
+
+        true ->
+          [public]
+      end
 
     from(activity in Activity)
     |> maybe_preload_objects(opts)
@@ -480,7 +488,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> restrict_blocked(opts)
     |> restrict_blockers_visibility(opts)
     |> restrict_muted_users(opts)
-    |> restrict_recipients(recipients, opts[:user])
+    |> restrict_recipients(recipients, user)
     |> restrict_filtered(opts)
     |> where(
       [activity],
@@ -526,12 +534,27 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> Pagination.fetch_paginated(opts, :keyset)
   end
 
-  @spec fetch_latest_direct_activity_id_for_context(String.t(), keyword() | map()) ::
+  @spec fetch_latest_direct_activity_id_for_context(String.t(), User.t()) ::
           FlakeId.Ecto.CompatType.t() | nil
-  def fetch_latest_direct_activity_id_for_context(context, opts \\ %{}) do
+  def fetch_latest_direct_activity_id_for_context(context, user) do
+    opts = %{
+      skip_preload: true,
+      user: user,
+      blocking_user: user,
+      # only want directly addressed activities
+      custom_recipients: [user.ap_id]
+    }
+
+    # to filter out non-direct mentions other than follower-only
+    nodm_scope = [Constants.as_public(), as_local_public()]
+
     context
-    |> fetch_activities_for_context_query(Map.merge(%{skip_preload: true}, opts))
-    |> restrict_visibility(%{visibility: "direct"})
+    |> fetch_activities_for_context_query(opts)
+    # filter out publicly visible and local-only posts
+    |> where([a], fragment("NOT (? && ?)", a.recipients, ^nodm_scope))
+    # filter out followers-only
+    |> join(:inner, [a], u in User, as: :actor_user, on: a.actor == u.ap_id)
+    |> where([a, actor_user: u], u.follower_address not in a.recipients)
     |> limit(1)
     |> select([a], a.id)
     |> Repo.one()
@@ -546,12 +569,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   def fetch_activities(recipients, opts \\ %{}, pagination \\ :keyset) do
-    list_memberships = Pleroma.List.memberships(opts[:user])
-
-    fetch_activities_query(recipients ++ list_memberships, opts)
+    fetch_activities_query(recipients, opts)
     |> fetch_paginated_optimized(opts, pagination)
     |> Enum.reverse()
-    |> maybe_update_cc(list_memberships, opts[:user])
   end
 
   @spec fetch_public_or_unlisted_activities(map(), Pagination.type()) :: [Activity.t()]
@@ -579,103 +599,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> Map.put(:restrict_unlisted, true)
     |> fetch_public_or_unlisted_activities(pagination)
   end
-
-  @valid_visibilities ~w[direct unlisted public private]
-
-  defp restrict_visibility(query, %{visibility: visibility})
-       when is_list(visibility) do
-    if Enum.all?(visibility, &(&1 in @valid_visibilities)) do
-      from(
-        a in query,
-        where:
-          fragment(
-            "activity_visibility(?, ?, ?) = ANY (?)",
-            a.actor,
-            a.recipients,
-            a.data,
-            ^visibility
-          )
-      )
-    else
-      Logger.error("Could not restrict visibility to #{visibility}")
-    end
-  end
-
-  defp restrict_visibility(query, %{visibility: visibility})
-       when visibility in @valid_visibilities do
-    from(
-      a in query,
-      where:
-        fragment("activity_visibility(?, ?, ?) = ?", a.actor, a.recipients, a.data, ^visibility)
-    )
-  end
-
-  defp restrict_visibility(_query, %{visibility: visibility})
-       when visibility not in @valid_visibilities do
-    Logger.error("Could not restrict visibility to #{visibility}")
-  end
-
-  defp restrict_visibility(query, _visibility), do: query
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when is_list(visibility) do
-    if Enum.all?(visibility, &(&1 in @valid_visibilities)) do
-      from(
-        a in query,
-        where:
-          not fragment(
-            "activity_visibility(?, ?, ?) = ANY (?)",
-            a.actor,
-            a.recipients,
-            a.data,
-            ^visibility
-          )
-      )
-    else
-      Logger.error("Could not exclude visibility to #{visibility}")
-      query
-    end
-  end
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when visibility in @valid_visibilities do
-    from(
-      a in query,
-      where:
-        not fragment(
-          "activity_visibility(?, ?, ?) = ?",
-          a.actor,
-          a.recipients,
-          a.data,
-          ^visibility
-        )
-    )
-  end
-
-  defp exclude_visibility(query, %{exclude_visibilities: visibility})
-       when visibility not in [nil | @valid_visibilities] do
-    Logger.error("Could not exclude visibility to #{visibility}")
-    query
-  end
-
-  defp exclude_visibility(query, _visibility), do: query
-
-  defp restrict_thread_visibility(query, _, %{skip_thread_containment: true} = _),
-    do: query
-
-  defp restrict_thread_visibility(query, %{user: %User{skip_thread_containment: true}}, _),
-    do: query
-
-  defp restrict_thread_visibility(query, %{user: %User{ap_id: ap_id}}, _) do
-    local_public = as_local_public()
-
-    from(
-      a in query,
-      where: fragment("thread_visibility(?, (?)->>'id', ?) = true", ^ap_id, a.data, ^local_public)
-    )
-  end
-
-  defp restrict_thread_visibility(query, _, _), do: query
 
   def fetch_user_abstract_activities(user, reading_user, params \\ %{}) do
     params =
@@ -1129,10 +1052,38 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_muted_threads(query, _), do: query
 
-  defp restrict_blocked(query, %{blocking_user: %User{} = user} = opts) do
-    blocked_ap_ids = opts[:blocked_users_ap_ids] || User.blocked_users_ap_ids(user)
-    domain_blocks = user.domain_blocks || []
+  defp restrict_blocked_users(query, _, []), do: query
 
+  defp restrict_blocked_users(query, user, blocked_ap_ids) do
+    query
+    # You don't block the author
+    |> where([activity], fragment("not (? = ANY(?))", activity.actor, ^blocked_ap_ids))
+    # You don't block any recipients, and didn't author the post
+    |> where(
+      [activity],
+      fragment(
+        "((not (? && ?)) or ? = ?)",
+        activity.recipients,
+        ^blocked_ap_ids,
+        activity.actor,
+        ^user.ap_id
+      )
+    )
+    # It's not a boost of a user you block
+    |> where(
+      [activity],
+      fragment(
+        "not (?->>'type' = 'Announce' and ?->'to' \\?| ?)",
+        activity.data,
+        activity.data,
+        ^blocked_ap_ids
+      )
+    )
+  end
+
+  defp restrict_blocked_domains(query, _, []), do: query
+
+  defp restrict_blocked_domains(query, user, domain_blocks) do
     following_ap_ids = User.get_friends_ap_ids(user)
 
     query =
@@ -1140,19 +1091,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
     from(
       [activity, object: o] in query,
-      # You don't block the author
-      where: fragment("not (? = ANY(?))", activity.actor, ^blocked_ap_ids),
-
-      # You don't block any recipients, and didn't author the post
-      where:
-        fragment(
-          "((not (? && ?)) or ? = ?)",
-          activity.recipients,
-          ^blocked_ap_ids,
-          activity.actor,
-          ^user.ap_id
-        ),
-
       # You don't block the domain of any recipients, and didn't author the post
       where:
         fragment(
@@ -1161,15 +1099,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
           ^domain_blocks,
           activity.actor,
           ^user.ap_id
-        ),
-
-      # It's not a boost of a user you block
-      where:
-        fragment(
-          "not (?->>'type' = 'Announce' and ?->'to' \\?| ?)",
-          activity.data,
-          activity.data,
-          ^blocked_ap_ids
         ),
 
       # You don't block the author's domain, and also don't follow the author
@@ -1194,14 +1123,21 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     )
   end
 
+  defp restrict_blocked(query, %{blocking_user: %User{} = user} = opts) do
+    blocked_ap_ids = opts[:blocked_users_ap_ids] || User.blocked_users_ap_ids(user)
+    domain_blocks = user.domain_blocks || []
+
+    query
+    |> restrict_blocked_users(user, blocked_ap_ids)
+    |> restrict_blocked_domains(user, domain_blocks)
+  end
+
   defp restrict_blocked(query, _), do: query
 
   defp restrict_blockers_visibility(query, %{blocking_user: %User{} = user}) do
-    if Config.get([:activitypub, :blockers_visible]) == true do
-      query
-    else
-      blocker_ap_ids = User.incoming_relationships_ungrouped_ap_ids(user, [:block])
-
+    with false <- Config.get([:activitypub, :blockers_visible]),
+         blocker_ap_ids <- User.incoming_relationships_ungrouped_ap_ids(user, [:block]),
+         false <- blocker_ap_ids == [] do
       from(
         activity in query,
         # The author doesn't block you
@@ -1216,6 +1152,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
             ^blocker_ap_ids
           )
       )
+    else
+      _ -> query
     end
   end
 
@@ -1421,10 +1359,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     {restrict_blocked_opts, restrict_muted_opts, restrict_muted_reblogs_opts} =
       fetch_activities_query_ap_ids_ops(opts)
 
-    config = %{
-      skip_thread_containment: Config.get([:instance, :skip_thread_containment])
-    }
-
     query =
       Activity
       |> maybe_preload_objects(opts)
@@ -1446,8 +1380,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       |> restrict_muted(restrict_muted_opts)
       |> restrict_filtered(opts)
       |> restrict_media(opts)
-      |> restrict_visibility(opts)
-      |> restrict_thread_visibility(opts, config)
       |> restrict_reblogs(opts)
       |> restrict_pinned(opts)
       |> restrict_muted_reblogs(restrict_muted_reblogs_opts)
@@ -1456,7 +1388,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       |> maybe_restrict_deactivated_users(opts)
       |> exclude_poll_votes(opts)
       |> exclude_invisible_actors(opts)
-      |> exclude_visibility(opts)
 
     if Config.feature_enabled?(:improved_hashtag_timeline) do
       query
@@ -1485,22 +1416,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> select([like, object, create], %{id: like.id, entry: %{create | object: object}})
     |> Pagination.fetch_paginated(params, :keyset)
   end
-
-  defp maybe_update_cc(activities, [_ | _] = list_memberships, %User{ap_id: user_ap_id}) do
-    Enum.map(activities, fn
-      %{data: %{"bcc" => [_ | _] = bcc}} = activity ->
-        if Enum.any?(bcc, &(&1 in list_memberships)) do
-          update_in(activity.data["cc"], &[user_ap_id | &1])
-        else
-          activity
-        end
-
-      activity ->
-        activity
-    end)
-  end
-
-  defp maybe_update_cc(activities, _, _), do: activities
 
   defp fetch_activities_bounded_query(query, recipients, recipients_with_public) do
     from(activity in query,
@@ -1540,23 +1455,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   defp sanitize_upload_file(upload), do: upload
-
-  # filter out broken threads
-  defp contain_broken_threads(%Activity{} = activity, %User{} = user) do
-    entire_thread_visible_for_user?(activity, user)
-  end
-
-  # do post-processing on a specific activity
-  def contain_activity(%Activity{} = activity, %User{} = user) do
-    contain_broken_threads(activity, user)
-  end
-
-  def fetch_direct_messages_query do
-    Activity
-    |> restrict_type(%{type: "Create"})
-    |> restrict_visibility(%{visibility: "direct"})
-    |> order_by([activity], asc: activity.id)
-  end
 
   defp maybe_restrict_deactivated_users(activity, %{type: "Flag"}), do: activity
 

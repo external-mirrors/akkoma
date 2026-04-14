@@ -330,11 +330,7 @@ defmodule Pleroma.Object.Fetcher do
           {:error, :id_mismatch}
         end
 
-      {:mrf_reject_check, _} = e ->
-        log_fetch_error(id, e)
-        {:reject, :mrf}
-
-      {:mrf_accept_check, _} = e ->
+      {:mrf_check, _} = e ->
         log_fetch_error(id, e)
         {:reject, :mrf}
 
