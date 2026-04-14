@@ -3,7 +3,7 @@ defmodule Pleroma.Repo.Migrations.RemoveThreadVisibility do
 
   def up() do
     alter table(:users) do
-      add_if_not_exists(:skip_thread_containment, :boolean, default: false)
+      remove_if_exists(:skip_thread_containment, :boolean)
     end
 
     execute(
