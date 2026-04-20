@@ -860,6 +860,10 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_recipients(query, [], _user), do: query
 
+  defp restrict_recipients(query, [recipient], nil) do
+    from(activity in query, where: fragment("? = ANY(?)", ^recipient, activity.recipients))
+  end
+
   defp restrict_recipients(query, recipients, nil) do
     from(activity in query, where: fragment("? && ?", ^recipients, activity.recipients))
   end

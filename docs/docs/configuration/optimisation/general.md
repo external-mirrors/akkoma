@@ -67,3 +67,17 @@ If needed it can be changed via the `nofile` key in `ulimits` section
 of the `akkoma` service; either in `docker-compose.yml` directly,
 using the `docker-compose.override.yml` file or without recompiling the
 container image via `docker run --ulimit …`.
+
+# DB Search Fuzziness
+
+If using the default database search with a GIN (not RUM!) index
+and specifically search database queries hog up unacceptably
+much database time, you may cap this impact in exchange for
+worse and unstable search results.  
+See [Search Configuraton](../search.md).
+
+This should not be necessary on all but the largest or oldest unpruned servers.
+Also when evaluating search performance keep in mind the time the API endpoint
+takes to respond is not the same as the database time. In particular when
+searching for URLs they may be fetched via the network taking orders of magnitudes
+longer than any normal database query.

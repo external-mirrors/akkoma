@@ -869,7 +869,6 @@ config :pleroma, configurable_from_database: false
 
 config :pleroma, Pleroma.Repo,
   parameters: [
-    gin_fuzzy_search_limit: "500",
     plan_cache_mode: "force_custom_plan"
   ]
 
@@ -919,6 +918,8 @@ config :pleroma, Pleroma.Web.WebFinger,
   update_nickname_on_user_fetch: true
 
 config :pleroma, Pleroma.Search, module: Pleroma.Search.DatabaseSearch
+
+config :pleroma, Pleroma.Search.DatabaseSearch, gin_fuzzy_search_limit: nil
 
 config :pleroma, Pleroma.Search.Meilisearch,
   url: "http://127.0.0.1:7700/",
