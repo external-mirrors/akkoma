@@ -1496,8 +1496,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :manifest,
     type: :group,
-    description:
-      "This section describe PWA manifest instance-specific values. Currently this option relate only for MastoFE.",
+    description: "This section describe PWA manifest instance-specific values.",
     children: [
       %{
         key: :icons,

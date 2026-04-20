@@ -371,7 +371,8 @@ Currently, the only option relates to mascots on masto-fe
 
 ### :manifest
 
-This section describes PWA manifest instance-specific values. Currently this option relate only for masto-fe.
+This section describes PWA manifest instance-specific values.
+Almost all PWA manifest keys can be overriden or added here, below some particularly relevant examples:
 
 * `icons`: Describe the icons of the app, this is a list of maps describing icons as
   detailed in its [spec](https://www.w3.org/TR/appmanifest/#imageresource-and-its-members).
