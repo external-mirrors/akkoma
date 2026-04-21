@@ -146,8 +146,18 @@ defmodule Pleroma.Web.MastodonAPI.SearchControllerTest do
     end
 
     test "supports pagination of hashtags search results", %{conn: conn} do
+      clear_config([:restrict_unauthenticated, :search], %{
+        all: false,
+        resolve: true,
+        paginate: true
+      })
+
+      user = insert(:user, local: true)
+
       results =
         conn
+        |> assign(:user, user)
+        |> assign(:token, insert(:oauth_token, user: user, scopes: ["read"]))
         |> get(
           "/api/v2/search?#{URI.encode_query(%{q: "#some #text #with #hashtags", limit: 2, offset: 1})}"
         )
@@ -156,6 +166,26 @@ defmodule Pleroma.Web.MastodonAPI.SearchControllerTest do
       assert results["hashtags"] == [
                %{"name" => "text", "url" => "#{Endpoint.url()}/tag/text"},
                %{"name" => "with", "url" => "#{Endpoint.url()}/tag/with"}
+             ]
+    end
+
+    test "does not paginate when unauthenticated and restricted", %{conn: conn} do
+      clear_config([:restrict_unauthenticated, :search], %{
+        all: false,
+        resolve: true,
+        paginate: true
+      })
+
+      results =
+        conn
+        |> get(
+          "/api/v2/search?#{URI.encode_query(%{q: "#some #text #with #hashtags", limit: 2, offset: 1})}"
+        )
+        |> json_response_and_validate_schema(200)
+
+      assert results["hashtags"] == [
+               %{"name" => "some", "url" => "#{Endpoint.url()}/tag/some"},
+               %{"name" => "text", "url" => "#{Endpoint.url()}/tag/text"}
              ]
     end
 

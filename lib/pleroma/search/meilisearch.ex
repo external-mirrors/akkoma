@@ -106,10 +106,10 @@ defmodule Pleroma.Search.Meilisearch do
         |> maybe_restrict_local(user)
         |> maybe_restrict_author(author)
         |> maybe_restrict_blocked(user)
-        |> maybe_fetch(user, query)
+        |> maybe_fetch(user, query, options)
         |> Pleroma.Repo.all()
       rescue
-        _ -> maybe_fetch([], user, query)
+        _ -> maybe_fetch([], user, query, options)
       end
     end
   end

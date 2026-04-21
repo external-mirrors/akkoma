@@ -33,9 +33,9 @@ defmodule Pleroma.Search.DatabaseSearch do
       else
         do_query(user, search_query, options)
       end
-      |> maybe_fetch(user, search_query)
+      |> maybe_fetch(user, search_query, options)
     rescue
-      _ -> maybe_fetch([], user, search_query)
+      _ -> maybe_fetch([], user, search_query, options)
     end
   end
 
@@ -138,8 +138,8 @@ defmodule Pleroma.Search.DatabaseSearch do
 
   defp restrict_local(q), do: where(q, local: true)
 
-  def maybe_fetch(activities, user, search_query) do
-    with false <- should_restrict_local(user),
+  def maybe_fetch(activities, user, search_query, options) do
+    with true <- options[:resolve],
          true <- Regex.match?(~r/https?:/, search_query),
          {:ok, object} <- Fetcher.fetch_object_from_id(search_query),
          %Activity{} = activity <- Activity.get_create_by_object_ap_id(object.data["id"]),
