@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - fixed status search not respecting `resolve=false`
+- fixed later search result pages again fetching remote content
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config

@@ -25,7 +25,7 @@ defmodule Pleroma.User.Search do
     query_string = format_query(query_string)
 
     # If this returns anything, it should bounce to the top
-    maybe_resolved = maybe_resolve(resolve, query_string)
+    maybe_resolved = maybe_resolve(resolve, offset, query_string)
 
     []
     |> maybe_add_resolved(maybe_resolved)
@@ -236,11 +236,11 @@ defmodule Pleroma.User.Search do
 
   defp filter_blocked_domains(query, _), do: query
 
-  defp maybe_resolve(true, query) do
+  defp maybe_resolve(true, 0, query) do
     User.get_or_fetch(query)
   end
 
-  defp maybe_resolve(_, _), do: :noop
+  defp maybe_resolve(_, _, _), do: :noop
 
   defp maybe_restrict_local(q, user) do
     case {limit(), user} do
