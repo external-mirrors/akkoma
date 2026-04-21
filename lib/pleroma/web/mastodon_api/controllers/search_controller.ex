@@ -7,6 +7,7 @@ defmodule Pleroma.Web.MastodonAPI.SearchController do
 
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.User.Search, as: UserSearch
   alias Pleroma.Web.ControllerHelper
   alias Pleroma.Web.Endpoint
   alias Pleroma.Web.MastodonAPI.AccountView
@@ -30,7 +31,7 @@ defmodule Pleroma.Web.MastodonAPI.SearchController do
   defdelegate open_api_operation(action), to: Pleroma.Web.ApiSpec.SearchOperation
 
   def account_search(%{assigns: %{user: user}} = conn, %{q: query} = params) do
-    accounts = User.search(query, search_options(params, user))
+    accounts = UserSearch.search(query, search_options(params, user))
 
     conn
     |> put_view(AccountView)
@@ -88,7 +89,7 @@ defmodule Pleroma.Web.MastodonAPI.SearchController do
   end
 
   defp resource_search(_, "accounts", query, options) do
-    accounts = with_fallback(fn -> User.search(query, options) end)
+    accounts = with_fallback(fn -> UserSearch.search(query, options) end)
 
     AccountView.render("index.json",
       users: accounts,

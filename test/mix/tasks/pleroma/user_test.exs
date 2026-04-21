@@ -511,7 +511,7 @@ defmodule Mix.Tasks.Pleroma.UserTest do
 
       assert [moon.id, kawen.id] == User.Search.search("moon") |> Enum.map(& &1.id)
 
-      res = User.search("moo") |> Enum.map(& &1.id)
+      res = User.Search.search("moo") |> Enum.map(& &1.id)
       assert Enum.sort([moon.id, moot.id, kawen.id]) == Enum.sort(res)
 
       assert [kawen.id, moon.id] == User.Search.search("expert fediverse") |> Enum.map(& &1.id)

@@ -21,7 +21,7 @@ defmodule Pleroma.Web.MastodonAPI.SearchControllerTest do
   describe ".search2" do
     test "it returns empty result if user or status search return undefined error", %{conn: conn} do
       with_mocks [
-        {Pleroma.User, [], [search: fn _q, _o -> raise "Oops" end]},
+        {Pleroma.User.Search, [], [search: fn _q, _o -> raise "Oops" end]},
         {Pleroma.Activity, [], [search: fn _u, _q, _o -> raise "Oops" end]}
       ] do
         capture_log(fn ->
