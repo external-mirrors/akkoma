@@ -14,43 +14,24 @@ defmodule Pleroma.UserSearchTest do
     :ok
   end
 
-  describe "sanitise_domain/1" do
-    test "should remove url-reserved characters" do
-      examples = [
-        ["example.com", "example.com"],
-        ["no spaces", "nospaces"],
-        ["no@at", "noat"],
-        ["dash-is-ok", "dash-is-ok"],
-        ["underscore_not_so_much", "underscorenotsomuch"],
-        ["no!", "no"],
-        ["no?", "no"],
-        ["a$b%s^o*l(u)t'e#l<y n>o/t", "absolutelynot"]
-      ]
-
-      for [input, expected] <- examples do
-        assert Pleroma.User.Search.sanitise_domain(input) == expected
-      end
-    end
-  end
-
   describe "User.search" do
     setup do: clear_config([:instance, :limit_to_local_content])
 
-    test "returns a resolved user as the first result" do
+    test "returns a resolved user as the first and only result" do
       clear_config([:instance, :limit_to_local_content], false)
       user = insert(:user, %{nickname: "no_relation", ap_id: "https://lain.com/users/lain"})
       _user = insert(:user, %{nickname: "com_user"})
 
-      [first_user, _second_user] = Search.search("https://lain.com/users/lain", resolve: true)
+      [first_user] = Search.search("https://lain.com/users/lain", resolve: true)
 
       assert first_user.id == user.id
     end
 
-    test "returns a user with matching ap_id as the first result" do
+    test "returns a user with matching ap_id as the first and only result" do
       user = insert(:user, %{nickname: "no_relation", ap_id: "https://lain.com/users/lain"})
       _user = insert(:user, %{nickname: "com_user"})
 
-      [first_user, _second_user] = Search.search("https://lain.com/users/lain")
+      [first_user] = Search.search("https://lain.com/users/lain")
 
       assert first_user.id == user.id
     end
@@ -61,7 +42,7 @@ defmodule Pleroma.UserSearchTest do
       assert [_first_user, _second_user] = Search.search("https://gensokyo.2hu/@raymoo")
     end
 
-    test "returns a user with matching uri as the first result" do
+    test "returns a user with matching uri as the first and only result" do
       user =
         insert(:user, %{
           nickname: "no_relation",
@@ -71,7 +52,7 @@ defmodule Pleroma.UserSearchTest do
 
       _user = insert(:user, %{nickname: "com_user"})
 
-      [first_user, _second_user] = Search.search("https://lain.com/@lain")
+      [first_user] = Search.search("https://lain.com/@lain")
 
       assert first_user.id == user.id
     end
@@ -335,7 +316,8 @@ defmodule Pleroma.UserSearchTest do
 
       result = Search.search("lain@examplelocalhost", resolve: true, for_user: user)
       assert Enum.each(result, fn u -> u.search_rank == 0.5 end)
-      assert length(result) == 2
+      assert length(result) == 1
+      assert hd(result).nickname == "lain@examplelocalhost"
     end
 
     test "local user search with users" do

@@ -1,9 +1,9 @@
 # Pleroma: A lightweight social networking server
 # Copyright © 2017-2021 Pleroma Authors <https://pleroma.social/>
+# Copyright © 2026 Akkoma Authors <https://akkoma.dev/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.User.Search do
-  alias Pleroma.EctoType.ActivityPub.ObjectValidators.Uri, as: UriType
   alias Pleroma.Pagination
   alias Pleroma.Repo
   alias Pleroma.User
@@ -15,50 +15,106 @@ defmodule Pleroma.User.Search do
   @limit 20
 
   def search(query_string, opts \\ []) do
-    resolve = Keyword.get(opts, :resolve, false)
+    for_user = Keyword.get(opts, :for_user)
+    local_only = should_restrict_local(for_user)
+    resolve = Keyword.get(opts, :resolve, false) && !local_only
+
+    query_string = String.trim(query_string)
+
+    is_uri = Regex.match?(~r/https?:/, query_string)
+    likely_nick = String.contains?(query_string, "@") && !String.contains?(query_string, " ")
+
+    []
+    |> maybe_search(fn -> uri_match(query_string, is_uri, resolve) end)
+    |> maybe_search(fn -> nick_match(query_string, likely_nick, resolve) end)
+    |> maybe_search(fn ->
+      fts_matches(query_string, for_user, local_only, opts)
+    end)
+    |> Enum.filter(&(&1 && (!local_only || &1.local)))
+  end
+
+  defp maybe_search([], finder) do
+    case finder.() do
+      [_ | _] = res -> res
+      {:ok, a} when a != nil -> [a]
+      {:error, _} -> []
+      nil -> []
+      [] -> []
+      a -> [a]
+    end
+  end
+
+  defp maybe_search(previous_results, _), do: previous_results
+
+  defp uri_match(uri, true, resolve) do
+    known =
+      from(u in User)
+      |> where([u], u.ap_id == ^uri or u.uri == ^uri)
+      |> filter_invisible_users()
+      |> filter_internal_users()
+      |> filter_deactivated_users()
+      |> Repo.all()
+
+    cond do
+      known != [] -> known
+      resolve -> User.fetch_by_ap_id(uri)
+      true -> nil
+    end
+  end
+
+  defp uri_match(_, _, _), do: nil
+
+  # NOTE: User.get_cached_by_nickname falls back to a netowrk lookup if not cached. DO NOT USE
+  defp do_nick_match(nick, true), do: User.get_or_fetch_by_nickname(nick)
+  defp do_nick_match(nick, false), do: User.get_by_nickname(nick)
+  defp do_nick_match(_, _), do: nil
+
+  defp verify_and_normalise_nick(nick) do
+    nick =
+      nick
+      |> String.trim_leading("@")
+      |> String.trim_trailing("@#{Pleroma.Web.WebFinger.Schema.domain()}")
+      |> String.trim_trailing("@#{local_domain()}")
+
+    case String.split(nick, "@", parts: 3) do
+      # local nick
+      [nick] ->
+        nick
+
+      # remote nick; maybe Unicode domain
+      [name, domain] ->
+        if Regex.match?(~r/[!-\,|@|?|<|>|[-`|{-~|\/|:|\s]/, domain) do
+          nil
+        else
+          encoded_domain =
+            domain
+            |> String.to_charlist()
+            |> :idna.encode()
+
+          "#{name}@#{encoded_domain}"
+        end
+
+      # not a valid nick
+      _ ->
+        nil
+    end
+  end
+
+  defp nick_match(nick, true, resolve) do
+    normalised_nick = verify_and_normalise_nick(nick)
+
+    if normalised_nick,
+      do: do_nick_match(normalised_nick, resolve),
+      else: nil
+  end
+
+  defp nick_match(_, _, _), do: nil
+
+  defp fts_matches(query_string, for_user, local_only, opts) do
     following = Keyword.get(opts, :following, false)
     result_limit = Keyword.get(opts, :limit, @limit)
     offset = Keyword.get(opts, :offset, 0)
 
-    for_user = Keyword.get(opts, :for_user)
-
-    query_string = format_query(query_string)
-
-    # If this returns anything, it should bounce to the top
-    maybe_resolved = maybe_resolve(resolve, offset, query_string)
-
-    []
-    |> maybe_add_resolved(maybe_resolved)
-    |> maybe_add_ap_id_match(query_string)
-    |> maybe_add_uri_match(query_string)
-    |> maybe_add_fts_search(query_string, for_user, following, offset, result_limit)
-  end
-
-  defp maybe_add_resolved(list, {:ok, %User{} = user}) do
-    [user.id | list]
-  end
-
-  defp maybe_add_resolved(list, _), do: list
-
-  defp maybe_add_ap_id_match(list, query) do
-    if user = User.get_cached_by_ap_id(query) do
-      [user.id | list]
-    else
-      list
-    end
-  end
-
-  defp maybe_add_uri_match(list, query) do
-    with {:ok, query} <- UriType.cast(query),
-         q = from(u in User, where: u.uri == ^query, select: u.id),
-         users = Pleroma.Repo.all(q) do
-      users ++ list
-    else
-      _ -> list
-    end
-  end
-
-  defp maybe_add_fts_search(top_user_ids, query_string, for_user, following, offset, result_limit) do
     gin_limit = Pleroma.Config.get([Pleroma.Search.DatabaseSearch, :gin_fuzzy_search_limit])
 
     if is_integer(gin_limit) do
@@ -66,8 +122,7 @@ defmodule Pleroma.User.Search do
         # SET LOCAL statement cannot be parametrised it seems; safe because integer
         Repo.query!("SET LOCAL gin_fuzzy_search_limit TO #{gin_limit}", [])
 
-        {:ok,
-         do_fts_search(top_user_ids, query_string, for_user, following, offset, result_limit)}
+        {:ok, do_fts_search(query_string, for_user, local_only, following, offset, result_limit)}
       end)
       |> then(fn
         {:ok, result} ->
@@ -75,74 +130,27 @@ defmodule Pleroma.User.Search do
 
         error ->
           Logger.error("#{__MODULE__}: user search transaction failed: #{inspect(error)}")
-          flake_ids = Enum.map(top_user_ids, &FlakeId.from_string(&1))
-
-          from(u in User,
-            inner_lateral_join:
-              i in fragment(
-                "SELECT * FROM UNNEST(?::uuid[]) WITH ORDINALITY AS i(id, ordinality)",
-                ^flake_ids
-              ),
-            on: u.id == i.id,
-            order_by: [asc: i.ordinality]
-          )
-          |> Repo.all()
+          []
       end)
     else
-      do_fts_search(top_user_ids, query_string, for_user, following, offset, result_limit)
+      do_fts_search(query_string, for_user, local_only, following, offset, result_limit)
     end
   end
 
-  defp do_fts_search(top_user_ids, query_string, for_user, following, offset, result_limit) do
-    query_string
-    |> search_query(for_user, following, top_user_ids)
-    |> Pagination.fetch_paginated(%{"offset" => offset, "limit" => result_limit}, :offset)
-  end
-
-  def sanitise_domain(domain) do
-    domain
-    |> String.replace(~r/[!-\,|@|?|<|>|[-`|{-~|\/|:|\s]+/, "")
-  end
-
-  defp format_query(query_string) do
-    # Strip the beginning @ off if there is a query
-    query_string = String.trim_leading(query_string, "@")
-
-    with [name, domain] <- String.split(query_string, "@") do
-      encoded_domain =
-        domain
-        |> sanitise_domain()
-        |> String.to_charlist()
-        |> :idna.encode()
-        |> to_string()
-
-      name <> "@" <> encoded_domain
-    else
-      _ -> query_string
-    end
-  end
-
-  defp search_query(query_string, for_user, following, top_user_ids) do
-    for_user
-    |> base_query(following)
+  defp do_fts_search(query_string, for_user, local_only, following, offset, result_limit) do
+    base_query(for_user, following)
     |> filter_blocked_user(for_user)
     |> filter_invisible_users()
     |> filter_internal_users()
     |> filter_blocked_domains(for_user)
     |> fts_search(query_string)
-    |> select_top_users(top_user_ids)
     |> trigram_rank(query_string)
-    |> boost_search_rank(for_user, top_user_ids)
+    |> boost_search_rank(for_user)
     |> subquery()
     |> order_by(desc: :search_rank)
-    |> maybe_restrict_local(for_user)
+    |> maybe_restrict_local(local_only)
     |> filter_deactivated_users()
-  end
-
-  defp select_top_users(query, top_user_ids) do
-    from(u in query,
-      or_where: u.id in ^top_user_ids
-    )
+    |> Pagination.fetch_paginated(%{"offset" => offset, "limit" => result_limit}, :offset)
   end
 
   defp fts_search(query, query_string) do
@@ -236,28 +244,25 @@ defmodule Pleroma.User.Search do
 
   defp filter_blocked_domains(query, _), do: query
 
-  defp maybe_resolve(true, 0, query) do
-    User.get_or_fetch(query)
-  end
+  defp limit, do: Pleroma.Config.get([:instance, :limit_to_local_content], :unauthenticated)
 
-  defp maybe_resolve(_, _, _), do: :noop
-
-  defp maybe_restrict_local(q, user) do
+  defp should_restrict_local(user) do
     case {limit(), user} do
-      {:all, _} -> restrict_local(q)
-      {:unauthenticated, %User{}} -> q
-      {:unauthenticated, _} -> restrict_local(q)
-      {false, _} -> q
+      {:all, _} -> true
+      {:unauthenticated, %User{}} -> false
+      {:unauthenticated, _} -> true
+      {false, _} -> false
     end
   end
 
-  defp limit, do: Pleroma.Config.get([:instance, :limit_to_local_content], :unauthenticated)
+  defp maybe_restrict_local(q, true), do: restrict_local(q)
+  defp maybe_restrict_local(q, false), do: q
 
   defp restrict_local(q), do: where(q, [u], u.local == true)
 
   defp local_domain, do: Pleroma.Config.get([Pleroma.Web.Endpoint, :url, :host])
 
-  defp boost_search_rank(query, %User{} = for_user, top_user_ids) do
+  defp boost_search_rank(query, %User{} = for_user) do
     friends_ids = User.get_friends_ids(for_user)
     followers_ids = User.get_followers_ids(for_user)
 
@@ -269,7 +274,6 @@ defmodule Pleroma.User.Search do
              CASE WHEN (?) THEN (?) * 1.5
              WHEN (?) THEN (?) * 1.3
              WHEN (?) THEN (?) * 1.1
-             WHEN (?) THEN 9001
              ELSE (?) END
             """,
             u.id in ^friends_ids and u.id in ^followers_ids,
@@ -278,26 +282,11 @@ defmodule Pleroma.User.Search do
             u.search_rank,
             u.id in ^followers_ids,
             u.search_rank,
-            u.id in ^top_user_ids,
             u.search_rank
           )
       }
     )
   end
 
-  defp boost_search_rank(query, _for_user, top_user_ids) do
-    from(u in subquery(query),
-      select_merge: %{
-        search_rank:
-          fragment(
-            """
-             CASE WHEN (?) THEN 9001
-             ELSE (?) END
-            """,
-            u.id in ^top_user_ids,
-            u.search_rank
-          )
-      }
-    )
-  end
+  defp boost_search_rank(query, _), do: query
 end
