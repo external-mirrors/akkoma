@@ -87,6 +87,16 @@ defmodule Pleroma.Search.Meilisearch do
       )
   end
 
+  defp maybe_fetch(activities, user, search_query, options) do
+    located = maybe_locate_apid(user, search_query, options)
+
+    if located != nil do
+      [located | activities]
+    else
+      activities
+    end
+  end
+
   def search(user, query, options \\ []) do
     limit = Enum.min([Keyword.get(options, :limit), 40])
     offset = Keyword.get(options, :offset, 0)

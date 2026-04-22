@@ -4,6 +4,7 @@
 
 defmodule Pleroma.Search.DatabaseSearch do
   alias Pleroma.Activity
+  alias Pleroma.Object
   alias Pleroma.Object.Fetcher
   alias Pleroma.Pagination
   alias Pleroma.Repo
@@ -17,6 +18,46 @@ defmodule Pleroma.Search.DatabaseSearch do
   @behaviour Pleroma.Search.SearchBackend
 
   def search(user, search_query, options \\ []) do
+    apid_match = is_uri(search_query) && maybe_locate_apid(search_query, user, options)
+
+    if apid_match do
+      [apid_match]
+    else
+      fts_search(user, search_query, options)
+    end
+  end
+
+  defp is_uri("https://" <> _), do: true
+  defp is_uri("http://" <> _), do: true
+  defp is_uri(_), do: false
+
+  defp should_resolve_remote(options) do
+    options[:resolve] && Keyword.get(options, :offset, 0) == 0
+  end
+
+  def maybe_locate_apid(apid, user, options) do
+    known = Object.get_by_ap_id(apid)
+
+    object_res =
+      cond do
+        known != nil -> {:ok, known}
+        should_resolve_remote(options) -> Fetcher.fetch_object_from_id(apid)
+        true -> nil
+      end
+
+    with {:ok, %Object{} = object} <- object_res,
+         %Activity{} = activity <- Activity.get_create_by_object_ap_id(object.data["id"]),
+         true <- activity.local || !should_restrict_local(user),
+         true <- Visibility.visible_for_user?(activity, user) do
+      activity
+    else
+      _ -> nil
+    end
+  end
+
+  def maybe_locate_uri(_, _, _), do: nil
+
+  defp fts_search(user, search_query, options) do
     gin_limit = Pleroma.Config.get([__MODULE__, :gin_fuzzy_search_limit])
 
     try do
@@ -24,22 +65,21 @@ defmodule Pleroma.Search.DatabaseSearch do
         Repo.transact(fn ->
           # SET LOCAL statement cannot be parametrised it seems; safe since integer
           Repo.query!("SET LOCAL gin_fuzzy_search_limit TO #{gin_limit}", [])
-          {:ok, do_query(user, search_query, options)}
+          {:ok, do_fts_query(user, search_query, options)}
         end)
         |> then(fn
           {:ok, result} -> result
           error -> raise "#{__MODULE__}: db search transaction failed: #{inspect(error)}"
         end)
       else
-        do_query(user, search_query, options)
+        do_fts_query(user, search_query, options)
       end
-      |> maybe_fetch(user, search_query, options)
     rescue
-      _ -> maybe_fetch([], user, search_query, options)
+      _ -> []
     end
   end
 
-  def do_query(user, search_query, options) do
+  defp do_fts_query(user, search_query, options) do
     index_type = if Pleroma.Config.get([:database, :rum_enabled]), do: :rum, else: :gin
     limit = Enum.min([Keyword.get(options, :limit), 40])
     offset = Keyword.get(options, :offset, 0)
@@ -137,17 +177,4 @@ defmodule Pleroma.Search.DatabaseSearch do
   end
 
   defp restrict_local(q), do: where(q, local: true)
-
-  def maybe_fetch(activities, user, search_query, options) do
-    with true <- options[:resolve],
-         0 <- Keyword.get(options, :offset, 0),
-         true <- Regex.match?(~r/https?:/, search_query),
-         {:ok, object} <- Fetcher.fetch_object_from_id(search_query),
-         %Activity{} = activity <- Activity.get_create_by_object_ap_id(object.data["id"]),
-         true <- Visibility.visible_for_user?(activity, user) do
-      [activity | activities]
-    else
-      _ -> activities
-    end
-  end
 end
