@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - federated voter count of polls is now parsed and federated out too;
     this fixes vote percetanges for new and refreshed remote multi-selection polls
 
+### Fixed
+
+### Changed
+- New installations (not existing instances) now default to the `simple` full-text-search config
+
 
 ## 2026.05 (3.19.0)
 
