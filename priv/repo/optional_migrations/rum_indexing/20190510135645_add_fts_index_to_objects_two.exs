@@ -1,15 +1,21 @@
 defmodule Pleroma.Repo.Migrations.AddFtsIndexToObjectsTwo do
   use Ecto.Migration
 
+  defmacro gin_index(search_config) do
+    quote do
+      index(:objects, ["(to_tsvector('#{unquote(search_config)}'::regconfig, data->>'content'))"],
+          using: :gin,
+          name: :objects_fts
+        )
+    end
+  end
+
   def up do
     execute("create extension if not exists rum")
 
-    drop_if_exists(
-      index(:objects, ["(to_tsvector('english', data->>'content'))"],
-        using: :gin,
-        name: :objects_fts
-      )
-    )
+	%{rows: [[tsc]]} = Pleroma.Repo.query!("select current_setting('default_text_search_config')::regconfig;")
+
+    drop_if_exists(gin_index(tsc))
 
     alter table(:objects) do
       add(:fts_content, :tsvector)
@@ -41,11 +47,8 @@ defmodule Pleroma.Repo.Migrations.AddFtsIndexToObjectsTwo do
       remove(:fts_content, :tsvector)
     end
 
-    create_if_not_exists(
-      index(:objects, ["(to_tsvector('english', data->>'content'))"],
-        using: :gin,
-        name: :objects_fts
-      )
-    )
+	%{rows: [[tsc]]} = Pleroma.Repo.query!("select current_setting('default_text_search_config')::regconfig;")
+
+    create_if_not_exists(gin_index(tsc))
   end
 end
