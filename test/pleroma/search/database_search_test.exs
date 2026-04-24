@@ -87,6 +87,18 @@ defmodule Pleroma.Search.DatabaseSearchTest do
       assert [^japanese_activity] = activities
     end
 
+    test "finds post via content warning", %{user: user} do
+      {:ok, activity} =
+        Pleroma.Web.CommonAPI.post(user, %{
+          status: "bug friend",
+          spoiler_text: "closeup of very large bug"
+        })
+
+      activities = DatabaseSearch.search(user, "\"very large bug\"")
+
+      assert [^activity] = activities
+    end
+
     test "find local and remote statuses for authenticated users", %{
       local_activity: local_activity,
       remote_activity: remote_activity,

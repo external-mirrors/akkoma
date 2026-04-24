@@ -597,7 +597,7 @@ defmodule Mix.Tasks.Pleroma.Database do
         Ecto.Adapters.SQL.query!(
           Pleroma.Repo,
           "CREATE OR REPLACE FUNCTION objects_fts_update() RETURNS trigger AS $$ BEGIN
-          new.fts_content := to_tsvector(new.data->>'content');
+          new.fts_content := to_tsvector(COALESCE(new.data->>'summary', '') || ' ' || (new.data->>'content'));
           RETURN new;
           END
           $$ LANGUAGE plpgsql",
@@ -612,7 +612,14 @@ defmodule Mix.Tasks.Pleroma.Database do
 
         Ecto.Adapters.SQL.query!(
           Pleroma.Repo,
-          "CREATE INDEX CONCURRENTLY objects_fts ON objects USING gin(to_tsvector('#{tsconfig}', data->>'content')); ",
+          """
+          CREATE INDEX CONCURRENTLY objects_fts ON objects USING gin(
+            to_tsvector(
+              '#{tsconfig}',
+              COALESCE(data->>'summary', '') || ' ' || (data->>'content')
+            )
+          );
+          """,
           [],
           timeout: :infinity
         )

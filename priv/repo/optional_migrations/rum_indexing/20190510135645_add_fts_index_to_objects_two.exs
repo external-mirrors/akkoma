@@ -3,17 +3,27 @@ defmodule Pleroma.Repo.Migrations.AddFtsIndexToObjectsTwo do
 
   defmacro gin_index(search_config) do
     quote do
-      index(:objects, ["(to_tsvector('#{unquote(search_config)}'::regconfig, data->>'content'))"],
-          using: :gin,
-          name: :objects_fts
-        )
+      index(
+        :objects,
+        [
+          """
+          (to_tsvector(
+            '#{unquote(search_config)}'::regconfig,
+            COALESCE(data->>'summary', '') || ' ' || (data->>'content')
+          ))
+          """
+        ],
+        using: :gin,
+        name: :objects_fts
+      )
     end
   end
 
   def up do
     execute("create extension if not exists rum")
 
-	%{rows: [[tsc]]} = Pleroma.Repo.query!("select current_setting('default_text_search_config')::regconfig;")
+    %{rows: [[tsc]]} =
+      Pleroma.Repo.query!("select current_setting('default_text_search_config')::regconfig;")
 
     drop_if_exists(gin_index(tsc))
 
@@ -23,7 +33,7 @@ defmodule Pleroma.Repo.Migrations.AddFtsIndexToObjectsTwo do
 
     execute("CREATE FUNCTION objects_fts_update() RETURNS trigger AS $$
     begin
-    new.fts_content := to_tsvector(new.data->>'content');
+    new.fts_content := to_tsvector(COALESCE(new.data->>'summary', '') || ' ' || (new.data->>'content'));
     return new;
     end
     $$ LANGUAGE plpgsql")
@@ -47,7 +57,8 @@ defmodule Pleroma.Repo.Migrations.AddFtsIndexToObjectsTwo do
       remove(:fts_content, :tsvector)
     end
 
-	%{rows: [[tsc]]} = Pleroma.Repo.query!("select current_setting('default_text_search_config')::regconfig;")
+    %{rows: [[tsc]]} =
+      Pleroma.Repo.query!("select current_setting('default_text_search_config')::regconfig;")
 
     create_if_not_exists(gin_index(tsc))
   end

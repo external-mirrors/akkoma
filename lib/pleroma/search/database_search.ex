@@ -134,8 +134,14 @@ defmodule Pleroma.Search.DatabaseSearch do
     from([a, o] in q,
       where:
         fragment(
-          "to_tsvector(?::oid::regconfig, ?->>'content') @@ websearch_to_tsquery(?::oid::regconfig, ?)",
+          """
+          to_tsvector(
+            ?::oid::regconfig,
+            COALESCE(?->>'summary', '') || ' ' || (?->>'content')
+          ) @@ websearch_to_tsquery(?::oid::regconfig, ?)
+          """,
           ^tsc,
+          o.data,
           o.data,
           ^tsc,
           ^search_query
