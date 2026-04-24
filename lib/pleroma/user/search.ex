@@ -230,7 +230,7 @@ defmodule Pleroma.User.Search do
 
     from(
       q in query,
-      where: fragment("substring(ap_id from '.*://([^/]*)') NOT IN (?)", ^domains)
+      where: fragment("split_part(ap_id, '/', 3) NOT IN (?)", ^domains)
     )
   end
 
