@@ -1268,6 +1268,10 @@ defmodule Pleroma.User do
     get_cached_by_ap_id(ap_id)
   end
 
+  @doc """
+  Loads matching cached user. If not found will fallback to database lookup.
+  If not locally known yet at all, the handle will be looked up on the network via WebFinger.
+  """
   def get_cached_by_nickname(nickname) do
     if String.valid?(nickname) do
       key = "nickname:#{nickname}"
