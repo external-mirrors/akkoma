@@ -36,7 +36,7 @@ defmodule Pleroma.User.Query do
           %{
             tags: [String.t()],
             name: String.t(),
-            email: String.t(),
+            email: String.t() | [String.t()],
             local: boolean(),
             external: boolean(),
             active: boolean(),
@@ -66,7 +66,7 @@ defmodule Pleroma.User.Query do
 
   @ilike_criteria [:nickname_substr, :name]
   @equal_criteria [:email, :nickname]
-  @contains_criteria [:ap_id, :nickname]
+  @contains_criteria [:ap_id, :email, :nickname]
 
   @spec build(Query.t(), criteria()) :: Query.t()
   def build(query \\ base_query(), criteria) do
