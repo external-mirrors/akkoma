@@ -94,11 +94,11 @@ defmodule Pleroma.User.Query do
   defp compose_query({key, value}, query)
        when key in @ilike_criteria and not_empty_string(value) do
     key = if key == :nickname_substr, do: :nickname, else: key
-    where(query, [u], ilike(field(u, ^key), ^"%#{value}%"))
+    where(query, [u], ilike(field(u, ^key), ^"%#{escape_sql_like(value)}%"))
   end
 
   defp compose_query({:nickname_suffix, value}, query) when not_empty_string(value) do
-    where(query, [u], ilike(u.nickname, ^"%#{value}"))
+    where(query, [u], ilike(u.nickname, ^"%#{escape_sql_like(value)}"))
   end
 
   defp compose_query({:invisible, bool}, query) when is_boolean(bool) do
@@ -233,5 +233,13 @@ defmodule Pleroma.User.Query do
 
   defp location_query(query, local) do
     where(query, [u], u.local == ^local)
+  end
+
+  defp escape_sql_like(literal) do
+    # https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-LIKE
+    # (assumes the default config of standard_conforming_strings=on)
+    literal
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
   end
 end
