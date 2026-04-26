@@ -176,7 +176,7 @@ defmodule Mix.Tasks.Pleroma.User do
   def run(["deactivate_all_from_instance", instance]) do
     start_pleroma()
 
-    Pleroma.User.Query.build(%{nickname: "@#{instance}"})
+    Pleroma.User.Query.build(%{nickname_suffix: "@#{instance}"})
     |> Pleroma.Repo.chunk_stream(500, :batches)
     |> Stream.each(fn users ->
       users

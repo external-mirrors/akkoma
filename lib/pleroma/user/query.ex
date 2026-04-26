@@ -55,6 +55,7 @@ defmodule Pleroma.User.Query do
             recipients_from_activity: [String.t()],
             nickname: [String.t()] | String.t(),
             nickname_substr: String.t(),
+            nickname_suffix: String.t(),
             ap_id: [String.t()],
             order_by: term(),
             select: term(),
@@ -63,8 +64,8 @@ defmodule Pleroma.User.Query do
           }
           | map()
 
-  @ilike_criteria [:nickname, :nickname_substr, :name]
-  @equal_criteria [:email]
+  @ilike_criteria [:nickname_substr, :name]
+  @equal_criteria [:email, :nickname]
   @contains_criteria [:ap_id, :nickname]
 
   @spec build(Query.t(), criteria()) :: Query.t()
@@ -94,6 +95,10 @@ defmodule Pleroma.User.Query do
        when key in @ilike_criteria and not_empty_string(value) do
     key = if key == :nickname_substr, do: :nickname, else: key
     where(query, [u], ilike(field(u, ^key), ^"%#{value}%"))
+  end
+
+  defp compose_query({:nickname_suffix, value}, query) when not_empty_string(value) do
+    where(query, [u], ilike(u.nickname, ^"%#{value}"))
   end
 
   defp compose_query({:invisible, bool}, query) when is_boolean(bool) do
