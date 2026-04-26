@@ -34,7 +34,6 @@ defmodule Pleroma.User.Query do
 
   @type criteria ::
           %{
-            query: String.t(),
             tags: [String.t()],
             name: String.t(),
             email: String.t(),
@@ -55,6 +54,7 @@ defmodule Pleroma.User.Query do
             friends: User.t(),
             recipients_from_activity: [String.t()],
             nickname: [String.t()] | String.t(),
+            nickname_substr: String.t(),
             ap_id: [String.t()],
             order_by: term(),
             select: term(),
@@ -63,7 +63,7 @@ defmodule Pleroma.User.Query do
           }
           | map()
 
-  @ilike_criteria [:nickname, :name, :query]
+  @ilike_criteria [:nickname, :nickname_substr, :name]
   @equal_criteria [:email]
   @contains_criteria [:ap_id, :nickname]
 
@@ -92,8 +92,7 @@ defmodule Pleroma.User.Query do
 
   defp compose_query({key, value}, query)
        when key in @ilike_criteria and not_empty_string(value) do
-    # hack for :query key
-    key = if key == :query, do: :nickname, else: key
+    key = if key == :nickname_substr, do: :nickname, else: key
     where(query, [u], ilike(field(u, ^key), ^"%#{value}%"))
   end
 
