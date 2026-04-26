@@ -65,8 +65,8 @@ defmodule Pleroma.User.Query do
           | map()
 
   @ilike_criteria [:nickname_substr, :name]
-  @equal_criteria [:email, :nickname]
-  @contains_criteria [:ap_id, :email, :nickname]
+  @equal_criteria [:email]
+  @contains_criteria [:ap_id, :email]
 
   @spec build(Query.t(), criteria()) :: Query.t()
   def build(query \\ base_query(), criteria) do
@@ -101,6 +101,10 @@ defmodule Pleroma.User.Query do
     where(query, [u], ilike(u.nickname, ^"%#{escape_sql_like(value)}"))
   end
 
+  defp compose_query({:nickname, nick}, query) when not_empty_string(nick) do
+    where(query, [u], fragment("LOWER(?) = LOWER(?)", u.nickname, ^nick))
+  end
+
   defp compose_query({:invisible, bool}, query) when is_boolean(bool) do
     where(query, [u], u.invisible == ^bool)
   end
@@ -112,6 +116,17 @@ defmodule Pleroma.User.Query do
 
   defp compose_query({key, values}, query) when key in @contains_criteria and is_list(values) do
     where(query, [u], field(u, ^key) in ^values)
+  end
+
+  defp compose_query({:nickname, nicks}, query) when is_list(nicks) do
+    where(
+      query,
+      [u],
+      fragment("LOWER(?)", u.nickname) in fragment(
+        "(SELECT LOWER(UNNEST(?::text[])))",
+        ^nicks
+      )
+    )
   end
 
   defp compose_query({:tags, tags}, query) when is_list(tags) and length(tags) > 0 do
@@ -226,7 +241,7 @@ defmodule Pleroma.User.Query do
   defp compose_query({:internal, false}, query) do
     query
     |> where([u], not is_nil(u.nickname))
-    |> where([u], not like(u.nickname, "internal.%"))
+    |> where([u], fragment("LOWER(?) NOT LIKE 'internal.%'", u.nickname))
   end
 
   defp compose_query(_unsupported_param, query), do: query
