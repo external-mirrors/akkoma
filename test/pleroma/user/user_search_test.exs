@@ -131,10 +131,10 @@ defmodule Pleroma.UserSearchTest do
       end)
     end
 
-    test "finds a user by full name or leading fragment(s) of its words" do
+    test "finds a user by full name or fragment(s) of its normalised words" do
       user = insert(:user, %{name: "John Doe"})
 
-      Enum.each(["John Doe", "JOHN", "doe", "j d", "j", "d"], fn query ->
+      Enum.each(["John Doe", "JOHN", "doe", "doe..."], fn query ->
         assert user ==
                  Search.search(query)
                  |> List.first()
@@ -142,11 +142,14 @@ defmodule Pleroma.UserSearchTest do
       end)
     end
 
-    test "matches by leading fragment of user domain" do
-      user = insert(:user, %{nickname: "arandom@dude.com"})
-      insert(:user, %{nickname: "iamthedude"})
+    test "limits matching to nicknames for an explicit nickname query" do
+      _user_name = insert(:user, %{name: "ocelot", nickname: "cat@sa.example"})
+      user_nick = insert(:user, %{name: "cat :3", nickname: "ocelot@sa.example"})
+      user_nick2 = insert(:user, %{name: "miaow", nickname: "ocelot2345@sa.example"})
 
-      assert [user.id] == Search.search("dud") |> Enum.map(& &1.id)
+      [result1, result2] = Search.search("@ocelot")
+      assert result1.id == user_nick.id
+      assert result2.id == user_nick2.id
     end
 
     test "ranks full nickname match higher than full name match" do
@@ -344,21 +347,7 @@ defmodule Pleroma.UserSearchTest do
       user = insert(:user, nickname: "lain@" <> to_string(:idna.encode("zetsubou.みんな")))
 
       results =
-        Search.search("lain@zetsubou." <> to_string(:idna.encode("zetsubou.みんな")),
-          resolve: false,
-          for_user: user
-        )
-
-      result = List.first(results)
-
-      assert user == result |> Map.put(:search_rank, nil) |> Map.put(:search_type, nil)
-    end
-
-    test "works with idna domains and bad chars in domain" do
-      user = insert(:user, nickname: "lain@" <> to_string(:idna.encode("zetsubou.みんな")))
-
-      results =
-        Search.search("lain@zetsubou!@#$%^&*()+,-/:;<=>?[]'_{}|~`.みんな",
+        Search.search("lain@" <> to_string(:idna.encode("zetsubou.みんな")),
           resolve: false,
           for_user: user
         )
@@ -369,7 +358,14 @@ defmodule Pleroma.UserSearchTest do
     end
 
     test "works with idna domains and query as link" do
-      user = insert(:user, nickname: "lain@" <> to_string(:idna.encode("zetsubou.みんな")))
+      idnaenc = to_string(:idna.encode("zetsubou.みんな"))
+
+      user =
+        insert(
+          :user,
+          nickname: "lain@" <> idnaenc,
+          ap_id: "https://" <> idnaenc <> "/users/lain"
+        )
 
       results =
         Search.search("https://zetsubou.みんな/users/lain",
@@ -378,6 +374,7 @@ defmodule Pleroma.UserSearchTest do
         )
 
       result = List.first(results)
+      assert result
 
       assert user == result |> Map.put(:search_rank, nil) |> Map.put(:search_type, nil)
     end

@@ -54,14 +54,14 @@ defmodule Pleroma.Web.MastodonAPI.SearchControllerTest do
 
       results =
         conn
-        |> get("/api/v2/search?#{URI.encode_query(%{q: "2hu #private"})}")
+        |> get("/api/v2/search?#{URI.encode_query(%{q: "2hu"})}")
         |> json_response_and_validate_schema(200)
 
       [account | _] = results["accounts"]
       assert account["id"] == to_string(user_three.id)
 
       assert results["hashtags"] == [
-               %{"name" => "private", "url" => "#{Endpoint.url()}/tag/private"}
+               %{"name" => "2hu", "url" => "#{Endpoint.url()}/tag/2hu"}
              ]
 
       [status] = results["statuses"]
@@ -244,7 +244,7 @@ defmodule Pleroma.Web.MastodonAPI.SearchControllerTest do
 
       results =
         conn
-        |> get("/api/v1/accounts/search?q=shp@shitposter.club xxx")
+        |> get("/api/v1/accounts/search?q=shp@shitposter.club%20")
         |> json_response_and_validate_schema(200)
 
       assert length(results) == 1
