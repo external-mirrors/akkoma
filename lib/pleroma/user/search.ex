@@ -188,7 +188,7 @@ defmodule Pleroma.User.Search do
           |> selected_as(:search_rank)
       }
     )
-    |> order_by(desc: selected_as(:search_rank))
+    |> order_by([u], desc: selected_as(:search_rank), desc: u.local, asc: u.id)
     |> Pagination.fetch_paginated(%{"offset" => offset, "limit" => result_limit}, :offset)
   end
 
@@ -220,7 +220,7 @@ defmodule Pleroma.User.Search do
     |> filter_user_query(for_user, local_only)
     |> fts_search(query_string)
     |> trigram_rank(query_string)
-    |> order_by(desc: selected_as(:search_rank))
+    |> order_by([u], desc: selected_as(:search_rank), desc: u.local, asc: u.id)
     |> Pagination.fetch_paginated(%{"offset" => offset, "limit" => result_limit}, :offset)
   end
 
