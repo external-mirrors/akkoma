@@ -28,6 +28,7 @@ defmodule Pleroma.Web.ActivityPub.PublisherTest do
     clear_config([:instance, :quarantined_instances], [])
     clear_config([:mrf_simple, :reject], [])
   end
+
   setup :request_host_header
 
   describe "gather_webfinger_links/1" do

@@ -45,7 +45,8 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
 
   defp case_insensitive_matches?(a, b) do
     String.equivalent?(
-      String.downcase(a), String.downcase(b)
+      String.downcase(a),
+      String.downcase(b)
     )
   end
 
@@ -54,7 +55,10 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
     case_insensitive_matches?(inbound_host, our_host)
   end
 
-  defp host_matches(%URI{host: inbound_host, port: inbound_port}, %URI{host: our_host, port: our_port}) do
-    (inbound_port == our_port) && case_insensitive_matches?(inbound_host, our_host)
+  defp host_matches(%URI{host: inbound_host, port: inbound_port}, %URI{
+         host: our_host,
+         port: our_port
+       }) do
+    inbound_port == our_port && case_insensitive_matches?(inbound_host, our_host)
   end
 end
