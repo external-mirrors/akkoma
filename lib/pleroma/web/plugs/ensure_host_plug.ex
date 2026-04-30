@@ -9,6 +9,7 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
   import Plug.Conn
 
   alias Pleroma.Web.Endpoint
+  import Phoenix.Controller, only: [text: 2]
 
   def init(options) do
     options
@@ -32,14 +33,16 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
       conn
     else
       conn
-      |> resp(400, "Host header does not match")
+      |> put_status(:bad_request)
+      |> text("Host header does not match")
       |> halt()
     end
   end
 
   defp handle_host_header(_, conn) do
     conn
-    |> resp(400, "Host header not present")
+    |> put_status(:bad_request)
+    |> text("Host header not present")
     |> halt()
   end
 
