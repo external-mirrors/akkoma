@@ -59,6 +59,17 @@ defmodule Pleroma.Web.ConnCase do
         [conn: conn]
       end
 
+      defp with_request_host_header(conn) do
+        uri = URI.parse(Pleroma.Web.Endpoint.url())
+        %{conn | host: "#{uri.host}:#{uri.port}"}
+      end
+
+      defp request_host_header(%{conn: conn}) do
+        uri = URI.parse(Pleroma.Web.Endpoint.url())
+        conn = %{conn | host: "#{uri.host}:#{uri.port}"}
+        [conn: conn]
+      end
+
       defp empty_json_response(conn) do
         body = response(conn, 204)
         response_content_type(conn, :json)

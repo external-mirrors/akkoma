@@ -31,6 +31,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
   setup do: clear_config([:instance, :federating], true)
   setup do: clear_config([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
+  setup :request_host_header
 
   describe "/relay" do
     setup do: clear_config([:instance, :allow_relay], true)
@@ -1854,6 +1855,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
       build_conn()
       |> put_req_header("accept", "application/activity+json")
+      |> with_request_host_header()
       |> assign(:user, other_user)
       |> get(object_path)
       |> json_response(200)
@@ -1878,6 +1880,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
       build_conn()
       |> put_req_header("accept", "application/activity+json")
+      |> with_request_host_header()
       |> assign(:user, other_user)
       |> get(activity_path)
       |> json_response(200)
