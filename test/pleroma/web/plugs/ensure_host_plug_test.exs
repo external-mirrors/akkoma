@@ -74,6 +74,21 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlugTest do
       end
     end
 
+    test "rejects a request where the hostname matches and there is no port, and we do not run on the default",
+         %{conn: conn} do
+      url = Pleroma.Web.Endpoint.struct_url()
+
+      conn =
+        conn
+        |> put_host_header(url.host)
+        |> EnsureHostPlug.call(%{})
+
+      assert conn.halted == true
+      assert conn.status == 400
+      assert conn.state == :sent
+      assert conn.resp_body == "Host header does not match"
+    end
+
     test "accepts a request where the hostname matches, with a port", %{conn: conn} do
       %{host: host, port: port} = Pleroma.Web.Endpoint.struct_url()
 
@@ -83,6 +98,21 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlugTest do
         |> EnsureHostPlug.call(%{})
 
       assert conn.halted == false
+    end
+
+    test "rejects a request with multiple host headers", %{conn: conn} do
+      url = Pleroma.Web.Endpoint.struct_url()
+
+      conn =
+        conn
+        |> put_host_header(url.host)
+        |> put_host_header("example.com")
+        |> EnsureHostPlug.call(%{})
+
+      assert conn.halted == true
+      assert conn.status == 400
+      assert conn.state == :sent
+      assert conn.resp_body == "Bad host header"
     end
   end
 end

@@ -20,6 +20,12 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
       [host] ->
         handle_host_header(host, conn)
 
+      [_host | _more] ->
+        conn
+        |> put_status(:bad_request)
+        |> text("Bad host header")
+        |> halt()
+
       [] ->
         handle_host_header(nil, conn)
     end
@@ -41,7 +47,7 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
     end
   end
 
-  defp handle_host_header(_, conn) do
+  defp handle_host_header(nil, conn) do
     conn
     |> put_status(:bad_request)
     |> text("Host header not present")
