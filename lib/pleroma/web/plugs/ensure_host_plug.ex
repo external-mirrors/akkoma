@@ -1,5 +1,5 @@
 # Akkoma: Magically expressive social media
-# Copyright Â© 2022-2026 Akkoma Authors <https://akkoma.dev/>
+# Copyright © 2022-2026 Akkoma Authors <https://akkoma.dev/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.Plugs.EnsureHostPlug do
