@@ -47,7 +47,7 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
     end
   end
 
-  defp handle_host_header(nil, conn) do
+  defp handle_host_header(_, conn) do
     conn
     |> put_status(:bad_request)
     |> text("Host header not present")
