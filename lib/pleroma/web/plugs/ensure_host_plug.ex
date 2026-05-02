@@ -16,21 +16,23 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
   end
 
   def call(conn, _) do
-    %{host: host} = conn
+    case get_req_header(conn, "host") do
+      [host] ->
+        handle_host_header(host, conn)
 
-    handle_host_header(host, conn)
+      [] ->
+        handle_host_header(nil, conn)
+    end
   end
 
   defp handle_host_header(value, conn) when is_binary(value) do
-    # this header should match our currently configured endpoint
-    # and _may or may not_ include a port.
-    # it's technically possible for a `host` to contain colons, so we can't split naively. best to rely on URI here.
-    # no protocol so we don't get any default port shennanigans
-    uri = URI.parse("//#{value}")
-    our_uri = URI.parse(Endpoint.url())
+    our_uri = Endpoint.struct_url()
+    default_port = URI.default_port(our_uri.scheme)
+    expected_host = "#{our_uri.host}:#{our_uri.port}"
 
-    if host_matches(uri, our_uri) do
-      conn
+    if case_insensitive_matches?(value, expected_host) ||
+         case_insensitive_matches?("#{value}:#{default_port}", expected_host) do
+      assign(conn, :host_matches, true)
     else
       conn
       |> put_status(:bad_request)
@@ -47,21 +49,6 @@ defmodule Pleroma.Web.Plugs.EnsureHostPlug do
   end
 
   defp case_insensitive_matches?(a, b) do
-    String.equivalent?(
-      String.downcase(a),
-      String.downcase(b)
-    )
-  end
-
-  # if the host header does not specify a port, match against our host only
-  defp host_matches(%URI{host: inbound_host, port: nil}, %URI{host: our_host}) do
-    case_insensitive_matches?(inbound_host, our_host)
-  end
-
-  defp host_matches(%URI{host: inbound_host, port: inbound_port}, %URI{
-         host: our_host,
-         port: our_port
-       }) do
-    inbound_port == our_port && case_insensitive_matches?(inbound_host, our_host)
+    String.downcase(a) == String.downcase(b)
   end
 end

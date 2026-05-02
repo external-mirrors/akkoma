@@ -60,14 +60,18 @@ defmodule Pleroma.Web.ConnCase do
       end
 
       defp with_request_host_header(conn) do
-        uri = URI.parse(Pleroma.Web.Endpoint.url())
-        %{conn | host: "#{uri.host}:#{uri.port}"}
+        uri = Pleroma.Web.Endpoint.struct_url()
+
+        %{
+          conn
+          | req_headers: [
+              {"host", "#{uri.host}:#{uri.port}"} | conn.req_headers
+            ]
+        }
       end
 
       defp request_host_header(%{conn: conn}) do
-        uri = URI.parse(Pleroma.Web.Endpoint.url())
-        conn = %{conn | host: "#{uri.host}:#{uri.port}"}
-        [conn: conn]
+        [conn: with_request_host_header(conn)]
       end
 
       defp empty_json_response(conn) do
