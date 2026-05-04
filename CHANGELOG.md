@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 2026.05
 
 ### General note
 - backup restore instructions very slightly changed but in an important way.  
@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - non-federating instances now return a 405 response on inbox `POST`s, matching AP spec
 - fixed `GET /api/v1/statuses/:id/context` omitting most local-only posts for authenticated users
 - fixed nondeterministic API results in endpoints using GIN indexes; e.g. full-text search
+- enforced the host header being present on signatures, and matching our server
 
 ### Changed
 - our Docker container now sets a default `nofile` `ulimit` to avoid issues on some systems.
