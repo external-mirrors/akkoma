@@ -146,11 +146,13 @@ defmodule Pleroma.Web.Router do
   end
 
   pipeline :optional_http_signature do
+    plug(Pleroma.Web.Plugs.EnsureHostPlug)
     plug(Pleroma.Web.Plugs.HTTPSignaturePlug)
     plug(Pleroma.Web.Plugs.MappedSignatureToIdentityPlug)
   end
 
   pipeline :http_signature do
+    plug(Pleroma.Web.Plugs.EnsureHostPlug)
     plug(Pleroma.Web.Plugs.HTTPSignaturePlug)
     plug(Pleroma.Web.Plugs.MappedSignatureToIdentityPlug)
     plug(Pleroma.Web.Plugs.EnsureHTTPSignaturePlug)
@@ -626,7 +628,6 @@ defmodule Pleroma.Web.Router do
     delete("/suggestions/:account_id", SuggestionController, :dismiss)
 
     get("/timelines/home", TimelineController, :home)
-    get("/timelines/direct", TimelineController, :direct)
     get("/timelines/list/:list_id", TimelineController, :list)
 
     get("/announcements", AnnouncementController, :index)

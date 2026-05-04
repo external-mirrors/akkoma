@@ -1812,6 +1812,45 @@ defmodule HttpRequestMock do
      }}
   end
 
+  def get("https://smithereen.example/users/1" = url, _, _, _) do
+    {:ok,
+     %Tesla.Env{
+       status: 200,
+       url: url,
+       body: File.read!("test/fixtures/smithereen/user.json"),
+       headers: [
+         {"content-type",
+          "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""}
+       ]
+     }}
+  end
+
+  def get("https://smithereen.example/posts/poll-disclosed" = url, _, _, _) do
+    {:ok,
+     %Tesla.Env{
+       status: 200,
+       url: url,
+       body: File.read!("test/fixtures/smithereen/poll_nonanonymous.json"),
+       headers: [
+         {"content-type",
+          "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""}
+       ]
+     }}
+  end
+
+  def get("https://smithereen.example/posts/poll-anon" = url, _, _, _) do
+    {:ok,
+     %Tesla.Env{
+       status: 200,
+       url: url,
+       body: File.read!("test/fixtures/smithereen/poll_anonymous.json"),
+       headers: [
+         {"content-type",
+          "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""}
+       ]
+     }}
+  end
+
   def get(url, query, body, headers) do
     {:error,
      "Mock response not implemented for GET #{inspect(url)}, #{query}, #{inspect(body)}, #{inspect(headers)}"}

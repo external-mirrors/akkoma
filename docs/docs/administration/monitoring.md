@@ -241,7 +241,7 @@ If this makes too much noise, consider filtering out telltale delivery failures.
 
 On the opposite side of things, a `http_401` error for example is always worth looking into!
 
-## Built-in Dashboard
+## Built-in Dashboard (Phoenix)
 
 Administrators can access a live dashboard under `/phoenix/live_dashboard`
 giving an overview of uptime, software versions, database stats and more.
@@ -258,7 +258,7 @@ as well as database diagnostics.
 BEAM VM stats include detailed memory consumption breakdowns
 and a full list of running processes for example.
 
-## Postgres Statements Statistics
+### Postgres Statements Statistics
 
 The built-in dashboard can list the queries your instances spends the 
 most accumulative time on giving insight into potential bottlenecks
@@ -307,6 +307,7 @@ but it additionally also:
   *(keep this in mind when granting people administrator rights!)*
 
 However, there are two caveats:
+
 1. Just as with the other built-in dashboard, data is not kept around
     (although here a **short** backlog actually exists);
     when you notice an issue during use and go here to check it likely is already too late.
@@ -314,4 +315,4 @@ However, there are two caveats:
     by default failed and succeeded jobs will disappear after about a minute.
 2. This dashboard comes with some seemingly constant-ish overhead.
     For large instances this appears to be negligible, but small instances on weaker hardware might suffer.
-    Thus this dashboard can be disabled in the [config](../cheatsheet.md#oban-web).
+    Thus this dashboard can be disabled in the [config](../configuration/cheatsheet.md#oban-web).

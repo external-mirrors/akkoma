@@ -500,7 +500,7 @@ defmodule Pleroma.Web.ActivityPub.TransmogrifierTest do
 
     test "it strips BCC field" do
       user = insert(:user)
-      {:ok, list} = Pleroma.List.create("foo", user)
+      {:ok, list} = Pleroma.List.create(%{title: "foo"}, user)
 
       {:ok, activity} = CommonAPI.post(user, %{status: "foobar", visibility: "list:#{list.id}"})
 
@@ -825,6 +825,109 @@ defmodule Pleroma.Web.ActivityPub.TransmogrifierTest do
             ],
             "mediaType" => "image/jpeg",
             "blurhash" => "eTKL26+HDjcEIBVl;ds+K6t301W.t7nit7y1E,R:v}ai4nXSt7V@of"
+          }
+        ]
+      }
+
+      assert Transmogrifier.fix_attachments(object) == expected
+    end
+
+    test "can deal with non-array attachment" do
+      object = %{
+        "attachment" => %{
+          "type" => "Document",
+          "name" => "Hello world",
+          "url" => "https://media.example.tld/1.jpg",
+          "mediaType" => "image/jpeg"
+        }
+      }
+
+      expected = %{
+        "attachment" => [
+          %{
+            "type" => "Document",
+            "name" => "Hello world",
+            "url" => [
+              %{
+                "type" => "Link",
+                "mediaType" => "image/jpeg",
+                "href" => "https://media.example.tld/1.jpg"
+              }
+            ],
+            "mediaType" => "image/jpeg"
+          }
+        ]
+      }
+
+      assert Transmogrifier.fix_attachments(object) == expected
+    end
+
+    test "can deal with missing MIME type" do
+      object_flat = %{
+        "attachment" => [
+          %{
+            "type" => "Document",
+            "name" => "Hello world",
+            "url" => "https://media.example.tld/1.jpg"
+          }
+        ]
+      }
+
+      object_url_map = %{
+        "attachment" => [
+          %{
+            "type" => "Document",
+            "name" => "Hello world",
+            "url" => %{
+              "type" => "Link",
+              "href" => "https://media.example.tld/1.jpg"
+            }
+          }
+        ]
+      }
+
+      expected = %{
+        "attachment" => [
+          %{
+            "type" => "Document",
+            "name" => "Hello world",
+            "url" => [
+              %{
+                "type" => "Link",
+                "href" => "https://media.example.tld/1.jpg"
+              }
+            ]
+          }
+        ]
+      }
+
+      assert Transmogrifier.fix_attachments(object_flat) == expected
+      assert Transmogrifier.fix_attachments(object_url_map) == expected
+    end
+
+    test "rejects invalid MIME type" do
+      object = %{
+        "attachment" => [
+          %{
+            "type" => "Document",
+            "name" => "Hello world",
+            "url" => "https://media.example.tld/1.jpg",
+            "mediaType" => "apzlicatonne/quark"
+          }
+        ]
+      }
+
+      expected = %{
+        "attachment" => [
+          %{
+            "type" => "Document",
+            "name" => "Hello world",
+            "url" => [
+              %{
+                "type" => "Link",
+                "href" => "https://media.example.tld/1.jpg"
+              }
+            ]
           }
         ]
       }

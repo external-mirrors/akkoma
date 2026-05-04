@@ -31,6 +31,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
   setup do: clear_config([:instance, :federating], true)
   setup do: clear_config([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
+  setup :request_host_header
 
   describe "/relay" do
     setup do: clear_config([:instance, :allow_relay], true)
@@ -644,6 +645,20 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
   end
 
   describe "/inbox" do
+    test "on non-federating instance, it returns 405", %{conn: conn} do
+      clear_config([:instance, :federating], false)
+
+      data = File.read!("test/fixtures/mastodon-post-activity.json") |> Jason.decode!()
+      {:ok, actor} = User.get_or_fetch_by_ap_id("http://mastodon.example.org/users/admin")
+
+      conn
+      |> assign(:valid_signature, true)
+      |> assign(:signature_user, actor)
+      |> put_req_header("content-type", "application/activity+json")
+      |> post("/inbox", data)
+      |> json_response(405)
+    end
+
     test "it inserts an incoming activity into the database", %{conn: conn} do
       data = File.read!("test/fixtures/mastodon-post-activity.json") |> Jason.decode!()
       {:ok, actor} = User.get_or_fetch_by_ap_id("http://mastodon.example.org/users/admin")
@@ -1840,6 +1855,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
       build_conn()
       |> put_req_header("accept", "application/activity+json")
+      |> with_request_host_header()
       |> assign(:user, other_user)
       |> get(object_path)
       |> json_response(200)
@@ -1864,6 +1880,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
       build_conn()
       |> put_req_header("accept", "application/activity+json")
+      |> with_request_host_header()
       |> assign(:user, other_user)
       |> get(activity_path)
       |> json_response(200)

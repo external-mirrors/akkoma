@@ -153,10 +153,7 @@ defmodule Pleroma.Conversation.Participation do
 
     ActivityPub.fetch_latest_direct_activity_id_for_context(
       participation.conversation.ap_id,
-      %{
-        user: user,
-        blocking_user: user
-      }
+      user
     )
   end
 

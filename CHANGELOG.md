@@ -4,9 +4,55 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 2026.05
+
+### General note
+- backup restore instructions very slightly changed but in an important way.  
+    It is no longer necessary to force sequential, single-transaction mode.
+    Now indexes can and are recommended to be restored in parallel significantly speeding up the overall process.
+   *(If ignoring instructions and using parallel mode before we got rid of index interdependence, `pg_restore` started restoring some indexes before other indexes they heavily depend on were done. Ironically leading to **much** worse restore times than pure sequential mode)*
+
+### Removed
+- as announced in 2025.12 (3.17) and since no complaints were raised, the semi-broken, seemingly unused and improvement-blocking thread containment feature is now removed. This entails the following API changes:
+    - dropped `PATCH /api/v1/accounts/update_credentials` input parameter `skip_thread_containment`
+    - dropped `GET /api/v1/accounts/:id` response key `pleroma.skip_thread_containment`
+    - dropped `GET /api/v1/pleroma/admin/users/:nickname/credentials` response key `skip_thread_containment`
+    - dropped the `skipThreadContainment` key from nodeinfo’s `metadata` object
+- for the same reason `GET /api/v1/timelines/direct` was removed too
+
+### Added
+- `{POST,PUT} api/v1/lists` now accepts the `exclusive` parameter from Mastodon allowing followed users in the list to be removed from the home timeline
+- User profile media now (can) have federated alt text; to this end:
+  - Mastodon-compatible `avatar_description` and `header_description` parameters are added to account API responses and as input for `PATCH /api/v1/accounts/update_credentials`
+  - `pleroma.background_image_descripption` is added to account API responses
+  - `pleroma_background_image_descripption` is added as a new parameter to `PATCH /api/v1/accounts/update_credentials`
+- `GET /api/v1/statuses/:id` contains the new `poll.akkoma.anonymous` parameter if `poll` is non-null.  
+    It relays if and whether the source instance promised to keep votes anonymous or disclose votes with voter identity.
+    There are no plans to enable creating non-anonymous polls in Akkoma, but some implementations do.
+
+### Fixed
+- fix date-time format in `* /api/v1/markers` to strictly conform to Mastodon’s ISO 8061 subset
+- fix response content-type and styling for the `/embed` endpoint
+- do not crash handler when attempting to refresh remote follow stats for users without follow* addresses
+- list timelines now include reblogs of users in the list matching Mastodon
+- non-federating instances now return a 405 response on inbox `POST`s, matching AP spec
+- fixed `GET /api/v1/statuses/:id/context` omitting most local-only posts for authenticated users
+- fixed nondeterministic API results in endpoints using GIN indexes; e.g. full-text search
+- enforced the host header being present on signatures, and matching our server
+
+### Changed
+- our Docker container now sets a default `nofile` `ulimit` to avoid issues on some systems.
+    Methods to customise this are documented under Configuration - General Optimisation.
+- Add reasonable defaults for `:database_config_whitelist`
+
 
 ## 2026.03.1
+
+### Update notes
+- If you experience degraded performance of database queries after upgrading,
+    try running `VACUUM ANALYZE;` either manually with `psql` or via the
+    [database vacuum analyze mix task](https://docs.akkoma.dev/develop/administration/CLI_tasks/database/#analyze).
+    This will force the planner to pick up index changes if it didn’t do so on its own.
 
 ### Fixed
 - fix WebFinger validation even more.  

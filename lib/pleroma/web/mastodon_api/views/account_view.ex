@@ -216,8 +216,10 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
 
     avatar = User.avatar_url(user) |> MediaProxy.url()
     avatar_static = User.avatar_url(user) |> MediaProxy.preview_url(static: true)
+    avatar_description = User.image_description(user.avatar, "")
     header = User.banner_url(user) |> MediaProxy.url()
     header_static = User.banner_url(user) |> MediaProxy.preview_url(static: true)
+    header_description = User.image_description(user.banner, "")
 
     following_count =
       if !user.hide_follows_count or !user.hide_follows or opts[:for] == user,
@@ -287,8 +289,10 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
       url: user.uri || user.ap_id,
       avatar: avatar,
       avatar_static: avatar_static,
+      avatar_description: avatar_description,
       header: header,
       header_static: header_static,
+      header_description: header_description,
       emojis: emojis,
       fields: user.fields,
       bot: bot,
@@ -322,8 +326,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
         hide_follows: user.hide_follows,
         hide_favorites: user.hide_favorites,
         relationship: relationship,
-        skip_thread_containment: user.skip_thread_containment,
         background_image: image_url(user.background) |> MediaProxy.url(),
+        background_image_description: User.image_description(user.background, ""),
         favicon: favicon
       }
     }

@@ -71,12 +71,14 @@ defmodule Pleroma.User.FetcherTest do
 
       assert user.avatar == %{
                "type" => "Image",
-               "url" => [%{"href" => "https://jk.nipponalba.scot/images/profile.jpg"}]
+               "url" => [%{"href" => "https://jk.nipponalba.scot/images/profile.jpg"}],
+               "name" => "profile picture"
              }
 
       assert user.banner == %{
                "type" => "Image",
-               "url" => [%{"href" => "https://jk.nipponalba.scot/images/profile.jpg"}]
+               "url" => [%{"href" => "https://jk.nipponalba.scot/images/profile.jpg"}],
+               "name" => "profile picture"
              }
     end
 
@@ -280,6 +282,35 @@ defmodule Pleroma.User.FetcherTest do
     {:ok, ^featured_url, %{}} = Fetcher.process_featured_collection(featured_url)
   end
 
+  test "fetches avatar description" do
+    user_id = "https://example.com/users/nicole"
+
+    user_data =
+      "test/fixtures/users_mock/user.json"
+      |> File.read!()
+      |> String.replace("{{nickname}}", "nicole")
+      |> Jason.decode!()
+      |> Map.delete("featured")
+      |> Map.update("icon", %{}, fn image -> Map.put(image, "name", "image description") end)
+      |> Jason.encode!()
+
+    Tesla.Mock.mock(fn
+      %{
+        method: :get,
+        url: ^user_id
+      } ->
+        %Tesla.Env{
+          status: 200,
+          body: user_data,
+          headers: [{"content-type", "application/activity+json"}]
+        }
+    end)
+
+    {:ok, user} = Fetcher.make_user_from_ap_id(user_id)
+
+    assert user.avatar["name"] == "image description"
+  end
+
   describe "fetch_follow_information_for_user" do
     test "synchronizes following/followers counters" do
       user =
@@ -396,6 +427,24 @@ defmodule Pleroma.User.FetcherTest do
       assert follow_info.hide_followers == true
       assert follow_info.follower_count == 0
       assert follow_info.hide_follows == true
+      assert follow_info.following_count == 0
+    end
+
+    test "treats missing follow* addresses as a private collection" do
+      user =
+        insert(:user,
+          local: false,
+          follower_address: nil,
+          following_address: nil
+        )
+
+      {:ok, follow_info} = Fetcher.fetch_follow_information_for_user(user)
+
+      assert follow_info.hide_followers == true
+      assert follow_info.hide_followers_count == true
+      assert follow_info.follower_count == 0
+      assert follow_info.hide_follows == true
+      assert follow_info.hide_follows_count == true
       assert follow_info.following_count == 0
     end
   end

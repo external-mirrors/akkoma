@@ -73,104 +73,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
     end
   end
 
-  describe "fetching restricted by visibility" do
-    test "it restricts by the appropriate visibility" do
-      user = insert(:user)
-
-      {:ok, public_activity} = CommonAPI.post(user, %{status: ".", visibility: "public"})
-
-      {:ok, direct_activity} = CommonAPI.post(user, %{status: ".", visibility: "direct"})
-
-      {:ok, unlisted_activity} = CommonAPI.post(user, %{status: ".", visibility: "unlisted"})
-
-      {:ok, private_activity} = CommonAPI.post(user, %{status: ".", visibility: "private"})
-
-      activities = ActivityPub.fetch_activities([], %{visibility: "direct", actor_id: user.ap_id})
-
-      assert activities == [direct_activity]
-
-      activities =
-        ActivityPub.fetch_activities([], %{visibility: "unlisted", actor_id: user.ap_id})
-
-      assert activities == [unlisted_activity]
-
-      activities =
-        ActivityPub.fetch_activities([], %{visibility: "private", actor_id: user.ap_id})
-
-      assert activities == [private_activity]
-
-      activities = ActivityPub.fetch_activities([], %{visibility: "public", actor_id: user.ap_id})
-
-      assert activities == [public_activity]
-
-      activities =
-        ActivityPub.fetch_activities([], %{
-          visibility: ~w[private public],
-          actor_id: user.ap_id
-        })
-
-      assert activities == [public_activity, private_activity]
-    end
-  end
-
-  describe "fetching excluded by visibility" do
-    test "it excludes by the appropriate visibility" do
-      user = insert(:user)
-
-      {:ok, public_activity} = CommonAPI.post(user, %{status: ".", visibility: "public"})
-
-      {:ok, direct_activity} = CommonAPI.post(user, %{status: ".", visibility: "direct"})
-
-      {:ok, unlisted_activity} = CommonAPI.post(user, %{status: ".", visibility: "unlisted"})
-
-      {:ok, private_activity} = CommonAPI.post(user, %{status: ".", visibility: "private"})
-
-      activities =
-        ActivityPub.fetch_activities([], %{
-          exclude_visibilities: "direct",
-          actor_id: user.ap_id
-        })
-
-      assert public_activity in activities
-      assert unlisted_activity in activities
-      assert private_activity in activities
-      refute direct_activity in activities
-
-      activities =
-        ActivityPub.fetch_activities([], %{
-          exclude_visibilities: "unlisted",
-          actor_id: user.ap_id
-        })
-
-      assert public_activity in activities
-      refute unlisted_activity in activities
-      assert private_activity in activities
-      assert direct_activity in activities
-
-      activities =
-        ActivityPub.fetch_activities([], %{
-          exclude_visibilities: "private",
-          actor_id: user.ap_id
-        })
-
-      assert public_activity in activities
-      assert unlisted_activity in activities
-      refute private_activity in activities
-      assert direct_activity in activities
-
-      activities =
-        ActivityPub.fetch_activities([], %{
-          exclude_visibilities: "public",
-          actor_id: user.ap_id
-        })
-
-      refute public_activity in activities
-      assert unlisted_activity in activities
-      assert private_activity in activities
-      assert direct_activity in activities
-    end
-  end
-
   test "it fetches the appropriate tag-restricted posts" do
     user = insert(:user)
 
@@ -1207,58 +1109,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
     end
   end
 
-  describe "timeline post-processing" do
-    test "it filters broken threads" do
-      user1 = insert(:user)
-      user2 = insert(:user)
-      user3 = insert(:user)
-
-      {:ok, user1, user3} = User.follow(user1, user3)
-      assert User.following?(user1, user3)
-
-      {:ok, user2, user3} = User.follow(user2, user3)
-      assert User.following?(user2, user3)
-
-      {:ok, user3, user2} = User.follow(user3, user2)
-      assert User.following?(user3, user2)
-
-      {:ok, public_activity} = CommonAPI.post(user3, %{status: "hi 1"})
-
-      {:ok, private_activity_1} = CommonAPI.post(user3, %{status: "hi 2", visibility: "private"})
-
-      {:ok, private_activity_2} =
-        CommonAPI.post(user2, %{
-          status: "hi 3",
-          visibility: "private",
-          in_reply_to_status_id: private_activity_1.id
-        })
-
-      {:ok, private_activity_3} =
-        CommonAPI.post(user3, %{
-          status: "hi 4",
-          visibility: "private",
-          in_reply_to_status_id: private_activity_2.id
-        })
-
-      activities =
-        ActivityPub.fetch_activities([user1.ap_id | User.following(user1)])
-        |> Enum.map(fn a -> a.id end)
-
-      private_activity_1 = Activity.get_by_ap_id_with_object(private_activity_1.data["id"])
-
-      assert [public_activity.id, private_activity_1.id, private_activity_3.id] == activities
-
-      assert length(activities) == 3
-
-      activities =
-        ActivityPub.fetch_activities([user1.ap_id | User.following(user1)], %{user: user1})
-        |> Enum.map(fn a -> a.id end)
-
-      assert [public_activity.id, private_activity_1.id] == activities
-      assert length(activities) == 2
-    end
-  end
-
   describe "flag/1" do
     setup do
       reporter = insert(:user)
@@ -1383,7 +1233,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
   test "fetch_activities/2 returns activities addressed to a list " do
     user = insert(:user)
     member = insert(:user)
-    {:ok, list} = Pleroma.List.create("foo", user)
+    {:ok, list} = Pleroma.List.create(%{title: "foo"}, user)
     {:ok, list} = Pleroma.List.follow(list, member)
 
     {:ok, activity} = CommonAPI.post(user, %{status: "foobar", visibility: "list:#{list.id}"})

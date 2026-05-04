@@ -247,7 +247,6 @@ config :pleroma, :instance,
   safe_dm_mentions: false,
   healthcheck: false,
   remote_post_retention_days: 90,
-  skip_thread_containment: true,
   limit_to_local_content: :unauthenticated,
   filter_embedded_nodeinfo: true,
   user_bio_length: 5000,
@@ -359,16 +358,6 @@ config :pleroma, :assets,
     }
   ],
   default_mascot: :pleroma_fox_tan
-
-config :pleroma, :manifest,
-  icons: [
-    %{
-      src: "/static/logo.svg",
-      type: "image/svg+xml"
-    }
-  ],
-  theme_color: "#282c37",
-  background_color: "#191b22"
 
 config :pleroma, :activitypub,
   unfollow_blocked: true,
@@ -565,6 +554,15 @@ config :pleroma, Pleroma.User,
     "mfa"
   ],
   email_blacklist: []
+
+config :pleroma, :database_config_whitelist, [
+  {:pleroma},
+  {:cors_plug},
+  {:ex_aws, :s3},
+  {:mime},
+  {:web_push_encryption, :vapid_details},
+  {:logger}
+]
 
 config :pleroma, Oban,
   repo: Pleroma.Repo,
@@ -861,7 +859,6 @@ config :pleroma, configurable_from_database: false
 
 config :pleroma, Pleroma.Repo,
   parameters: [
-    gin_fuzzy_search_limit: "500",
     plan_cache_mode: "force_custom_plan"
   ]
 
@@ -911,6 +908,8 @@ config :pleroma, Pleroma.Web.WebFinger,
   update_nickname_on_user_fetch: true
 
 config :pleroma, Pleroma.Search, module: Pleroma.Search.DatabaseSearch
+
+config :pleroma, Pleroma.Search.DatabaseSearch, gin_fuzzy_search_limit: nil
 
 config :pleroma, Pleroma.Search.Meilisearch,
   url: "http://127.0.0.1:7700/",

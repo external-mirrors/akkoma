@@ -71,8 +71,10 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       },
       avatar: "http://localhost:4001/images/avi.png",
       avatar_static: "http://localhost:4001/images/avi.png",
+      avatar_description: "",
       header: "http://localhost:4001/images/banner.png",
       header_static: "http://localhost:4001/images/banner.png",
+      header_description: "",
       emojis: [
         %{
           static_url: "/file.png",
@@ -98,6 +100,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         ap_id: user.ap_id,
         also_known_as: ["https://shitposter.zone/users/shp"],
         background_image: "https://example.com/images/asuka_hospital.png",
+        background_image_description: "",
         favicon: nil,
         is_confirmed: true,
         tags: [],
@@ -109,8 +112,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         hide_follows: false,
         hide_followers_count: false,
         hide_follows_count: false,
-        relationship: %{},
-        skip_thread_containment: false
+        relationship: %{}
       }
     }
 
@@ -228,8 +230,10 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       url: user.ap_id,
       avatar: "http://localhost:4001/images/avi.png",
       avatar_static: "http://localhost:4001/images/avi.png",
+      avatar_description: "",
       header: "http://localhost:4001/images/banner.png",
       header_static: "http://localhost:4001/images/banner.png",
+      header_description: "",
       emojis: [],
       fields: [],
       bot: true,
@@ -257,6 +261,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         ap_id: user.ap_id,
         also_known_as: [],
         background_image: nil,
+        background_image_description: "",
         favicon: "http://localhost:4001/favicon.png",
         is_confirmed: true,
         tags: [],
@@ -268,8 +273,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         hide_follows: false,
         hide_followers_count: false,
         hide_follows_count: false,
-        relationship: %{},
-        skip_thread_containment: false
+        relationship: %{}
       }
     }
 

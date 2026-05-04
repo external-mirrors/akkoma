@@ -4,7 +4,7 @@ defmodule Pleroma.Mixfile do
   def project do
     [
       app: :pleroma,
-      version: version("3.18.1"),
+      version: version("3.19.0"),
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
@@ -132,7 +132,7 @@ defmodule Pleroma.Mixfile do
       {:inet_cidr, "~> 1.0.0"},
       {:ecto_enum, "~> 1.4"},
       {:ecto_sql, "~> 3.13.2"},
-      {:postgrex, "~> 0.21.1"},
+      {:postgrex, "~> 0.22.0"},
       {:oban, "~> 2.20.1"},
       {:oban_web, "~> 2.11.0"},
       {:gettext, "~> 0.26 or ~> 1.0"},
