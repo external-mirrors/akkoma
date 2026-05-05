@@ -24,8 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `{POST,PUT} api/v1/lists` now accepts the `exclusive` parameter from Mastodon allowing followed users in the list to be removed from the home timeline
 - User profile media now (can) have federated alt text; to this end:
   - Mastodon-compatible `avatar_description` and `header_description` parameters are added to account API responses and as input for `PATCH /api/v1/accounts/update_credentials`
-  - `pleroma.background_image_descripption` is added to account API responses
-  - `pleroma_background_image_descripption` is added as a new parameter to `PATCH /api/v1/accounts/update_credentials`
+  - `pleroma.background_image_description` is added to account API responses
+  - `pleroma_background_image_description` is added as a new parameter to `PATCH /api/v1/accounts/update_credentials`
 - `GET /api/v1/statuses/:id` contains the new `poll.akkoma.anonymous` parameter if `poll` is non-null.  
     It relays if and whether the source instance promised to keep votes anonymous or disclose votes with voter identity.
     There are no plans to enable creating non-anonymous polls in Akkoma, but some implementations do.
