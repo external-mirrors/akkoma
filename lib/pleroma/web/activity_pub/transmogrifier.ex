@@ -811,6 +811,16 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     end
   end
 
+  defp set_voters_count(%{"votersCount" => n} = obj) when is_integer(n) do
+    obj
+  end
+
+  defp set_voters_count(%{"voters" => voters} = obj) when is_list(voters) do
+    Map.put_new(obj, "votersCount", length(voters))
+  end
+
+  defp set_voters_count(obj), do: obj
+
   # Prepares the object of an outgoing create activity.
   def prepare_object(object) do
     object
@@ -823,6 +833,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     |> set_reply_to_uri
     |> set_quote_url()
     |> set_replies
+    |> set_voters_count()
     |> strip_internal_fields
     |> strip_internal_tags
     |> set_type
