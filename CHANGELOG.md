@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   your text search config to your current value (or something else, like `simple` if you so wish)
   via the `database set_text_search_config <value>` mix task
 
-## Added
+### Added
 - federated voter count of polls is now parsed and federated out too;
     this fixes vote percetanges for new and refreshed remote multi-selection polls
 - new config options to restrict unauthenticated search API access under `:pleroma, :restrict_unauthenticated, :search`
@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - fixed status search not respecting `resolve=false`
 - fixed later search result pages again fetching remote content
+- handle reports referring to a single plain id as their object;
+    affected e.g. JSON-LD compacted reports without status references from Iceshrimp.NET
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
