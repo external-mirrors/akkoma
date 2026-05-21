@@ -84,6 +84,9 @@ defmodule Pleroma.HTML.Scrubber.Default do
     "mfm-scale",
     "mfm-fg",
     "mfm-bg",
+    "mfm-crop",
+    "mfm-border",
+    "mfm-unixtime",
     # The following are the animated MFM
     "mfm-jelly",
     "mfm-twitch",
@@ -94,6 +97,8 @@ defmodule Pleroma.HTML.Scrubber.Default do
     "mfm-rainbow",
     "mfm-tada",
     "mfm-sparkle",
+    "mfm-fade",
+    "mfm-followmouse",
     # MFM legacy
     # This is for backwards compatibility with posts formatted on Akkoma before support for FEP-c16b
     "mfm",
@@ -132,6 +137,18 @@ defmodule Pleroma.HTML.Scrubber.Default do
     "data-mfm-emoji",
     "data-mfm-math",
     "data-mfm-color",
+    "data-mfm-delay",
+    "data-mfm-out",
+    "data-mfm-top",
+    "data-mfm-right",
+    "data-mfm-bottom",
+    "data-mfm-width",
+    "data-mfm-radius",
+    "data-mfm-style",
+    "data-mfm-rotateByVelocity",
+    "data-mfm-loop",
+    # Not yet covered by the FEP; speculative name
+    "data-mfm-unixtime",
     # MFM legacy
     # This is for backwards compatibility with posts formatted on Akkoma before support for FEP-c16b
     "data-x",
