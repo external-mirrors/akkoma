@@ -266,6 +266,9 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     |> (fn {text, mentions, tags} ->
           {String.replace(text, ~r/\r?\n/, "<br>"), mentions, tags}
         end).()
+
+    # XXX: breaks rel=me links in bios, thus for now omitted.
+    # |> Formatter.html_escape("text/html")
   end
 
   def format_input(text, "text/bbcode", options) do
@@ -275,12 +278,13 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     |> BBCode.to_html()
     |> (fn {:ok, html} -> html end).()
     |> Formatter.linkify(options)
+    |> Formatter.html_escape("text/html")
   end
 
   def format_input(text, "text/html", options) do
     text
-    |> Formatter.html_escape("text/html")
     |> Formatter.linkify(options)
+    |> Formatter.html_escape("text/html")
   end
 
   def format_input(text, "text/x.misskeymarkdown", options) do

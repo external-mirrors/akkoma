@@ -134,7 +134,7 @@ defmodule Pleroma.Web.CommonAPI.UtilsTest do
       assert output == expected
 
       text = "[b]hello world![/b]\n\nsecond paragraph!"
-      expected = "<strong>hello world!</strong><br><br>second paragraph!"
+      expected = "<strong>hello world!</strong><br/><br/>second paragraph!"
 
       {output, [], []} = Utils.format_input(text, "text/bbcode")
 
@@ -143,7 +143,7 @@ defmodule Pleroma.Web.CommonAPI.UtilsTest do
       text = "[b]hello world![/b]\n\n<strong>second paragraph!</strong>"
 
       expected =
-        "<strong>hello world!</strong><br><br>&lt;strong&gt;second paragraph!&lt;/strong&gt;"
+        "<strong>hello world!</strong><br/><br/>&lt;strong&gt;second paragraph!&lt;/strong&gt;"
 
       {output, [], []} = Utils.format_input(text, "text/bbcode")
 
