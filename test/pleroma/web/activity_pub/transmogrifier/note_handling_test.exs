@@ -914,6 +914,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
 
     # the exact output may change in the future, but when updating make sure it never turns into something fishy
     assert object.data["content"] ==
-             "<p><span class=\"mfm-twitch\" data-mfm-speed=\"5s”&gt;&lt;script&gt;alert(1);&lt;/script&gt;&lt;span&gt;”\">boo!</span></p>"
+             "<p><span class=\"mfm-twitch\" data-mfm-speed=\"5s\">”&amp;gt;&amp;lt;script&amp;gt;alert(1);&amp;lt;/script&amp;gt;&amp;lt;span&amp;gt;” boo!</span>&lt;/p&gt;</p>"
   end
 end

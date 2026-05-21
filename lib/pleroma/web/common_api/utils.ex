@@ -287,7 +287,8 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     text
     |> Formatter.markdown_to_html(%{breaks: true})
     |> MfmParser.Parser.parse()
-    |> MfmParser.Encoder.to_html()
+    # Must preserve HTML tags from markdown parser (last step removes dangerous bits)
+    |> MfmParser.Encoder.to_html(escape_text: false)
     |> Formatter.linkify(options)
     |> Formatter.html_escape("text/html")
   end
