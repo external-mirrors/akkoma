@@ -879,4 +879,41 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
     assert object.data["context"] == object.data["inReplyTo"]
     assert modified.data["context"] == object.data["inReplyTo"]
   end
+
+  test "sanitises MFM injection attempts (when reparsing MFM source)" do
+    author = insert(:user, local: false)
+
+    activity =
+      %{
+        "type" => "Create",
+        "actor" => author.ap_id,
+        "id" => author.ap_id <> "/create",
+        "to" => ["as:Public"],
+        "object" => %{
+          "type" => "Note",
+          "attributedTo" => author.ap_id,
+          "id" => author.ap_id <> "/mfm-note",
+          "to" => ["as:Public"],
+          "content" =>
+            "<span class=\"mfm-twitch\" data-mfm-speed=\"5s\"><script>alert(1);</script><span>\"\">boo!</span>",
+          "source" => %{
+            "mediaType" => "text/x.misskeymarkdown",
+            "content" => "$[twitch.speed=5s\"><script>alert(1);</script><span>\" boo!]"
+          }
+        }
+      }
+
+    {:ok, %Activity{} = modified} = Transmogrifier.handle_incoming(activity)
+    object = Object.normalize(modified, fetch: false)
+
+    refute object.data["content"] =~ "<script>"
+    refute object.data["content"] =~ "</script>"
+
+    {:ok, fhtml} = Floki.parse_document(object.data["content"])
+    assert Floki.find(fhtml, "script") == []
+
+    # the exact output may change in the future, but when updating make sure it never turns into something fishy
+    assert object.data["content"] ==
+             "<p><span class=\"mfm-twitch\" data-mfm-speed=\"5s”&gt;&lt;script&gt;alert(1);&lt;/script&gt;&lt;span&gt;”\">boo!</span></p>"
+  end
 end
