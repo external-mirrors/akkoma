@@ -299,7 +299,7 @@ defmodule Pleroma.Instances.Instance do
   end
 
   def perform(:delete_instance, host) when is_binary(host) do
-    User.Query.build(%{nickname: "@#{host}"})
+    User.Query.build(%{nickname_suffix: "@#{host}"})
     |> Repo.chunk_stream(100, :batches)
     |> Stream.each(fn users ->
       users

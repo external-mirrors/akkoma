@@ -289,8 +289,6 @@ defmodule Pleroma.User do
   defdelegate following_ap_ids(user), to: FollowingRelationship
   defdelegate get_follow_requests_query(user), to: FollowingRelationship
 
-  defdelegate search(query, opts \\ []), to: User.Search
-
   @doc """
   Dumps Flake Id to SQL-compatible format (16-byte UUID).
   E.g. "9pQtDGXuq4p3VlcJEm" -> <<0, 0, 1, 110, 179, 218, 42, 92, 213, 41, 44, 227, 95, 213, 0, 0>>
@@ -502,7 +500,7 @@ defmodule Pleroma.User do
     |> cast(params, [:name], empty_values: [])
     |> validate_required([:ap_id])
     |> validate_required([:name], trim: false)
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> cast_assoc(:signing_key, with: &SigningKey.remote_changeset/2, required: false)
     |> validate_format(:nickname, @email_regex)
     |> validate_length(:bio, max: bio_limit)
@@ -561,7 +559,7 @@ defmodule Pleroma.User do
         :accepts_direct_messages_from
       ]
     )
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_format(:nickname, local_nickname_regex())
     |> validate_length(:bio, max: bio_limit)
     |> validate_length(:name, min: 1, max: name_limit)
@@ -793,7 +791,7 @@ defmodule Pleroma.User do
       :email
     ])
     |> validate_required([:name, :nickname])
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_exclusion(:nickname, Config.get([User, :restricted_nicknames]))
     |> validate_format(:nickname, local_nickname_regex())
     |> put_ap_id()
@@ -850,7 +848,7 @@ defmodule Pleroma.User do
 
       if valid?, do: [], else: [email: "Invalid email"]
     end)
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_exclusion(:nickname, Config.get([User, :restricted_nicknames]))
     |> validate_format(:nickname, local_nickname_regex())
     |> validate_length(:bio, max: bio_limit)
@@ -1268,6 +1266,10 @@ defmodule Pleroma.User do
     get_cached_by_ap_id(ap_id)
   end
 
+  @doc """
+  Loads matching cached user. If not found will fallback to database lookup.
+  If not locally known yet at all, the handle will be looked up on the network via WebFinger.
+  """
   def get_cached_by_nickname(nickname) do
     if String.valid?(nickname) do
       key = "nickname:#{nickname}"
@@ -1304,10 +1306,15 @@ defmodule Pleroma.User do
   @spec get_by_nickname(String.t()) :: User.t() | nil
   def get_by_nickname(nickname) do
     if String.valid?(nickname) do
-      Repo.get_by(User, nickname: nickname) ||
+      search_nick =
         if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
-          Repo.get_by(User, nickname: local_nickname(nickname))
+          local_nickname(nickname)
+        else
+          nickname
         end
+
+      User.Query.build(%{internal: :allowed, nickname: search_nick})
+      |> Repo.one()
     else
       nil
     end
@@ -2117,7 +2124,7 @@ defmodule Pleroma.User do
     }
     |> change
     |> put_private_key()
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> Repo.insert()
     |> set_cache()
   end
@@ -2365,10 +2372,8 @@ defmodule Pleroma.User do
   end
 
   def get_ap_ids_by_nicknames(nicknames) do
-    from(u in User,
-      where: u.nickname in ^nicknames,
-      select: u.ap_id
-    )
+    User.Query.build(%{internal: :allowed, nickname: nicknames})
+    |> select([u], u.ap_id)
     |> Repo.all()
   end
 

@@ -869,7 +869,8 @@ private_instance? = :if_instance_is_private
 config :pleroma, :restrict_unauthenticated,
   timelines: %{local: private_instance?, federated: private_instance?, bubble: true},
   profiles: %{local: private_instance?, remote: private_instance?},
-  activities: %{local: private_instance?, remote: private_instance?}
+  activities: %{local: private_instance?, remote: private_instance?},
+  search: %{all: private_instance?, resolve: true, paginate: true}
 
 config :pleroma, Pleroma.Web.ApiSpec.CastAndValidate, strict: false
 

@@ -6,9 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Update note
+- If you are using database search with a non-default RUM index,
+  you _MUST_ apply the new optional RUM migration before upgrading.  
+  Then after upgrading you wil need to refresh your RUM index setup
+  to also get the new search behaviour. This can be done by "changing"
+  your text search config to your current value (or something else, like `simple` if you so wish)
+  via the `database set_text_search_config <value>` mix task
+
 ## Added
 - federated voter count of polls is now parsed and federated out too;
     this fixes vote percetanges for new and refreshed remote multi-selection polls
+- new config options to restrict unauthenticated search API access under `:pleroma, :restrict_unauthenticated, :search`
+
+### Fixed
+- fixed status search not respecting `resolve=false`
+- fixed later search result pages again fetching remote content
+
+### Changed
+- New installations (not existing instances) now default to the `simple` full-text-search config
+- Unauthenticated search requests now by default force-disable remote fetches and pagination
+- Post search can now match text in the content warning with the database provider
+- prefixing a user search query with `@` will limit results to matching nicknames only, if the query contains no enclosed whitespace
 
 
 ## 2026.05 (3.19.0)

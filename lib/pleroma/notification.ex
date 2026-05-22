@@ -146,9 +146,7 @@ defmodule Pleroma.Notification do
       fragment(
         # "(actor's domain NOT in domain_blocks)"
         """
-        NOT (
-          substring(? from '.*://([^/]*)') = ANY(?)
-        )
+        split_part(?, '/', 3) <> ALL(?)
         """,
         activity.actor,
         ^user.domain_blocks

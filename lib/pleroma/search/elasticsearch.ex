@@ -30,8 +30,10 @@ defmodule Pleroma.Search.Elasticsearch do
     }
   end
 
-  defp maybe_fetch(:activity, search_query) do
-    with true <- Regex.match?(~r/https?:/, search_query),
+  defp maybe_fetch(:activity, search_query, options) do
+    with true <- options[:resolve],
+         0 <- Keyword.get(options, :offset, 0),
+         true <- Regex.match?(~r/https?:/, search_query),
          {:ok, object} <- Fetcher.fetch_object_from_id(search_query),
          %Activity{} = activity <- Activity.get_create_by_object_ap_id(object.data["id"]) do
       activity
@@ -51,7 +53,7 @@ defmodule Pleroma.Search.Elasticsearch do
 
     activity_fetch_task =
       Task.async(fn ->
-        maybe_fetch(:activity, String.trim(query))
+        maybe_fetch(:activity, String.trim(query), options)
       end)
 
     activity_task =
