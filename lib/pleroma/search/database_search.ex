@@ -18,12 +18,15 @@ defmodule Pleroma.Search.DatabaseSearch do
   @behaviour Pleroma.Search.SearchBackend
 
   def search(user, search_query, options \\ []) do
-    apid_match = is_uri(search_query) && maybe_locate_apid(search_query, user, options)
+    maybe_network = should_resolve_remote(options) && is_uri(search_query)
+    action = fn -> do_search(user, search_query, options) end
 
-    if apid_match do
-      [apid_match]
+    # We want to checkout a connection to not be stuck repeatedly in queue
+    # but not needlessly stall other queries while we wait for a network response
+    if !maybe_network do
+      Repo.checkout(action)
     else
-      fts_search(user, search_query, options)
+      action.()
     end
   end
 
@@ -33,6 +36,19 @@ defmodule Pleroma.Search.DatabaseSearch do
 
   defp should_resolve_remote(options) do
     options[:resolve] && Keyword.get(options, :offset, 0) == 0
+  end
+
+  defp do_search(user, search_query, options) do
+    apid_match = is_uri(search_query) && maybe_locate_apid(search_query, user, options)
+
+    if apid_match do
+      [apid_match]
+    else
+      # Now, we can definitely checkout a conn
+      Repo.checkout(fn ->
+        fts_search(user, search_query, options)
+      end)
+    end
   end
 
   def maybe_locate_apid(apid, user, options) do
