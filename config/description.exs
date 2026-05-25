@@ -3378,6 +3378,12 @@ config :pleroma, :config_description, [
         type: :module,
         description: "Selected search module.",
         suggestions: {:list_behaviour_implementations, Pleroma.Search.SearchBackend}
+      },
+      %{
+        key: :task_timeout,
+        type: :integer,
+        description: "Timeout for individual search tasks.",
+        suggestions: [45_000]
       }
     ]
   },

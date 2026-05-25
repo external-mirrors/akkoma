@@ -2,7 +2,19 @@
 
 {! administration/CLI_tasks/general_cli_task_info.include !}
 
-## Built-in search
+## General
+
+Processing of each search request is capped.
+If a search exceeds this limit, the API will return an empty result for the affected category.
+Too large values might end up capped by Cowboy’s HTTP request idle timeout, killing the whole response.
+The value can be configured with:
+
+```elixir
+config :pleroma, Pleroma.Search, task_timeout: 51_610
+```
+
+## Search providers
+### Built-in search
 
 To use built-in search that has no external dependencies, set the search module to `Pleroma.Activity`:
 
@@ -19,7 +31,7 @@ By default FTS search is exact and considers everything. To enforce a limit only
 config :pleroma, Pleroma.Search.DatabaseSearch, gin_fuzzy_search_limit: 10_000
 ```
 
-## Meilisearch
+### Meilisearch
 
 Note that it's quite a bit more memory hungry than PostgreSQL (around 4-5G for ~1.2 million
 posts while idle and up to 7G while indexing initially). The disk usage for this additional index is also
@@ -52,7 +64,7 @@ At least version 0.25.0 is required, but you are strongly adviced to use at leas
 the `--enable-auto-batching` option which drastically improves performance. Without this option, the search
 is hardly usable on a somewhat big instance.
 
-### Private key authentication (optional)
+#### Private key authentication (optional)
 
 To set the private key, use the `MEILI_MASTER_KEY` environment variable when starting. After setting the _master key_,
 you have to get the _private key_ and possibly _search key_, which are actually used for authentication.
@@ -73,7 +85,7 @@ your configuration file as `private_key`. You should also see a
 If your version of Meilisearch only showed the former,
 just leave `search_key` completely unset in Akkoma's config.
 
-### Initial indexing
+#### Initial indexing
 
 After setting up the configuration, you'll want to index all of your already existsing posts. Only public posts are indexed.  You'll only
 have to do it one time, but it might take a while, depending on the amount of posts your instance has seen. This is also a fairly RAM
@@ -116,7 +128,7 @@ of indexing and how many posts have actually been indexed, use the `stats` comma
     mix pleroma.search.meilisearch stats
     ```
 
-### Clearing the index
+#### Clearing the index
 
 In case you need to clear the index (for example, to re-index from scratch, if that needs to happen for some reason), you can
 use the `clear` command:
@@ -136,7 +148,7 @@ there is no need to actually clear the whole index, unless you want **all** of i
 that cannot be re-created from the database, it should also generally be a lot smaller than the size of your database. Still, the size
 depends on the amount of text in posts.
 
-## Elasticsearch
+### Elasticsearch
 
 **Note: This requires at least ElasticSearch 7**
 
@@ -153,7 +165,7 @@ You then need to set the URL and authentication credentials if relevant.
 >    username: "elastic",
 >    password: "changeme",
 
-### Initial indexing
+#### Initial indexing
 
 After setting up the configuration, you'll want to index all of your already existsing posts. You'll only have to do it one time, but it might take a while, depending on the amount of posts your instance has seen.
 
