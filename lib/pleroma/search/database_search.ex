@@ -71,8 +71,6 @@ defmodule Pleroma.Search.DatabaseSearch do
     end
   end
 
-  def maybe_locate_uri(_, _, _), do: nil
-
   defp fts_search(user, search_query, options) do
     gin_limit = Pleroma.Config.get([__MODULE__, :gin_fuzzy_search_limit])
 
