@@ -28,6 +28,16 @@ defmodule Pleroma.User.Search do
     local_only = should_restrict_local(for_user)
     resolve = Keyword.get(opts, :resolve, false) && !local_only
 
+    action = fn -> search_action(query_string, for_user, local_only, resolve, opts) end
+
+    if !resolve do
+      Repo.checkout(action)
+    else
+      action.()
+    end
+  end
+
+  defp search_action(query_string, for_user, local_only, resolve, opts) do
     is_uri = Regex.match?(~r/https?:/, query_string)
     explicit_nick = String.starts_with?(query_string, "@") && !String.contains?(query_string, " ")
 
