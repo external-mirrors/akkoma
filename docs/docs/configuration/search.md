@@ -18,10 +18,37 @@ config :pleroma, Pleroma.Search, task_timeout: 51_610
 
 To use built-in search that has no external dependencies, set the search module to `Pleroma.Activity`:
 
-> config :pleroma, Pleroma.Search, module: Pleroma.Search.DatabaseSearch
+```elixir
+config :pleroma, Pleroma.Search, module: Pleroma.Search.DatabaseSearch
+```
 
-While it has no external dependencies, it has problems with performance and relevancy.
+It has no external dependencies and requires the least amount of disk usage.
+However, it is slower than external providers and for performance reasons
+is limited to sorting results by recency alone instead of match quality.
+Result quality may depend on how well your FTS config (typically a language)
+matches the posts on your server.
 
+Also keep in mind to make use of PostgreSQL’s websearch syntax. Full documentation can be found 
+[here](https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES).
+
+In short, searching for `apple pie` will match everything containing those two words in any order or place of the text.
+`"apple pie"` only matches if both words appear and `pie` immediately follows `apple`.
+`apple -orange` matches everything referencing apple(s) but not orange(s).
+And `or` acts as an operator to be used for alternatives; for a literal word it must be quoted `"or"`.
+
+#### Change FTS config
+By default Akkoma uses the `simple` config which performs almost no normalisation (except casing)
+nor removes any stop words, making it rather strict but independent of language.
+
+You can change your config with the `database set_text_search_config` task.
+See [docs on CJK search](./howto_search_cjk.md) for advanced examples.
+For many languages, Postgres already has a preset built-in you can use as is; e.g.
+
+```sh
+...database set_text_search_config english
+```
+
+#### Fuzzy search
 You may choose to limit the set of posts considered during a FTS search for better performance
 in exchange for potentially non-deterministic and less relevant results. See documentation of
 `gin_fuzzy_search_limit` in [PostgreSQL’s docs](https://www.postgresql.org/docs/17/gin.html#GIN-TIPS).
@@ -31,36 +58,93 @@ By default FTS search is exact and considers everything. To enforce a limit only
 config :pleroma, Pleroma.Search.DatabaseSearch, gin_fuzzy_search_limit: 10_000
 ```
 
+#### RUM
+
+Instead of a GIN index, the built-in database search can also use a RUM index.
+The hope was to improve performance at the cost of higher disk-storage (around 3× more)
+by leveraging RUM’s capability to include extra data (here timestamps for sorting)
+in the index thus avoiding additional heap lookups.
+
+However, since search queries still need to filter results down to respect visibility etc
+heap lookups are still needed anyway and in practice this probably doesn’t actually help much if at all
+while taking up more disk space and needing extra setup work.  
+You probably don’t want to use this and if you already do, consider migrating back to GIN.
+
+##### Enable
+
+!!! warning
+    It is recommended to use PostgreSQL v11 or newer. We have seen some minor issues with lower PostgreSQL versions.
+
+RUM indexes are a third-party PostgreSQL extension.
+First install it via your distro if available or manually from source: https://github.com/postgrespro/rum.
+
+Then change your Akkoma config to set:
+```elixir
+config :pleroma, :database, rum_enabled: true
+```
+
+To enable them, both the `rum_enabled` flag has to be set and the following special migration has to be run:
+
+Finally run the special RUM migrations:
+
+```sh
+mix ecto.migrate --migrations-path priv/repo/optional_migrations/rum_indexing/
+```
+
+This will probably take a long time.
+
+##### Disable
+Just delete the config setting again and revert RUM-specific migrations with
+
+```sh
+mix ecto.rollback --all --migrations-path priv/repo/optional_migrations/rum_indexing/
+```
+
+Then reapply any potential regular GIN versions of the reverted migrations:
+
+```sh
+mix ecto.migrate
+```
+
+You can now remove the extension again.
+
+
 ### Meilisearch
 
-Note that it's quite a bit more memory hungry than PostgreSQL (around 4-5G for ~1.2 million
-posts while idle and up to 7G while indexing initially). The disk usage for this additional index is also
-around 4 gigabytes. Like [RUM](./cheatsheet.md#rum-indexing-for-full-text-search) indexes, it offers considerably
-higher performance and ordering by timestamp in a reasonable amount of time.
-Additionally, the search results seem to be more accurate.
+Note that it's quite a bit more memory hungry than PostgreSQL (around 4-5GB for ~1.2 million
+posts while idle and up to 7GB while indexing initially). It also requires significantly more
+disk space (around 4GB for the previous example setup).  
+This however allows it to process individually queries faster while also sorting results
+by match quality ("relevancy") rather than just by recency.
+Additionally, the search profits from Meilisearch’s typo tolerance etc;
+see: [Meilisearch’s documentation](https://www.meilisearch.com/docs/capabilities/full_text_search/overview).
 
-Due to high memory usage, it may be best to set it up on a different machine, if running akkoma on a low-resource
+Due to high memory usage, it may be best to set it up on a different machine, if running Akkoma on a low-resource
 computer, and use private key authentication to secure the remote search instance.
 
 To use [meilisearch](https://www.meilisearch.com/), set the search module to `Pleroma.Search.Meilisearch`:
 
-> config :pleroma, Pleroma.Search, module: Pleroma.Search.Meilisearch
+```elixir
+config :pleroma, Pleroma.Search, module: Pleroma.Search.Meilisearch
+```
 
 You then need to set the address of the meilisearch instance, and optionally the private key for authentication. You might
 also want to change the `initial_indexing_chunk_size` to be smaller if your server is not very powerful, but not higher than `100_000`,
 because Meilisearch will refuse to process it if it's too big. However, in general you want this to be as big as possible, because Meilisearch
 indexes faster when it can process many posts in a single batch.
 
-> config :pleroma, Pleroma.Search.Meilisearch,
->    url: "http://127.0.0.1:7700/",
->    private_key: "private key",
->    search_key: "search key",
->    initial_indexing_chunk_size: 100_000
+```elixir
+config :pleroma, Pleroma.Search.Meilisearch,
+  url: "http://127.0.0.1:7700/",
+  private_key: "private key",
+  search_key: "search key",
+  initial_indexing_chunk_size: 100_000
+```
 
 Information about setting up Meilisearch can be found in the
 [official documentation](https://docs.meilisearch.com/learn/getting_started/installation.html).
 You probably want to start it with `MEILI_NO_ANALYTICS=true` environment variable to disable analytics.
-At least version 0.25.0 is required, but you are strongly adviced to use at least 0.26.0, as it introduces
+At least version 0.25.0 is required, but you are strongly advised to use at least 0.26.0, as it introduces
 the `--enable-auto-batching` option which drastically improves performance. Without this option, the search
 is hardly usable on a somewhat big instance.
 
@@ -87,7 +171,7 @@ just leave `search_key` completely unset in Akkoma's config.
 
 #### Initial indexing
 
-After setting up the configuration, you'll want to index all of your already existsing posts. Only public posts are indexed.  You'll only
+After setting up the configuration, you'll want to index all of your already existing posts. Only public posts are indexed.  You'll only
 have to do it one time, but it might take a while, depending on the amount of posts your instance has seen. This is also a fairly RAM
 consuming process for `meilisearch`, and it will take a lot of RAM when running if you have a lot of posts (seems to be around 5G for ~1.2
 million posts while idle and up to 7G while indexing initially, but your experience may be different).
@@ -156,18 +240,22 @@ As with Meilisearch, this can be rather memory-hungry, but it is very good at wh
 
 To use [Elasticsearch](https://www.elastic.co/), set the search module to `Pleroma.Search.Elasticsearch`:
 
-> config :pleroma, Pleroma.Search, module: Pleroma.Search.Elasticsearch
+```elixir
+config :pleroma, Pleroma.Search, module: Pleroma.Search.Elasticsearch
+```
 
 You then need to set the URL and authentication credentials if relevant.
 
-> config :pleroma, Pleroma.Search.Elasticsearch.Cluster,
->    url: "http://127.0.0.1:9200/",
->    username: "elastic",
->    password: "changeme",
+```elixir
+config :pleroma, Pleroma.Search.Elasticsearch.Cluster,
+  url: "http://127.0.0.1:9200/",
+  username: "elastic",
+  password: "changeme"
+```
 
 #### Initial indexing
 
-After setting up the configuration, you'll want to index all of your already existsing posts. You'll only have to do it one time, but it might take a while, depending on the amount of posts your instance has seen.
+After setting up the configuration, you'll want to index all of your already existing posts. You'll only have to do it one time, but it might take a while, depending on the amount of posts your instance has seen.
 
 The sequence of actions is as follows:
 
