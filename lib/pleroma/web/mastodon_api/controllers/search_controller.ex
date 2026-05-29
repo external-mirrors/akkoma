@@ -6,7 +6,6 @@ defmodule Pleroma.Web.MastodonAPI.SearchController do
   use Pleroma.Web, :controller
 
   alias Pleroma.Config
-  alias Pleroma.Repo
   alias Pleroma.User
   alias Pleroma.User.Search, as: UserSearch
   alias Pleroma.Web.ControllerHelper
@@ -67,7 +66,7 @@ defmodule Pleroma.Web.MastodonAPI.SearchController do
   defp do_search(version, %{assigns: %{user: user}} = conn, %{q: query} = params) do
     query = String.trim(query)
     options = search_options(params, user)
-    timeout = Keyword.get(Repo.config(), :timeout, 15_000)
+    timeout = Pleroma.Config.get!([Pleroma.Search, :task_timeout])
     default_values = %{"statuses" => [], "accounts" => [], "hashtags" => []}
 
     result =

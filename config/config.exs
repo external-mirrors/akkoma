@@ -908,7 +908,10 @@ config :pleroma, Pleroma.Web.WebFinger,
   # TODO: default this to false after the fallout from recent WebFinger bugs is healed
   update_nickname_on_user_fetch: true
 
-config :pleroma, Pleroma.Search, module: Pleroma.Search.DatabaseSearch
+config :pleroma, Pleroma.Search,
+  module: Pleroma.Search.DatabaseSearch,
+  # note this + pre- & postprocessing needs to fit into Phoenix/Cowboy’s timeout too (default: 60s)
+  task_timeout: 45_000
 
 config :pleroma, Pleroma.Search.DatabaseSearch, gin_fuzzy_search_limit: nil
 
