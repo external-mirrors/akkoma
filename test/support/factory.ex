@@ -86,10 +86,25 @@ defmodule Pleroma.Factory do
           featured_address: ap_id <> "/collections/featured"
         }
       else
-        ap_id = User.generate_ap_id(user)
+        id = FlakeId.get()
+        user = Map.put(user, :id, id)
+
+        ap_id =
+          cond do
+            is_binary(attrs[:ap_id]) ->
+              attrs[:ap_id]
+
+            attrs[:legacy_ap] == true ->
+              Pleroma.Web.Endpoint.url() <> "/users/" <> user.nickname
+
+            true ->
+              User.generate_ap_id(user)
+          end
+
         user = Map.put(user, :ap_id, ap_id)
 
         %{
+          id: id,
           ap_id: ap_id,
           uri: User.generate_display_uri(user),
           inbox: User.generate_ap_inbox(user),
@@ -101,6 +116,7 @@ defmodule Pleroma.Factory do
       end
 
     attrs = Map.delete(attrs, :domain)
+    attrs = Map.delete(attrs, :legacy_ap)
 
     user
     |> Map.put(:raw_bio, user.bio)

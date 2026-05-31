@@ -402,10 +402,9 @@ defmodule Pleroma.User do
   def image_description(%{"name" => name}, _default), do: name
   def image_description(_, default), do: default
 
-  # Should probably be renamed or removed
+  # generate_* functions are public to allow usage in test helper factory
   @spec generate_ap_id(%{id: String.t()}) :: String.t()
-  def generate_ap_id(%{nickname: nickname}) when nickname != nil,
-    do: "#{Endpoint.url()}/users/#{nickname}"
+  def generate_ap_id(%{id: id}) when id != nil, do: "#{Endpoint.url()}/users/by-id/#{id}"
 
   @spec generate_ap_inbox(%{ap_id: String.t()}) :: String.t()
   def generate_ap_inbox(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/inbox"
@@ -797,6 +796,7 @@ defmodule Pleroma.User do
     |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_exclusion(:nickname, Config.get([User, :restricted_nicknames]))
     |> validate_format(:nickname, local_nickname_regex())
+    |> put_id()
     |> put_ap_id_and_display_uri()
     |> unique_constraint(:ap_id)
     |> put_in_and_outbox()
@@ -860,6 +860,7 @@ defmodule Pleroma.User do
     |> validate_length(:registration_reason, max: reason_limit)
     |> maybe_validate_required_email(opts[:external])
     |> put_password_hash
+    |> put_id()
     |> put_ap_id_and_display_uri()
     |> unique_constraint(:ap_id)
     |> put_in_and_outbox()
@@ -876,6 +877,13 @@ defmodule Pleroma.User do
       changeset
     end
   end
+
+  defp put_id(%{valid?: true} = changeset) do
+    id = FlakeId.get()
+    put_change(changeset, :id, id)
+  end
+
+  defp put_id(changeset), do: changeset
 
   defp put_ap_id_and_display_uri(%{valid?: true, changes: initdata} = changeset) do
     changeset
@@ -2846,4 +2854,11 @@ defmodule Pleroma.User do
 
   def accepts_direct_messages?(%User{accepts_direct_messages_from: :nobody}, _),
     do: false
+
+  def legacy_ap_id?(%User{local: true, ap_id: ap_id, nickname: nick})
+      when is_binary(ap_id) and is_binary(nick) do
+    String.ends_with?(ap_id, "/users/" <> nick)
+  end
+
+  def legacy_ap_id?(%User{}), do: false
 end

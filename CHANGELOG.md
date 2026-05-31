@@ -51,6 +51,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Unauthenticated search requests now by default force-disable remote fetches and pagination
 - Post search can now match text in the content warning with the database provider
 - prefixing a user search query with `@` will limit results to matching nicknames only, if the query contains no enclosed whitespace
+- newly created users will no longer include their nickname in AP IDs of and related to the actor;
+    this prepares for (sensible) future renaming support
 
 
 ## 2026.05 (3.19.0)

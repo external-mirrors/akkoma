@@ -16,6 +16,7 @@ defmodule Pleroma.Web.StaticFE.StaticFEController do
   plug(:assign_id)
 
   @page_keys ["max_id", "min_id", "limit", "since_id", "order"]
+  @user_tabs ["posts", "with_replies", "following", "followers", "media", "feed"]
 
   @doc "Renders requested local public activity or public activities of requested user"
   def show(%{assigns: %{notice_id: notice_id}} = conn, _params) do
@@ -229,6 +230,7 @@ defmodule Pleroma.Web.StaticFE.StaticFEController do
 
   defp in_reply_to_user(_), do: nil
 
+  # post display URLs, akkoma-fe style and other FEs
   defp assign_id(%{path_info: ["notice", notice_id]} = conn, _opts),
     do: assign(conn, :notice_id, notice_id)
 
@@ -241,18 +243,33 @@ defmodule Pleroma.Web.StaticFE.StaticFEController do
   defp assign_id(%{path_info: [_nickname, "status", notice_id]} = conn, _opts),
     do: assign(conn, :notice_id, notice_id)
 
+  # user display URL and subpages (and also legacy user AP ID)
   defp assign_id(%{path_info: ["users", user_id]} = conn, _opts),
     do:
       conn
       |> assign(:username_or_id, user_id)
       |> assign(:tab, "posts")
 
-  defp assign_id(%{path_info: ["users", user_id, tab]} = conn, _opts),
+  defp assign_id(%{path_info: ["users", user_id, tab]} = conn, _opts) when tab in @user_tabs,
     do:
       conn
       |> assign(:username_or_id, user_id)
       |> assign(:tab, tab)
 
+  # (new) user AP ID (tabs mostly to handle HTML fallback for /feed URL)
+  defp assign_id(%{path_info: ["users", "by-id", user_id]} = conn, _opts),
+    do:
+      conn
+      |> assign(:username_or_id, user_id)
+      |> assign(:tab, "posts")
+
+  defp assign_id(%{path_info: ["users", "by-id", user_id, tab]} = conn, _opts),
+    do:
+      conn
+      |> assign(:user_id, user_id)
+      |> assign(:tab, tab)
+
+  # object AP IDs
   defp assign_id(%{path_info: ["objects", object_id]} = conn, _opts),
     do: assign(conn, :object_id, object_id)
 
