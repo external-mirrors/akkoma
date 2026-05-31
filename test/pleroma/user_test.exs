@@ -159,28 +159,28 @@ defmodule Pleroma.UserTest do
     end
   end
 
-  test "ap_id returns the activity pub id for the user" do
+  test "generate_ap_id returns a new local activity pub id" do
     user = UserBuilder.build()
 
     expected_ap_id = "#{Pleroma.Web.Endpoint.url()}/users/#{user.nickname}"
 
-    assert expected_ap_id == User.ap_id(user)
+    assert expected_ap_id == User.generate_ap_id(user)
   end
 
-  test "ap_followers returns the followers collection for the user" do
+  test "generate_ap_followers returns a new followers collection URI" do
     user = UserBuilder.build()
 
-    expected_followers_collection = "#{User.ap_id(user)}/followers"
+    expected_followers_collection = "#{user.ap_id}/followers"
 
-    assert expected_followers_collection == User.ap_followers(user)
+    assert expected_followers_collection == User.generate_ap_followers(user)
   end
 
-  test "ap_following returns the following collection for the user" do
+  test "generate_ap_following returns a new local following collection URI" do
     user = UserBuilder.build()
 
-    expected_followers_collection = "#{User.ap_id(user)}/following"
+    expected_followers_collection = "#{user.ap_id}/following"
 
-    assert expected_followers_collection == User.ap_following(user)
+    assert expected_followers_collection == User.generate_ap_following(user)
   end
 
   test "returns all pending follow requests" do
@@ -281,7 +281,7 @@ defmodule Pleroma.UserTest do
     assert followed.follower_count == 1
     assert user.following_count == 1
 
-    assert User.ap_followers(followed) in User.following(user)
+    assert followed.follower_address in User.following(user)
   end
 
   test "can't follow a deactivated users" do
@@ -645,7 +645,10 @@ defmodule Pleroma.UserTest do
 
       assert changeset.valid?
       assert is_binary(changeset.changes[:password_hash])
-      assert changeset.changes[:ap_id] == User.ap_id(%User{nickname: @full_user_data.nickname})
+
+      assert changeset.changes[:ap_id] ==
+               User.generate_ap_id(%User{nickname: @full_user_data.nickname})
+
       assert changeset.changes[:signing_key]
       assert changeset.changes[:signing_key].valid?
       assert is_binary(changeset.changes[:signing_key].changes.private_key)
@@ -944,16 +947,16 @@ defmodule Pleroma.UserTest do
     end
   end
 
-  test "returns an ap_id for a user" do
+  test "test factory creates sensible ap_id for a user" do
     user = insert(:user)
 
-    assert User.ap_id(user) == url(@endpoint, ~p[/users/#{user.nickname}])
+    assert user.ap_id == url(@endpoint, ~p[/users/#{user.nickname}])
   end
 
-  test "returns an ap_followers link for a user" do
+  test "test factory creates sensible ap_followers link for a user" do
     user = insert(:user)
 
-    assert User.ap_followers(user) == url(@endpoint, ~p[/users/#{user.nickname}/followers])
+    assert user.follower_address == url(@endpoint, ~p[/users/#{user.nickname}/followers])
   end
 
   describe "remote user changeset" do

@@ -253,7 +253,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
 
       {:ok, %Activity{data: data, local: false}} = Transmogrifier.handle_incoming(data)
 
-      assert data["cc"] == [User.ap_followers(user)]
+      assert data["cc"] == [user.follower_address]
     end
 
     test "it ensures that address fields become lists" do

@@ -86,12 +86,15 @@ defmodule Pleroma.Factory do
           featured_address: ap_id <> "/collections/featured"
         }
       else
+        ap_id = User.generate_ap_id(user)
+        user = Map.put(user, :ap_id, ap_id)
+
         %{
-          ap_id: User.ap_id(user),
-          inbox: User.ap_id(user) <> "/inbox",
-          follower_address: User.ap_followers(user),
-          following_address: User.ap_following(user),
-          featured_address: User.ap_featured_collection(user)
+          ap_id: ap_id,
+          inbox: User.generate_ap_id(user) <> "/inbox",
+          follower_address: User.generate_ap_followers(user),
+          following_address: User.generate_ap_following(user),
+          featured_address: User.generate_ap_featured_collection(user)
         }
       end
 
