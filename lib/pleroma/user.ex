@@ -435,13 +435,6 @@ defmodule Pleroma.User do
     end
   end
 
-  defp fix_follower_address(%{follower_address: _, following_address: _} = params), do: params
-
-  defp fix_follower_address(%{nickname: nickname} = params),
-    do: Map.put(params, :follower_address, ap_followers(%User{nickname: nickname}))
-
-  defp fix_follower_address(params), do: params
-
   def remote_user_changeset(struct \\ %User{local: false}, params) do
     bio_limit = Config.get([:instance, :user_bio_length], 5000)
     name_limit = Config.get([:instance, :user_name_length], 100)
@@ -461,7 +454,6 @@ defmodule Pleroma.User do
       |> truncate_if_exists(:bio, bio_limit)
       |> Map.update(:fields, [], &Enum.take(&1, fields_limit))
       |> truncate_fields_param()
-      |> fix_follower_address()
 
     struct
     |> Repo.preload(:signing_key)

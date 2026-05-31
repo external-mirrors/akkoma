@@ -972,13 +972,6 @@ defmodule Pleroma.UserTest do
       assert cs.valid?
     end
 
-    test "it sets the follower_adress" do
-      cs = User.remote_user_changeset(@valid_remote)
-      # remote users get a fake local follower address
-      assert cs.changes.follower_address ==
-               User.ap_followers(%User{nickname: @valid_remote[:nickname]})
-    end
-
     test "it enforces the fqn format for nicknames" do
       cs = User.remote_user_changeset(%{@valid_remote | nickname: "bla"})
       assert Ecto.Changeset.get_field(cs, :local) == false
