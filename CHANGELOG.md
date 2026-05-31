@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fixed later search result pages again fetching remote content
 - handle reports referring to a single plain id as their object;
     affected e.g. JSON-LD compacted reports without status references from Iceshrimp.NET
+- fixed several issues parsing remote Question objects
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
