@@ -73,16 +73,49 @@ defmodule Pleroma.Object.Fetcher do
         new_data
       end
 
+    # Moderators might have changed the visibility for safekeeping and we don't want to undo this now.
+    # Also, since we use "recipients" from the unchanged Create (most, but not all of the time. It assumes
+    # they’ll always match; oh the "splendor" of this codebase), addressing updates won't work anyway.
+    new_data =
+      new_data
+      |> Map.put("to", old_data["to"])
+      |> Map.put("cc", old_data["cc"])
+      |> Map.put("bto", old_data["bto"])
+      |> Map.put("bcc", old_data["bcc"])
+
     Map.merge(new_data, internal_fields)
   end
 
   defp maybe_reinject_internal_fields(_, new_data), do: new_data
 
+  defp new_data_matches_old?(%Object{} = old_object, new_data) do
+    # somehow, when explicitly refetching pruned objects this can also end up with an invalid, all-nil object struct
+    with {_, old_data} when old_data != nil <- {:local_delete, old_object.data},
+         {_, false} <- {:local_delete, old_data["type"] == "Tombstone"},
+         # cannot (re)fetch transient objects!
+         old_id when old_id != nil <- old_data["id"],
+         {_, true} <- {:id_match, old_id == new_data["id"]},
+         {_, true} <- {:type_match, old_data["type"] == new_data["type"]} do
+      true
+    else
+      {:local_delete, _} ->
+        true
+
+      e ->
+        Logger.debug("Rejected mismatchig new data on reinject attempt: #{inspect(e)}")
+        false
+    end
+  end
+
   @spec reinject_object(struct(), map()) :: {:ok, Object.t()} | {:error, any()}
   defp reinject_object(%Object{} = object, new_data) do
     Logger.debug("Reinjecting object #{new_data["id"]}")
 
+    # TODO: when are MRFs applied? Seems like atm refetches can bypass all MRF checks?
+    # (well... ObjectAge, probably must be bypassed, but other MRFs for moderation should _always_ run)
+
     with new_data <- Transmogrifier.fix_object(new_data),
+         {_, true} <- {:data_match, new_data_matches_old?(object, new_data)},
          data <- maybe_reinject_internal_fields(object, new_data),
          {:ok, data, _} <- ObjectValidator.validate(data, %{}),
          changeset <- Object.change(object, %{data: data}),
