@@ -149,12 +149,11 @@ defmodule Pleroma.Web.Router do
     plug(Pleroma.Web.Plugs.EnsureHostPlug)
     plug(Pleroma.Web.Plugs.HTTPSignaturePlug)
     plug(Pleroma.Web.Plugs.MappedSignatureToIdentityPlug)
+    plug(Pleroma.Web.Plugs.UserEnabledPlug)
   end
 
   pipeline :http_signature do
-    plug(Pleroma.Web.Plugs.EnsureHostPlug)
-    plug(Pleroma.Web.Plugs.HTTPSignaturePlug)
-    plug(Pleroma.Web.Plugs.MappedSignatureToIdentityPlug)
+    plug(:optional_http_signature)
     plug(Pleroma.Web.Plugs.EnsureHTTPSignaturePlug)
   end
 

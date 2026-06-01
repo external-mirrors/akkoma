@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - handle reports referring to a single plain id as their object;
     affected e.g. JSON-LD compacted reports without status references from Iceshrimp.NET
 - fixed several issues parsing remote Question objects
+- fixed signatures from blocked or deleted actors still being accepted
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
