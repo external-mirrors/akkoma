@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fix follow* collections being readable without signature even if authorized_fetch mode is enabled
 - fix one’s own follow* counts sometimes being redacted in API if hiding count for others
 - fix delete&redraft still deleting attachment files most oft the time once the initial redraft delay elapsed
+- fix fetched objects not normalising various valid forms of the public addressing URI
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config

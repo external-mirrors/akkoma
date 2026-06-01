@@ -32,6 +32,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   def fix_object(object, options \\ []) do
     object
     |> strip_internal_fields()
+    |> normalise_addressing_public()
     |> fix_actor()
     |> fix_url()
     |> fix_attachments()
