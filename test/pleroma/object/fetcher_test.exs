@@ -11,6 +11,8 @@ defmodule Pleroma.Object.FetcherTest do
   alias Pleroma.Object
   alias Pleroma.Object.Fetcher
 
+  require Pleroma.Constants
+
   import Mock
   import Tesla.Mock
 
@@ -519,7 +521,7 @@ defmodule Pleroma.Object.FetcherTest do
         "bcc" => [],
         "bto" => [],
         "cc" => [],
-        "to" => [],
+        "to" => [Pleroma.Constants.as_public()],
         "summary" => ""
       }
 
@@ -532,7 +534,7 @@ defmodule Pleroma.Object.FetcherTest do
         "bcc" => [],
         "bto" => [],
         "cc" => [],
-        "to" => [],
+        "to" => [Pleroma.Constants.as_public()],
         "summary" => "",
         "formerRepresentations" => %{
           "type" => "OrderedCollection",
@@ -545,7 +547,7 @@ defmodule Pleroma.Object.FetcherTest do
               "bcc" => [],
               "bto" => [],
               "cc" => [],
-              "to" => [],
+              "to" => [Pleroma.Constants.as_public()],
               "summary" => ""
             }
           ],
@@ -614,7 +616,7 @@ defmodule Pleroma.Object.FetcherTest do
                 "bcc" => [],
                 "bto" => [],
                 "cc" => [],
-                "to" => [],
+                "to" => [Pleroma.Constants.as_public()],
                 "summary" => ""
               }
             ],
@@ -647,7 +649,12 @@ defmodule Pleroma.Object.FetcherTest do
           "formerRepresentations" => %{
             "type" => "OrderedCollection",
             "orderedItems" => [
-              %{"type" => "Note", "content" => "mew mew 2"}
+              %{
+                "type" => "Note",
+                "content" => "mew mew 2",
+                "actor" => object2["actor"],
+                "to" => object2["to"]
+              }
             ],
             "totalItems" => 1
           }
@@ -672,7 +679,12 @@ defmodule Pleroma.Object.FetcherTest do
           "formerRepresentations" => %{
             "type" => "OrderedCollection",
             "orderedItems" => [
-              %{"type" => "Note", "content" => "mew mew 1"}
+              %{
+                "type" => "Note",
+                "content" => "mew mew 1",
+                "actor" => object1["actor"],
+                "to" => object1["to"]
+              }
             ],
             "totalItems" => 1
           }
