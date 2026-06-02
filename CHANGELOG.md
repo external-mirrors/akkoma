@@ -30,10 +30,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     affected e.g. JSON-LD compacted reports without status references from Iceshrimp.NET
 - fixed several issues parsing remote Question objects
 - fixed signatures from blocked or deleted actors still being accepted
-- fix follow* collections being readable without signature even if authorized_fetch mode is enabled
-- fix one’s own follow* counts sometimes being redacted in API if hiding count for others
-- fix delete&redraft still deleting attachment files most oft the time once the initial redraft delay elapsed
-- fix fetched objects not normalising various valid forms of the public addressing URI
+- fixed follow* collections being readable without signature even if authorized_fetch mode is enabled
+- fixed one’s own follow* counts sometimes being redacted in API if hiding count for others
+- fixed delete&redraft still deleting attachment files most oft the time once the initial redraft delay elapsed
+- fixed fetched objects not normalising various valid forms of the public addressing URI
+- fixed searches for an already known statuses with resolve=true sometimes failing
+    if searching by a display URL instead of canonical AP ID.
+    With resolve=false no display URL lookups are possible.
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config

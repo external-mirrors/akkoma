@@ -160,6 +160,8 @@ defmodule Pleroma.Object.Fetcher do
          {_, nil} <- {:fetch_object, Object.get_cached_by_ap_id(id)},
          {_, true} <- {:allowed_depth, Federator.allowed_thread_distance?(options[:depth])},
          {_, {:ok, data}} <- {:fetch, fetch_and_contain_remote_object_from_id(id)},
+         {_, unknown, _} when unknown in [false, nil] <-
+           {:cached_new_id, data["id"] != id && Object.get_cached_by_ap_id(data["id"]), data},
          {_, nil} <- {:normalize, Object.normalize(data, fetch: false)},
          params <- prepare_activity_params(data),
          {_, {:ok, activity}} <-
@@ -207,6 +209,12 @@ defmodule Pleroma.Object.Fetcher do
         {:ok, object}
 
       {:fetch_object, %Object{} = object} ->
+        {:ok, object}
+
+      {:cached_new_id, %Object{} = object, _data} ->
+        # might as well make use of the fresh canonical source we now already fetched
+        # EXCEPT: this would bypass MRFs atm; thus unfortunately we must ignore it
+        # reinject_object(object, data)
         {:ok, object}
 
       {:fetch, {:error, reason}} = e ->
