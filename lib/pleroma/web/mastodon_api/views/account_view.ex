@@ -221,13 +221,15 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
     header_static = User.banner_url(user) |> MediaProxy.preview_url(static: true)
     header_description = User.image_description(user.banner, "")
 
+    self_view? = opts[:for] && opts[:for].id == user.id
+
     following_count =
-      if !user.hide_follows_count or !user.hide_follows or opts[:for] == user,
+      if !user.hide_follows_count or !user.hide_follows or self_view?,
         do: user.following_count,
         else: 0
 
     followers_count =
-      if !user.hide_followers_count or !user.hide_followers or opts[:for] == user,
+      if !user.hide_followers_count or !user.hide_followers or self_view?,
         do: user.follower_count,
         else: 0
 
