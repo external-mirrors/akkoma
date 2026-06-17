@@ -38,15 +38,25 @@ defmodule Pleroma.Object.Fetcher do
   end
 
   defp revive_pruned_object(object, new_data) do
-    changeset =
+    changeset = fn data ->
       object
-      |> Object.change(%{data: new_data})
+      |> Object.change(%{data: data})
       |> touch_changeset()
+    end
 
-    with {:ok, object} <- Repo.insert_or_update(changeset),
+    # before revivial pass through MRFs again
+    fake_create = prepare_create_activity_params(new_data)
+
+    with {_, {:ok, %{"object" => new_data_processed}}} <- {:mrf_check, MRF.filter(fake_create)},
+         changeset <- changeset.(new_data_processed),
+         {:ok, object} <- Repo.insert_or_update(changeset),
          {:ok, object} <- Object.set_cache(object) do
       {:ok, object}
     else
+      {:mrf_check, error} ->
+        Logger.debug("Rejected fetched object revival due to MRF: #{inspect(error)}")
+        {:reject, :mrf}
+
       e ->
         Logger.error(
           "Error while processing object for reinjection after deletion: #{inspect(e)}"
@@ -60,12 +70,11 @@ defmodule Pleroma.Object.Fetcher do
   defp reinject_object(%Object{} = object, new_data) do
     Logger.debug("Reinjecting object #{new_data["id"]}")
 
-    # TODO: when are MRFs applied? Seems like atm refetches can bypass all MRF checks?
-    # (well... ObjectAge, probably must be bypassed, but other MRFs for moderation should _always_ run)
-
     with new_data <- Transmogrifier.fix_object(new_data),
          {:ok, new_data, _} <- ObjectValidator.validate(new_data, %{}),
          {_, false, _} <- {:pruned_old, object.data == nil, new_data},
+         fake_update <- prepare_update_activity_params(new_data),
+         {_, {:ok, %{"object" => new_data}}} <- {:mrf_check, MRF.filter(fake_update)},
          %{updated_data: new_data} <-
            Updater.make_new_object_data_from_update_object(object.data, new_data, true),
          changeset <- Object.change(object, %{data: new_data}),
@@ -76,6 +85,10 @@ defmodule Pleroma.Object.Fetcher do
     else
       {:pruned_old, _, new_data_fixed} ->
         revive_pruned_object(object, new_data_fixed)
+
+      {:mrf_check, error} ->
+        Logger.debug("Rejected fetched object update due to MRF: #{inspect(error)}")
+        {:reject, :mrf}
 
       e ->
         Logger.error("Error while processing object for reinjection: #{inspect(e)}")
@@ -116,7 +129,7 @@ defmodule Pleroma.Object.Fetcher do
          {_, unknown, _} when unknown in [false, nil] <-
            {:cached_new_id, data["id"] != id && Object.get_cached_by_ap_id(data["id"]), data},
          {_, nil} <- {:normalize, Object.normalize(data, fetch: false)},
-         params <- prepare_activity_params(data),
+         params <- prepare_create_activity_params(data),
          {_, {:ok, activity}} <-
            {:transmogrifier, Transmogrifier.handle_incoming(params, options)},
          {_, _data, %Object{} = object} <-
@@ -164,11 +177,12 @@ defmodule Pleroma.Object.Fetcher do
       {:fetch_object, %Object{} = object} ->
         {:ok, object}
 
-      {:cached_new_id, %Object{} = object, _data} ->
+      {:cached_new_id, %Object{} = object, data} ->
         # might as well make use of the fresh canonical source we now already fetched
-        # EXCEPT: this would bypass MRFs atm; thus unfortunately we must ignore it
-        # reinject_object(object, data)
-        {:ok, object}
+        case reinject_object(object, data) do
+          {:ok, _} = ok -> ok
+          _ -> {:ok, object}
+        end
 
       {:fetch, {:error, reason}} = e ->
         log_fetch_error(id, e)
@@ -196,9 +210,9 @@ defmodule Pleroma.Object.Fetcher do
     end
   end
 
-  defp prepare_activity_params(data) do
+  defp prepare_activity_params(data, type) do
     %{
-      "type" => "Create",
+      "type" => type,
       # Should we seriously keep this attributedTo thing?
       "actor" => data["actor"] || data["attributedTo"],
       "object" => data
@@ -208,6 +222,12 @@ defmodule Pleroma.Object.Fetcher do
     |> Maps.put_if_present("bto", data["bto"])
     |> Maps.put_if_present("bcc", data["bcc"])
   end
+
+  # We also need a Create activity for posts, but typically fetch Note objects directly
+  defp prepare_create_activity_params(data), do: prepare_activity_params(data, "Create")
+
+  # Only used to pass to MRFs when refetching an object
+  defp prepare_update_activity_params(data), do: prepare_activity_params(data, "Update")
 
   @doc """
   Fetches arbitrary remote object and performs basic safety and authenticity checks.
