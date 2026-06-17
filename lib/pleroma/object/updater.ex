@@ -99,7 +99,8 @@ defmodule Pleroma.Object.Updater do
 
   defp maybe_update_poll(to_be_updated, updated_object) do
     choice_key = fn data ->
-      if Map.has_key?(data, "anyOf"), do: "anyOf", else: "oneOf"
+      # Our normalisation fills out the not-used-type with empty array
+      if data["anyOf"] not in [nil, []], do: "anyOf", else: "oneOf"
     end
 
     with true <- to_be_updated["type"] == "Question",
@@ -114,7 +115,8 @@ defmodule Pleroma.Object.Updater do
       |> Maps.put_if_present("votersCount", updated_object["votersCount"])
     else
       # Choices (or vote type) have changed, do not allow this
-      _ -> to_be_updated
+      _ ->
+        to_be_updated
     end
   end
 

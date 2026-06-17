@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fixed searches for an already known statuses with resolve=true sometimes failing
     if searching by a display URL instead of canonical AP ID.
     With resolve=false no display URL lookups are possible.
+- fixed single-selection poll states not updating when receiving an Update activity for the status
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
