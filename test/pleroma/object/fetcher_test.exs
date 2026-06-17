@@ -522,7 +522,11 @@ defmodule Pleroma.Object.FetcherTest do
         "bto" => [],
         "cc" => [],
         "to" => [Pleroma.Constants.as_public()],
-        "summary" => ""
+        "summary" => nil,
+        "tag" => [],
+        "emoji" => %{},
+        "sensitive" => false,
+        "attachment" => []
       }
 
       object2 = %{

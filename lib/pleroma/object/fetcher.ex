@@ -8,6 +8,7 @@ defmodule Pleroma.Object.Fetcher do
   alias Pleroma.Maps
   alias Pleroma.Object
   alias Pleroma.Object.Containment
+  alias Pleroma.Object.Updater
   alias Pleroma.Repo
   alias Pleroma.Web.ActivityPub.InternalFetchActor
   alias Pleroma.Web.ActivityPub.MRF
@@ -36,74 +37,22 @@ defmodule Pleroma.Object.Fetcher do
     Ecto.Changeset.put_change(changeset, :updated_at, updated_at)
   end
 
-  defp maybe_reinject_internal_fields(%{data: %{} = old_data}, new_data) do
-    has_history? = fn
-      %{"formerRepresentations" => %{"orderedItems" => list}} when is_list(list) -> true
-      _ -> false
-    end
+  defp revive_pruned_object(object, new_data) do
+    changeset =
+      object
+      |> Object.change(%{data: new_data})
+      |> touch_changeset()
 
-    internal_fields = Map.take(old_data, Pleroma.Constants.object_internal_fields())
-
-    remote_history_exists? = has_history?.(new_data)
-
-    # If the remote history exists, we treat that as the only source of truth.
-    new_data =
-      if has_history?.(old_data) and not remote_history_exists? do
-        Map.put(new_data, "formerRepresentations", old_data["formerRepresentations"])
-      else
-        new_data
-      end
-
-    # If the remote does not have history information, we need to manage it ourselves
-    new_data =
-      if not remote_history_exists? do
-        changed? =
-          Pleroma.Constants.status_updatable_fields()
-          |> Enum.any?(fn field -> Map.get(old_data, field) != Map.get(new_data, field) end)
-
-        %{updated_object: updated_object} =
-          new_data
-          |> Object.Updater.maybe_update_history(old_data,
-            updated: changed?,
-            use_history_in_new_object?: false
-          )
-
-        updated_object
-      else
-        new_data
-      end
-
-    # Moderators might have changed the visibility for safekeeping and we don't want to undo this now.
-    # Also, since we use "recipients" from the unchanged Create (most, but not all of the time. It assumes
-    # they’ll always match; oh the "splendor" of this codebase), addressing updates won't work anyway.
-    new_data =
-      new_data
-      |> Map.put("to", old_data["to"])
-      |> Map.put("cc", old_data["cc"])
-      |> Map.put("bto", old_data["bto"])
-      |> Map.put("bcc", old_data["bcc"])
-
-    Map.merge(new_data, internal_fields)
-  end
-
-  defp maybe_reinject_internal_fields(_, new_data), do: new_data
-
-  defp new_data_matches_old?(%Object{} = old_object, new_data) do
-    # somehow, when explicitly refetching pruned objects this can also end up with an invalid, all-nil object struct
-    with {_, old_data} when old_data != nil <- {:local_delete, old_object.data},
-         {_, false} <- {:local_delete, old_data["type"] == "Tombstone"},
-         # cannot (re)fetch transient objects!
-         old_id when old_id != nil <- old_data["id"],
-         {_, true} <- {:id_match, old_id == new_data["id"]},
-         {_, true} <- {:type_match, old_data["type"] == new_data["type"]} do
-      true
+    with {:ok, object} <- Repo.insert_or_update(changeset),
+         {:ok, object} <- Object.set_cache(object) do
+      {:ok, object}
     else
-      {:local_delete, _} ->
-        true
-
       e ->
-        Logger.debug("Rejected mismatchig new data on reinject attempt: #{inspect(e)}")
-        false
+        Logger.error(
+          "Error while processing object for reinjection after deletion: #{inspect(e)}"
+        )
+
+        {:error, e}
     end
   end
 
@@ -115,15 +64,19 @@ defmodule Pleroma.Object.Fetcher do
     # (well... ObjectAge, probably must be bypassed, but other MRFs for moderation should _always_ run)
 
     with new_data <- Transmogrifier.fix_object(new_data),
-         {_, true} <- {:data_match, new_data_matches_old?(object, new_data)},
-         data <- maybe_reinject_internal_fields(object, new_data),
-         {:ok, data, _} <- ObjectValidator.validate(data, %{}),
-         changeset <- Object.change(object, %{data: data}),
+         {:ok, new_data, _} <- ObjectValidator.validate(new_data, %{}),
+         {_, false, _} <- {:pruned_old, object.data == nil, new_data},
+         %{updated_data: new_data} <-
+           Updater.make_new_object_data_from_update_object(object.data, new_data, true),
+         changeset <- Object.change(object, %{data: new_data}),
          changeset <- touch_changeset(changeset),
          {:ok, object} <- Repo.insert_or_update(changeset),
          {:ok, object} <- Object.set_cache(object) do
       {:ok, object}
     else
+      {:pruned_old, _, new_data_fixed} ->
+        revive_pruned_object(object, new_data_fixed)
+
       e ->
         Logger.error("Error while processing object for reinjection: #{inspect(e)}")
         {:error, e}
