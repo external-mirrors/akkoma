@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Object.Fetcher do
+  alias Pleroma.Activity
   alias Pleroma.HTTP
   alias Pleroma.Instances
   alias Pleroma.Maps
@@ -10,6 +11,7 @@ defmodule Pleroma.Object.Fetcher do
   alias Pleroma.Object.Containment
   alias Pleroma.Object.Updater
   alias Pleroma.Repo
+  alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.InternalFetchActor
   alias Pleroma.Web.ActivityPub.MRF
   alias Pleroma.Web.ActivityPub.ObjectValidator
@@ -37,19 +39,39 @@ defmodule Pleroma.Object.Fetcher do
     Ecto.Changeset.put_change(changeset, :updated_at, updated_at)
   end
 
-  defp revive_pruned_object(object, new_data) do
-    changeset = fn data ->
-      object
+  defp persist_revived_data(old_activity, activity_data, object_changeset) do
+    Repo.transact(fn ->
+      with {:ok, _} <- Repo.delete(old_activity),
+           {:ok, _, _} <- ActivityPub.persist(activity_data, local: false) do
+        Repo.insert_or_update(object_changeset)
+      end
+    end)
+  end
+
+  defp revive_pruned_object(activity, new_data) do
+    object_changeset = fn data ->
+      %Object{}
       |> Object.change(%{data: data})
       |> touch_changeset()
     end
 
-    # before revivial pass through MRFs again
-    fake_create = prepare_create_activity_params(new_data)
+    # We don’t store the inlined object inside Create in db
+    activity_data_db = fn data ->
+      data
+      |> Pleroma.Maps.put_if_present("object", is_map(data["object"]) && data["object"]["id"])
+    end
 
-    with {_, {:ok, %{"object" => new_data_processed}}} <- {:mrf_check, MRF.filter(fake_create)},
-         changeset <- changeset.(new_data_processed),
-         {:ok, object} <- Repo.insert_or_update(changeset),
+    # Before revivial pass through MRFs again
+    # and recreate activity in db to ensure data consistency (e.g. changed addressing)
+    fake_create =
+      prepare_create_activity_params(new_data)
+      |> Pleroma.Maps.put_if_present("id", activity.data && activity.data["id"])
+
+    with {_, {:ok, %{"object" => new_data_processed} = activity_data}} <-
+           {:mrf_check, MRF.filter(fake_create)},
+         object_changeset <- object_changeset.(new_data_processed),
+         activity_data_db <- activity_data_db.(activity_data),
+         {:ok, object} <- persist_revived_data(activity, activity_data_db, object_changeset),
          {:ok, object} <- Object.set_cache(object) do
       {:ok, object}
     else
@@ -67,12 +89,14 @@ defmodule Pleroma.Object.Fetcher do
   end
 
   @spec reinject_object(struct(), map()) :: {:ok, Object.t()} | {:error, any()}
-  defp reinject_object(%Object{} = object, new_data) do
+  defp reinject_object(old_ref, new_data) do
     Logger.debug("Reinjecting object #{new_data["id"]}")
 
-    with new_data <- Transmogrifier.fix_object(new_data),
+    # AP ID is checked early on in transmogrifier and assumed to hold later
+    with ap_id when is_binary(ap_id) <- new_data["id"],
+         new_data <- Transmogrifier.fix_object(new_data),
          {:ok, new_data, _} <- ObjectValidator.validate(new_data, %{}),
-         {_, false, _} <- {:pruned_old, object.data == nil, new_data},
+         {_, object = %Object{}, _} <- {:pruned_old, old_ref, new_data},
          fake_update <- prepare_update_activity_params(new_data),
          {_, {:ok, %{"object" => new_data}}} <- {:mrf_check, MRF.filter(fake_update)},
          %{updated_data: new_data} <-
@@ -83,8 +107,10 @@ defmodule Pleroma.Object.Fetcher do
          {:ok, object} <- Object.set_cache(object) do
       {:ok, object}
     else
-      {:pruned_old, _, new_data_fixed} ->
-        revive_pruned_object(object, new_data_fixed)
+      {:pruned_old, %Activity{} = activity, new_data_fixed} ->
+        # we don't know the object anymore, but there’s already an orphaned Create pointing at it
+        # (can happen when running prune_objects without prune_orphaned_activities)
+        revive_pruned_object(activity, new_data_fixed)
 
       {:mrf_check, error} ->
         Logger.debug("Rejected fetched object update due to MRF: #{inspect(error)}")
@@ -132,8 +158,8 @@ defmodule Pleroma.Object.Fetcher do
          params <- prepare_create_activity_params(data),
          {_, {:ok, activity}} <-
            {:transmogrifier, Transmogrifier.handle_incoming(params, options)},
-         {_, _data, %Object{} = object} <-
-           {:object, data, Object.normalize(activity, fetch: false)} do
+         {_, _data, _activity, %Object{} = object} <-
+           {:object, data, activity, Object.normalize(activity, fetch: false)} do
       {:ok, object}
     else
       {:allowed_depth, false} = e ->
@@ -168,8 +194,8 @@ defmodule Pleroma.Object.Fetcher do
         log_fetch_error(id, e)
         {:error, reason}
 
-      {:object, data, nil} ->
-        reinject_object(%Object{}, data)
+      {:object, data, %Activity{} = activity, nil} ->
+        reinject_object(activity, data)
 
       {:normalize, object = %Object{}} ->
         {:ok, object}

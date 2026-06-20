@@ -470,6 +470,7 @@ defmodule Pleroma.Object.FetcherTest do
       object_id = "http://mastodon.example.org/@admin/99541947525187367"
 
       {:ok, object} = Fetcher.fetch_object_from_id(object_id)
+      old_create = Activity.get_create_by_object_ap_id(object.data["id"])
 
       assert object
 
@@ -478,9 +479,13 @@ defmodule Pleroma.Object.FetcherTest do
       refute Object.get_by_ap_id(object_id)
 
       {:ok, %Object{} = object_two} = Fetcher.fetch_object_from_id(object_id)
+      new_create = Activity.get_create_by_object_ap_id(object.data["id"])
 
       assert object.data["id"] == object_two.data["id"]
       assert object.id != object_two.id
+      # Create must have been recreated with new data
+      refute old_create.id == new_create.id
+      refute Activity.get_by_id(old_create.id)
     end
   end
 
