@@ -149,12 +149,11 @@ defmodule Pleroma.Web.Router do
     plug(Pleroma.Web.Plugs.EnsureHostPlug)
     plug(Pleroma.Web.Plugs.HTTPSignaturePlug)
     plug(Pleroma.Web.Plugs.MappedSignatureToIdentityPlug)
+    plug(Pleroma.Web.Plugs.UserEnabledPlug)
   end
 
   pipeline :http_signature do
-    plug(Pleroma.Web.Plugs.EnsureHostPlug)
-    plug(Pleroma.Web.Plugs.HTTPSignaturePlug)
-    plug(Pleroma.Web.Plugs.MappedSignatureToIdentityPlug)
+    plug(:optional_http_signature)
     plug(Pleroma.Web.Plugs.EnsureHTTPSignaturePlug)
   end
 
@@ -809,14 +808,16 @@ defmodule Pleroma.Web.Router do
   scope "/", Pleroma.Web.ActivityPub do
     pipe_through([:activitypub_client])
 
+    # C2S-only
     get("/users/:nickname/inbox", ActivityPubController, :read_inbox)
   end
 
   scope "/", Pleroma.Web.ActivityPub do
     # Note: html format is supported only if static FE is enabled
-    pipe_through([:accepts_html_json, :static_fe, :activitypub_client])
+    pipe_through([:accepts_html_json, :static_fe, :activitypub])
 
-    # The following two are S2S as well, see `ActivityPub.fetch_follow_information_for_user/1`:
+    # The following are AP S2S and also used in static FE as well
+    # (See e.g. `ActivityPub.fetch_follow_information_for_user/1` for S2S usage)
     get("/users/:nickname/followers", ActivityPubController, :followers)
     get("/users/:nickname/following", ActivityPubController, :following)
   end

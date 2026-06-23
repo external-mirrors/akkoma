@@ -1702,6 +1702,16 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       |> get("/users/#{user.nickname}/followers")
       |> json_response(200)
     end
+
+    test "require authentication with authfetch", %{conn: conn} do
+      clear_config([:activitypub, :authorized_fetch_mode], true)
+
+      user = insert(:user)
+
+      conn
+      |> get("/users/#{user.nickname}/followers")
+      |> response(401)
+    end
   end
 
   describe "/users/:nickname/following" do
@@ -1803,6 +1813,16 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       conn
       |> get("/users/#{user.nickname}/following")
       |> json_response(200)
+    end
+
+    test "require authentication with authfetch", %{conn: conn} do
+      clear_config([:activitypub, :authorized_fetch_mode], true)
+
+      user = insert(:user)
+
+      conn
+      |> get("/users/#{user.nickname}/following")
+      |> response(401)
     end
   end
 

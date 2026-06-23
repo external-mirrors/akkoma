@@ -228,7 +228,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def following(%{assigns: %{user: for_user}} = conn, %{"nickname" => nickname, "page" => page}) do
+  def following(%{assigns: assigns} = conn, %{"nickname" => nickname, "page" => page}) do
+    for_user = assigns[:user]
+
     with %User{} = user <- User.get_cached_by_nickname(nickname),
          {:show_follows, true} <-
            {:show_follows, (for_user && for_user == user) || !user.hide_follows} do
@@ -246,7 +248,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def following(%{assigns: %{user: for_user}} = conn, %{"nickname" => nickname}) do
+  def following(%{assigns: assigns} = conn, %{"nickname" => nickname}) do
+    for_user = assigns[:user]
+
     with %User{} = user <- User.get_cached_by_nickname(nickname) do
       conn
       |> put_resp_content_type("application/activity+json")
@@ -267,7 +271,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def followers(%{assigns: %{user: for_user}} = conn, %{"nickname" => nickname, "page" => page}) do
+  def followers(%{assigns: assigns} = conn, %{"nickname" => nickname, "page" => page}) do
+    for_user = assigns[:user]
+
     with %User{} = user <- User.get_cached_by_nickname(nickname),
          {:show_followers, true} <-
            {:show_followers, (for_user && for_user == user) || !user.hide_followers} do
@@ -285,7 +291,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def followers(%{assigns: %{user: for_user}} = conn, %{"nickname" => nickname}) do
+  def followers(%{assigns: assigns} = conn, %{"nickname" => nickname}) do
+    for_user = assigns[:user]
+
     with %User{} = user <- User.get_cached_by_nickname(nickname) do
       conn
       |> put_resp_content_type("application/activity+json")

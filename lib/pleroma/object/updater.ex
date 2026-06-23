@@ -99,7 +99,8 @@ defmodule Pleroma.Object.Updater do
 
   defp maybe_update_poll(to_be_updated, updated_object) do
     choice_key = fn data ->
-      if Map.has_key?(data, "anyOf"), do: "anyOf", else: "oneOf"
+      # Our normalisation fills out the not-used-type with empty array
+      if data["anyOf"] not in [nil, []], do: "anyOf", else: "oneOf"
     end
 
     with true <- to_be_updated["type"] == "Question",
@@ -114,7 +115,8 @@ defmodule Pleroma.Object.Updater do
       |> Maps.put_if_present("votersCount", updated_object["votersCount"])
     else
       # Choices (or vote type) have changed, do not allow this
-      _ -> to_be_updated
+      _ ->
+        to_be_updated
     end
   end
 
@@ -143,7 +145,7 @@ defmodule Pleroma.Object.Updater do
 
   # This calculates the data of the new Object from an Update.
   # new_data's formerRepresentations is considered.
-  def make_new_object_data_from_update_object(original_data, new_data) do
+  def make_new_object_data_from_update_object(original_data, new_data, force_update \\ false) do
     update_is_reasonable =
       with {_, updated} when not is_nil(updated) <- {:cur_updated, new_data["updated"]},
            {_, {:ok, updated_time, _}} <- {:cur_updated, DateTime.from_iso8601(updated)},
@@ -162,6 +164,8 @@ defmodule Pleroma.Object.Updater do
         # allow no updates
         _ -> false
       end
+
+    update_is_reasonable = if force_update, do: :update_everything, else: update_is_reasonable
 
     %{
       updated_object: updated_data,

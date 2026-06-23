@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   your text search config to your current value (or something else, like `simple` if you so wish)
   via the `database set_text_search_config <value>` mix task
 
+### Removed
+- vestige C2S access to follow* collections was dropped
+
 ### Added
 - federated voter count of polls is now parsed and federated out too;
     this fixes vote percetanges for new and refreshed remote multi-selection polls
@@ -26,6 +29,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - handle reports referring to a single plain id as their object;
     affected e.g. JSON-LD compacted reports without status references from Iceshrimp.NET
 - fixed several issues parsing remote Question objects
+- fixed signatures from blocked or deleted actors still being accepted
+- fixed follow* collections being readable without signature even if authorized_fetch mode is enabled
+- fixed one’s own follow* counts sometimes being redacted in API if hiding count for others
+- fixed delete&redraft still deleting attachment files most oft the time once the initial redraft delay elapsed
+- fixed fetched objects not normalising various valid forms of the public addressing URI
+- fixed searches for an already known statuses with resolve=true sometimes failing
+    if searching by a display URL instead of canonical AP ID.
+    With resolve=false no display URL lookups are possible.
+- fixed single-selection poll states not updating when receiving an Update activity for the status
+- fixed fetched updates of statuses with a poll or rediscovered pruned objects not being passed through MRFs
+- fixed potential data inconsistencies and API ordering for rediscovered partially pruned objects
+- fixed tagged (mentioned) but not addressed users receiving notifications about
+    statuses they are not actually allowed to access
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
