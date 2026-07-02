@@ -39,8 +39,8 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     %{
       "id" => user.ap_id,
       "type" => "Application",
-      "inbox" => "#{user.ap_id}/inbox",
-      "outbox" => "#{user.ap_id}/outbox",
+      "inbox" => user.inbox,
+      "outbox" => user.outbox,
       "name" => "Akkoma",
       "summary" =>
         "An internal service actor for this Akkoma instance.  No user-serviceable parts inside.",
@@ -84,11 +84,11 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     %{
       "id" => user.ap_id,
       "type" => user.actor_type,
-      "following" => "#{user.ap_id}/following",
-      "followers" => "#{user.ap_id}/followers",
-      "inbox" => "#{user.ap_id}/inbox",
-      "outbox" => "#{user.ap_id}/outbox",
-      "featured" => "#{user.ap_id}/collections/featured",
+      "following" => user.following_address,
+      "followers" => user.follower_address,
+      "inbox" => user.inbox,
+      "outbox" => user.outbox,
+      "featured" => user.featured_address,
       "preferredUsername" => user.nickname,
       "name" => user.name,
       "summary" => user.bio,
@@ -139,8 +139,8 @@ defmodule Pleroma.Web.ActivityPub.UserView do
         "publicKeyPem" => public_key
       },
       # REQUIRED fields per AP spec
-      "inbox" => "#{user.ap_id}/inbox",
-      "outbox" => "#{user.ap_id}/outbox",
+      "inbox" => user.inbox,
+      "outbox" => user.outbox,
       # allow type-based processing
       "type" => user.actor_type,
       # since Mastodon requires a WebFinger address for all users, this seems like a good idea
@@ -172,7 +172,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
 
     CollectionViewHelper.collection_page_offset(
       following,
-      "#{user.ap_id}/following",
+      user.following_address,
       page,
       showing_items,
       total
@@ -199,13 +199,13 @@ defmodule Pleroma.Web.ActivityPub.UserView do
       showing_items &&
         CollectionViewHelper.collection_page_offset(
           following,
-          "#{user.ap_id}/following",
+          user.following_address,
           1,
           !user.hide_follows
         )
 
     CollectionViewHelper.collection_root_ordered(
-      "#{user.ap_id}/following",
+      user.following_address,
       total,
       first_page
     )
@@ -234,7 +234,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
 
     CollectionViewHelper.collection_page_offset(
       followers,
-      "#{user.ap_id}/followers",
+      user.follower_address,
       page,
       showing_items,
       total
@@ -261,14 +261,14 @@ defmodule Pleroma.Web.ActivityPub.UserView do
       showing_items &&
         CollectionViewHelper.collection_page_offset(
           followers,
-          "#{user.ap_id}/followers",
+          user.follower_address,
           1,
           showing_items,
           total
         )
 
     CollectionViewHelper.collection_root_ordered(
-      "#{user.ap_id}/followers",
+      user.follower_address,
       total,
       first_page
     )

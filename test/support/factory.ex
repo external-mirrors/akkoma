@@ -76,7 +76,7 @@ defmodule Pleroma.Factory do
       if attrs[:local] == false do
         base_domain = attrs[:domain] || Enum.random(["domain1.com", "domain2.com", "domain3.com"])
 
-        ap_id = "https://#{base_domain}/users/#{user.nickname}"
+        ap_id = attrs[:ap_id] || "https://#{base_domain}/users/#{user.nickname}"
 
         %{
           ap_id: ap_id,
