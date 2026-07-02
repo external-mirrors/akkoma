@@ -151,6 +151,7 @@ defmodule Pleroma.User do
     field(:allow_following_move, :boolean, default: true)
     field(:actor_type, :string, default: "Person")
     field(:also_known_as, {:array, ObjectValidators.ObjectID}, default: [])
+    field(:outbox, :string)
     field(:inbox, :string)
     field(:shared_inbox, :string)
     field(:last_active_at, :naive_datetime)
@@ -461,6 +462,7 @@ defmodule Pleroma.User do
         :bio,
         :emoji,
         :ap_id,
+        :outbox,
         :inbox,
         :shared_inbox,
         :nickname,
@@ -523,6 +525,7 @@ defmodule Pleroma.User do
         :name,
         :emoji,
         :avatar,
+        :outbox,
         :inbox,
         :shared_inbox,
         :is_locked,
