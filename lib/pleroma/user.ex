@@ -407,6 +407,12 @@ defmodule Pleroma.User do
   def generate_ap_id(%{nickname: nickname}) when nickname != nil,
     do: "#{Endpoint.url()}/users/#{nickname}"
 
+  @spec generate_ap_inbox(%{ap_id: String.t()}) :: String.t()
+  def generate_ap_inbox(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/inbox"
+
+  @spec generate_ap_outbox(%{ap_id: String.t()}) :: String.t()
+  def generate_ap_outbox(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/outbox"
+
   @spec generate_ap_followers(%{ap_id: String.t()}) :: String.t()
   def generate_ap_followers(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/followers"
 
@@ -789,6 +795,7 @@ defmodule Pleroma.User do
     |> validate_format(:nickname, local_nickname_regex())
     |> put_ap_id()
     |> unique_constraint(:ap_id)
+    |> put_in_and_outbox()
     |> put_following_and_follower_and_featured_address()
     |> put_private_key()
   end
@@ -851,6 +858,7 @@ defmodule Pleroma.User do
     |> put_password_hash
     |> put_ap_id()
     |> unique_constraint(:ap_id)
+    |> put_in_and_outbox()
     |> put_following_and_follower_and_featured_address()
     |> put_private_key()
   end
@@ -870,6 +878,17 @@ defmodule Pleroma.User do
   end
 
   defp put_ap_id(%{valid?: false} = changeset), do: changeset
+
+  defp put_in_and_outbox(%{valid?: true, changes: initdata} = changeset) do
+    inbox = generate_ap_inbox(initdata)
+    outbox = generate_ap_inbox(initdata)
+
+    changeset
+    |> put_change(:inbox, inbox)
+    |> put_change(:outbox, outbox)
+  end
+
+  defp put_in_and_outbox(%{valid?: false} = changeset), do: changeset
 
   defp put_following_and_follower_and_featured_address(
          %{valid?: true, changes: initdata} = changeset

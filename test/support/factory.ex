@@ -91,7 +91,8 @@ defmodule Pleroma.Factory do
 
         %{
           ap_id: ap_id,
-          inbox: User.generate_ap_id(user) <> "/inbox",
+          inbox: User.generate_ap_inbox(user),
+          outbox: User.generate_ap_outbox(user),
           follower_address: User.generate_ap_followers(user),
           following_address: User.generate_ap_following(user),
           featured_address: User.generate_ap_featured_collection(user)
