@@ -61,12 +61,27 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
   end
 
   def user(conn, %{"user_id" => id}) do
-    with_new_ap_user(id, fn user -> render_user(conn, user) end)
+    with_new_ap_user(
+      id,
+      fn user -> render_user(conn, user) end,
+      fn user -> redirect_to_ap_id(conn, user) end
+    )
   end
 
   # legacy AP path
   def user(conn, %{"nickname" => nickname}) do
-    with_legacy_ap_user(nickname, fn user -> render_user(conn, user) end)
+    with_legacy_ap_user(
+      nickname,
+      fn user -> render_user(conn, user) end,
+      fn user -> redirect_to_ap_id(conn, user) end
+    )
+  end
+
+  defp redirect_to_ap_id(conn, %User{ap_id: ap_id}) do
+    conn
+    |> put_status(301)
+    |> redirect(external: ap_id)
+    |> halt()
   end
 
   # Render the user's AP data IF it’s a local user.
@@ -532,21 +547,31 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     |> json(UserView.render("featured.json", %{user: user}))
   end
 
-  defp with_new_ap_user(user_id, action) do
-    with %User{local: true} = user <- User.get_cached_by_id(user_id),
-         false <- User.legacy_ap_id?(user) do
+  defp with_new_ap_user(user_id, action, era_fallback_action \\ fn _ -> {:error, :not_found} end) do
+    User.get_cached_by_id(user_id)
+    |> with_local_user_era(false, action, era_fallback_action)
+  end
+
+  defp with_legacy_ap_user(
+         nickname,
+         action,
+         era_fallback_action \\ fn _ -> {:error, :not_found} end
+       ) do
+    User.get_cached_by_nickname(nickname)
+    |> with_local_user_era(true, action, era_fallback_action)
+  end
+
+  defp with_local_user_era(user, legacy, action, era_fallback_action)
+
+  defp with_local_user_era(%User{} = user, legacy, action, era_fallback_action) do
+    with %User{local: true} <- user,
+         true <- User.legacy_ap_id?(user) == legacy do
       action.(user)
     else
+      false -> era_fallback_action.(user)
       _ -> {:error, :not_found}
     end
   end
 
-  defp with_legacy_ap_user(nickname, action) do
-    with %User{local: true} = user <- User.get_cached_by_nickname(nickname),
-         true <- User.legacy_ap_id?(user) do
-      action.(user)
-    else
-      _ -> {:error, :not_found}
-    end
-  end
+  defp with_local_user_era(_not_a_user, _, _, _), do: {:error, :not_found}
 end

@@ -172,6 +172,20 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       end)
     end
 
+    test "legacy path returns 301 for local new users", %{
+      conn: conn
+    } do
+      user = insert(:user, local: true, legacy_ap: false)
+      refute String.ends_with?(user.ap_id, "/users/" <> user.nickname)
+
+      conn =
+        conn
+        |> put_req_header("accept", "application/json")
+        |> get("/users/" <> user.nickname)
+
+      assert redirected_to(conn, 301) == user.ap_id
+    end
+
     test "legacy path returns 404 for remote users", %{
       conn: conn
     } do
@@ -184,6 +198,20 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
         |> get(local_path(user.ap_id) <> ".json")
 
       assert json_response(conn, 404)
+    end
+
+    test "new path returns 301 for local legacy users", %{
+      conn: conn
+    } do
+      user = insert(:user, local: true, legacy_ap: true)
+      refute String.contains?(user.ap_id, "/by-id/")
+
+      conn =
+        conn
+        |> put_req_header("accept", "application/json")
+        |> get("/users/by-id/#{user.id}")
+
+      assert redirected_to(conn, 301) == user.ap_id
     end
 
     test "new path returns 404 for remote users", %{
