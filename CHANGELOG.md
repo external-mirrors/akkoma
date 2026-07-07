@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - new config options to restrict unauthenticated search API access under `:pleroma, :restrict_unauthenticated, :search`
 - extended MFM support further
 - `GET /api/v1/accounts/lookup` now supports the \*oma-specific `with_relationships` query parameter like many other account endpoints
+- Account responses in Mastodon API include a new property `akkoma.web_feed`
+    indicating the preferred URL for RSS and/or Atom feeds if one is known
 
 ### Fixed
 - fixed status search not respecting `resolve=false`
