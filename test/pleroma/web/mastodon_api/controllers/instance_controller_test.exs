@@ -110,6 +110,8 @@ defmodule Pleroma.Web.MastodonAPI.InstanceControllerTest do
   end
 
   test "get translation languages", %{conn: conn} do
+    clear_config([:translator, :enabled], true)
+
     Tesla.Mock.mock_global(fn
       %{method: :get, url: "https://api-free.deepl.com/v2/languages?type=source"} ->
         %Tesla.Env{
@@ -138,5 +140,18 @@ defmodule Pleroma.Web.MastodonAPI.InstanceControllerTest do
     response = json_response_and_validate_schema(conn, 200)
 
     assert %{"en" => ["ja"]} = response
+  end
+
+  test "stubs out translation languages when no translator enabled", %{conn: conn} do
+    clear_config([:translator, :enabled], false)
+
+    conn =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> get("/api/v1/instance/translation_languages")
+
+    response = json_response_and_validate_schema(conn, 200)
+
+    assert %{} == response
   end
 end
