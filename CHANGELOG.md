@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fixed potential data inconsistencies and API ordering for rediscovered partially pruned objects
 - fixed tagged (mentioned) but not addressed users receiving notifications about
     statuses they are not actually allowed to access
+- fixed tranlator service being queried for supported languages even if not enabled
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
