@@ -244,7 +244,7 @@ Post using this scope will never federate to other servers
 but for the sake of completeness it is listed here.
 
 In addition to the usual scopes *(public, unlisted, followers-only, direct)*
-Akkoma supports an “unlisted” post scope. Such posts will not federate to
+Akkoma supports a “local” post scope. Such posts will not federate to
 other instances and only be shown to logged-in users on the same instance.
 It is included into the local timeline.  
 This may be useful to discuss or announce instance-specific policies and topics.
