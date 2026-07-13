@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     statuses they are not actually allowed to access
 - fixed tranlator service being queried for supported languages even if not enabled
 - fixed explicitly static media proxy previews pointing to a broken redirect for non-animated files
+- fixed ElastiSearch/OpenSearch provider bailing out of remote URL fetches too quickly
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
