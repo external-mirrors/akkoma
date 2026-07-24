@@ -423,6 +423,10 @@ defmodule Pleroma.User do
   def generate_ap_featured_collection(%{ap_id: ap_id}) when ap_id != nil,
     do: "#{ap_id}/collections/featured"
 
+  @spec generate_display_uri(%{id: String.t()}) :: String.t()
+  def generate_display_uri(%{nickname: nick}) when nick != nil,
+    do: "#{Endpoint.url()}/users/#{nick}"
+
   defp truncate_fields_param(params) do
     if Map.has_key?(params, :fields) do
       Map.put(params, :fields, Enum.map(params[:fields], &truncate_field/1))
@@ -793,7 +797,7 @@ defmodule Pleroma.User do
     |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_exclusion(:nickname, Config.get([User, :restricted_nicknames]))
     |> validate_format(:nickname, local_nickname_regex())
-    |> put_ap_id()
+    |> put_ap_id_and_display_uri()
     |> unique_constraint(:ap_id)
     |> put_in_and_outbox()
     |> put_following_and_follower_and_featured_address()
@@ -856,7 +860,7 @@ defmodule Pleroma.User do
     |> validate_length(:registration_reason, max: reason_limit)
     |> maybe_validate_required_email(opts[:external])
     |> put_password_hash
-    |> put_ap_id()
+    |> put_ap_id_and_display_uri()
     |> unique_constraint(:ap_id)
     |> put_in_and_outbox()
     |> put_following_and_follower_and_featured_address()
@@ -873,11 +877,13 @@ defmodule Pleroma.User do
     end
   end
 
-  defp put_ap_id(%{valid?: true, changes: initdata} = changeset) do
-    put_change(changeset, :ap_id, generate_ap_id(initdata))
+  defp put_ap_id_and_display_uri(%{valid?: true, changes: initdata} = changeset) do
+    changeset
+    |> put_change(:ap_id, generate_ap_id(initdata))
+    |> put_change(:uri, generate_display_uri(initdata))
   end
 
-  defp put_ap_id(%{valid?: false} = changeset), do: changeset
+  defp put_ap_id_and_display_uri(%{valid?: false} = changeset), do: changeset
 
   defp put_in_and_outbox(%{valid?: true, changes: initdata} = changeset) do
     inbox = generate_ap_inbox(initdata)

@@ -159,6 +159,14 @@ defmodule Pleroma.UserTest do
     end
   end
 
+  test "generate_display_uri returns a new local display URL with nick" do
+    user = UserBuilder.build()
+
+    expected_uri = "#{Pleroma.Web.Endpoint.url()}/users/#{user.nickname}"
+
+    assert expected_uri == User.generate_display_uri(user)
+  end
+
   test "generate_ap_id returns a new local activity pub id" do
     user = UserBuilder.build()
 

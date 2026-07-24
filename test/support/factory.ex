@@ -62,7 +62,7 @@ defmodule Pleroma.Factory do
     user = %User{
       name: sequence(:name, &"Test テスト User #{&1}"),
       email: sequence(:email, &"user#{&1}@example.com"),
-      nickname: sequence(:nickname, &"nick#{&1}"),
+      nickname: attrs[:nickname] || sequence(:nickname, &"nick#{&1}"),
       password_hash: password_hash,
       bio: sequence(:bio, &"Tester Number #{&1}"),
       is_discoverable: true,
@@ -91,6 +91,7 @@ defmodule Pleroma.Factory do
 
         %{
           ap_id: ap_id,
+          uri: User.generate_display_uri(user),
           inbox: User.generate_ap_inbox(user),
           outbox: User.generate_ap_outbox(user),
           follower_address: User.generate_ap_followers(user),

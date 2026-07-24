@@ -196,7 +196,7 @@ defmodule Pleroma.Web.CommonAPI.UtilsTest do
       {result, _, []} = Utils.format_input(code, "text/markdown")
 
       assert result ==
-               ~s[<p><span class="h-card"><a class="u-url mention" data-user="#{mario.id}" href="#{mario.ap_id}" rel="ugc">@<span>mario</span></a></span> <span class="h-card"><a class="u-url mention" data-user="#{luigi.id}" href="#{luigi.ap_id}" rel="ugc">@<span>luigi</span></a></span> yo what’s up?</p>]
+               ~s[<p><span class="h-card"><a class="u-url mention" data-user="#{mario.id}" href="#{mario.uri}" rel="ugc">@<span>mario</span></a></span> <span class="h-card"><a class="u-url mention" data-user="#{luigi.id}" href="#{luigi.uri}" rel="ugc">@<span>luigi</span></a></span> yo what’s up?</p>]
     end
 
     test "remote mentions" do

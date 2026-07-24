@@ -57,7 +57,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       following_count: 0,
       statuses_count: 5,
       note: "<span>valid html</span>. a<br/>b<br/>c<br/>d<br/>f &#39;&amp;&lt;&gt;&quot;",
-      url: user.ap_id,
+      url: user.uri,
       akkoma: %{
         instance: %{
           name: "example.com",
@@ -227,7 +227,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       following_count: 0,
       statuses_count: 5,
       note: user.bio,
-      url: user.ap_id,
+      url: user.uri,
       avatar: "http://localhost:4001/images/avi.png",
       avatar_static: "http://localhost:4001/images/avi.png",
       avatar_description: "",
@@ -313,7 +313,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       id: to_string(user.id),
       acct: user.nickname,
       username: user.nickname,
-      url: user.ap_id
+      url: user.uri
     }
 
     assert expected == AccountView.render("mention.json", %{user: user})
