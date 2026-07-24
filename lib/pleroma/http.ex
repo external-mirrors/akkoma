@@ -96,7 +96,7 @@ defmodule Pleroma.HTTP do
     # the _compressed_ response body skewing results.
     middlewares =
       if method != :head and @mix_env != :test do
-        [Tesla.Middleware.DecompressResponse | middlewares]
+        [{Tesla.Middleware.DecompressResponse, max_body_size: 512_000_000} | middlewares]
       else
         middlewares
       end
