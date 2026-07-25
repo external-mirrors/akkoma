@@ -56,6 +56,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - prefixing a user search query with `@` will limit results to matching nicknames only, if the query contains no enclosed whitespace
 - newly created users will no longer include their nickname in AP IDs of and related to the actor;
     this prepares for (sensible) future renaming support
+- `/users/:nickname` and subpages no longer accept ID arguments instead of a nickname.
+    ID arguments being accepted here too was never advertised anywhere.
+    For URLs stable across renames the recently added `/users/by-id/:id` versions can be used instead.
+    This fixes some pathological nicknames not having working display URLs since id matches were preferred.
 
 
 ## 2026.05 (3.19.0)

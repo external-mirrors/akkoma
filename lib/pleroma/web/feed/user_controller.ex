@@ -27,10 +27,8 @@ defmodule Pleroma.Web.Feed.UserController do
   end
 
   # redirect from static-fe or legacy AP id route
-  # (while this already _also_ accepts ids, we want to avoid disambiguity for redirects from new AP id routes)
-  # (parameter MUST remain named "nickname" for passing on to ActivityPub controller)
-  def feed_redirect(conn, %{"nickname" => nickname_or_id}) do
-    user = User.get_cached_by_nickname_or_id(nickname_or_id)
+  def feed_redirect(conn, %{"nickname" => nickname}) do
+    user = User.get_cached_by_nickname(nickname)
     redirect_html_or_feed(conn, user)
   end
 
