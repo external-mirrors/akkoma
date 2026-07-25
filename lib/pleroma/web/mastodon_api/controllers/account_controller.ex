@@ -34,7 +34,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
 
   plug(:skip_auth when action in [:create])
 
-  plug(:skip_public_check when action in [:show, :statuses])
+  plug(:skip_public_check when action in [:show, :statuses, :lookup])
 
   plug(
     OAuthScopesPlug,
