@@ -104,6 +104,7 @@ Endpoints which accept `with_relationships` parameter:
 - `/api/v1/accounts/:id`
 - `/api/v1/accounts/:id/followers`
 - `/api/v1/accounts/:id/following`
+- `/api/v1/accounts/lookup`
 - `/api/v1/mutes`
 
 Has these additional fields under the `pleroma` object:

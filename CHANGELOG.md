@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     this fixes vote percetanges for new and refreshed remote multi-selection polls
 - new config options to restrict unauthenticated search API access under `:pleroma, :restrict_unauthenticated, :search`
 - extended MFM support further
+- `GET /api/v1/accounts/lookup` now supports the \*oma-specific `with_relationships` query parameter like many other account endpoints
 
 ### Fixed
 - fixed status search not respecting `resolve=false`
