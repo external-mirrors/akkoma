@@ -881,7 +881,7 @@ defmodule Pleroma.User do
 
   defp put_in_and_outbox(%{valid?: true, changes: initdata} = changeset) do
     inbox = generate_ap_inbox(initdata)
-    outbox = generate_ap_inbox(initdata)
+    outbox = generate_ap_outbox(initdata)
 
     changeset
     |> put_change(:inbox, inbox)
