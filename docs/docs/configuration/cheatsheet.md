@@ -114,6 +114,7 @@ To add configuration to your config file, you can copy it from the base config. 
 
 ### :mrf
 * `transparency`: Make the content of your Message Rewrite Facility settings public (via nodeinfo).
+    Can be set to `true`, `:authenticated` or `false`
 * `transparency_exclusions`: Exclude specific instance names from MRF transparency.  The use of the exclusions feature will be disclosed in nodeinfo as a boolean value.
 * `transparency_obfuscate_domains`: Show domains with `*` in the middle, to censor them if needed. For example, `ridingho.me` will show as `rid*****.me`
 * `policies`: Message Rewrite Policy, either one or a list. Here are the ones available by default:

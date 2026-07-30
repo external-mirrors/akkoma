@@ -154,4 +154,60 @@ defmodule Pleroma.Web.MastodonAPI.InstanceControllerTest do
 
     assert %{} == response
   end
+
+  describe "MRF info is" do
+    setup %{conn: unauthed_conn} do
+      clear_config([:instance, :federating], true)
+      clear_config([:mrf, :policies], [Pleroma.Web.ActivityPub.MRF.SimplePolicy])
+      clear_config([:mrf_simple, :reject], [{"bigots.example", "bigottery"}])
+
+      user = insert(:user, local: true)
+      %{conn: authed_conn} = oauth_access(["read"], user: user)
+
+      %{authed_conn: authed_conn, unauthed_conn: unauthed_conn}
+    end
+
+    test "hides MRF info from authenticated users when transparency disabled", %{
+      authed_conn: authed_conn
+    } do
+      clear_config([:mrf, :transparency], false)
+
+      response =
+        authed_conn
+        |> put_req_header("content-type", "application/json")
+        |> get("/api/v1/instance")
+        |> json_response_and_validate_schema(200)
+
+      assert %{"enabled" => true} == response["pleroma"]["metadata"]["federation"]
+    end
+
+    test "hides MRF info from anonymous viewers when restricted to authenticated", %{
+      unauthed_conn: unauthed_conn
+    } do
+      clear_config([:mrf, :transparency], :authenticated)
+
+      response =
+        unauthed_conn
+        |> put_req_header("content-type", "application/json")
+        |> get("/api/v1/instance")
+        |> json_response_and_validate_schema(200)
+
+      assert %{"enabled" => true} == response["pleroma"]["metadata"]["federation"]
+    end
+
+    test "shows MRF info to authenticated users when set to authenticated-only", %{
+      authed_conn: authed_conn
+    } do
+      clear_config([:mrf, :transparency], :authenticated)
+
+      response =
+        authed_conn
+        |> put_req_header("content-type", "application/json")
+        |> get("/api/v1/instance")
+        |> json_response_and_validate_schema(200)
+
+      assert %{"mrf_simple" => %{"reject" => ["bigots.example"]}} =
+               response["pleroma"]["metadata"]["federation"]
+    end
+  end
 end
