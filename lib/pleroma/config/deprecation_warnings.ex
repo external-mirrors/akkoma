@@ -54,6 +54,8 @@ defmodule Pleroma.Config.DeprecationWarnings do
          https://akkoma.dev/AkkomaGang/akkoma/issues
       We can’t fix bugs we don’t know about.
       """)
+    else
+      :ok
     end
   end
 
@@ -258,7 +260,8 @@ defmodule Pleroma.Config.DeprecationWarnings do
       check_uploader_base_url_set(),
       check_uploader_base_url_is_not_base_domain(),
       check_exiftool_filter(),
-      check_skip_thread_containment()
+      check_skip_thread_containment(),
+      check_truncated_nodeinfo_in_accounts()
     ]
     |> Enum.reduce(:ok, fn
       :ok, :ok -> :ok
