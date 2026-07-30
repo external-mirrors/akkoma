@@ -535,6 +535,24 @@ defmodule Pleroma.Object.FetcherTest do
 
       refute called(Pleroma.Signature.sign(:_, :_, :_))
     end
+
+    test_with_mock "it signs the query params of the request target",
+                   Pleroma.Signature,
+                   [:passthrough],
+                   sign: fn key, headers, opts ->
+                     rt = headers["(request-target)"]
+                     unless String.ends_with?(rt, "?page=1"), do: raise("omits query part!")
+                     passthrough([key, headers, opts])
+                   end do
+      clear_config([:activitypub, :sign_object_fetches], true)
+
+      {:ok, _doc} =
+        Fetcher.fetch_and_contain_remote_object_from_id(
+          "http://remote.org/users/masto_closed/followers?page=1"
+        )
+
+      assert_called(Pleroma.Signature.sign(:_, :_, :_))
+    end
   end
 
   describe "refetching" do

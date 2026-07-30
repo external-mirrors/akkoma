@@ -64,6 +64,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     This fixes some pathological nicknames not having working display URLs since id matches were preferred.
 - `/api/v1/accounts/lookup` is now allowed to be used without authentication on private instances.
     The finer-grained restrict_unauthenticated settings are still/instead enforced here.
+- HTTP Signatues now include the query part of the request target.
+    Temporarily, it’s possible to set `:activitypub, sign_query_part: true` to omit it matching previous versions.
 
 
 ## 2026.05 (3.19.0)

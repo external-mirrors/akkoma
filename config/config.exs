@@ -366,6 +366,7 @@ config :pleroma, :activitypub,
   follow_handshake_timeout: 500,
   note_replies_output_limit: 5,
   sign_object_fetches: true,
+  sign_query_part: true,
   authorized_fetch_mode: false,
   min_key_refetch_interval: 86_400,
   max_collection_objects: 50
