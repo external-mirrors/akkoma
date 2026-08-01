@@ -22,6 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     this fixes vote percetanges for new and refreshed remote multi-selection polls
 - new config options to restrict unauthenticated search API access under `:pleroma, :restrict_unauthenticated, :search`
 - extended MFM support further
+- `GET /api/v1/accounts/lookup` now supports the \*oma-specific `with_relationships` query parameter like many other account endpoints
+- Account responses in Mastodon API include a new property `akkoma.web_feed`
+    indicating the preferred URL for RSS and/or Atom feeds if one is known
+- `:pleroma, :mrf, :transparency` now accepts a value of `:authenticated` to only reveal MRF details
+    to logged-in viewers via Masto API like `/api/v1/instance`; nodeinfo is always unauthenticated
 
 ### Fixed
 - fixed status search not respecting `resolve=false`
@@ -51,6 +56,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Unauthenticated search requests now by default force-disable remote fetches and pagination
 - Post search can now match text in the content warning with the database provider
 - prefixing a user search query with `@` will limit results to matching nicknames only, if the query contains no enclosed whitespace
+- newly created users will no longer include their nickname in AP IDs of and related to the actor;
+    this prepares for (sensible) future renaming support
+- `/users/:nickname` and subpages no longer accept ID arguments instead of a nickname.
+    ID arguments being accepted here too was never advertised anywhere.
+    For URLs stable across renames the recently added `/users/by-id/:id` versions can be used instead.
+    This fixes some pathological nicknames not having working display URLs since id matches were preferred.
+- `/api/v1/accounts/lookup` is now allowed to be used without authentication on private instances.
+    The finer-grained restrict_unauthenticated settings are still/instead enforced here.
 
 
 ## 2026.05 (3.19.0)

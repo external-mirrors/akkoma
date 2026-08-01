@@ -12,8 +12,8 @@ defmodule Pleroma.Web.MastodonAPI.InstanceController do
   defdelegate open_api_operation(action), to: Pleroma.Web.ApiSpec.InstanceOperation
 
   @doc "GET /api/v1/instance"
-  def show(conn, _params) do
-    render(conn, "show.json")
+  def show(%{assigns: %{user: for_user}} = conn, _params) do
+    render(conn, "show.json", for: for_user)
   end
 
   @doc "GET /api/v1/instance/peers"

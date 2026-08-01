@@ -159,6 +159,9 @@ defmodule Pleroma.User.BackupTest do
     followers_ap = user.follower_address
     following_ap = user.following_address
 
+    display_url = user.uri
+    assert is_binary(display_url)
+
     assert %{
              "@context" => [
                "https://www.w3.org/ns/activitystreams",
@@ -180,7 +183,7 @@ defmodule Pleroma.User.BackupTest do
                "owner" => ^ap_id
              },
              "type" => "Person",
-             "url" => ^ap_id
+             "url" => ^display_url
            } = Jason.decode!(json)
 
     assert {:ok, {~c"outbox.json", json}} = :zip.zip_get(~c"outbox.json", zipfile)

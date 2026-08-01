@@ -159,10 +159,18 @@ defmodule Pleroma.UserTest do
     end
   end
 
+  test "generate_display_uri returns a new local display URL with nick" do
+    user = UserBuilder.build()
+
+    expected_uri = "#{Pleroma.Web.Endpoint.url()}/users/#{user.nickname}"
+
+    assert expected_uri == User.generate_display_uri(user)
+  end
+
   test "generate_ap_id returns a new local activity pub id" do
     user = UserBuilder.build()
 
-    expected_ap_id = "#{Pleroma.Web.Endpoint.url()}/users/#{user.nickname}"
+    expected_ap_id = "#{Pleroma.Web.Endpoint.url()}/users/by-id/#{user.id}"
 
     assert expected_ap_id == User.generate_ap_id(user)
   end
@@ -646,8 +654,10 @@ defmodule Pleroma.UserTest do
       assert changeset.valid?
       assert is_binary(changeset.changes[:password_hash])
 
-      assert changeset.changes[:ap_id] ==
-               User.generate_ap_id(%User{nickname: @full_user_data.nickname})
+      id = changeset.changes[:id]
+      assert FlakeId.flake_id?(id)
+
+      assert changeset.changes[:ap_id] == User.generate_ap_id(%{id: id})
 
       assert changeset.changes[:signing_key]
       assert changeset.changes[:signing_key].valid?
@@ -950,13 +960,13 @@ defmodule Pleroma.UserTest do
   test "test factory creates sensible ap_id for a user" do
     user = insert(:user)
 
-    assert user.ap_id == url(@endpoint, ~p[/users/#{user.nickname}])
+    assert user.ap_id == url(@endpoint, ~p[/users/by-id/#{user.id}])
   end
 
   test "test factory creates sensible ap_followers link for a user" do
     user = insert(:user)
 
-    assert user.follower_address == url(@endpoint, ~p[/users/#{user.nickname}/followers])
+    assert user.follower_address == url(@endpoint, ~p[/users/by-id/#{user.id}/followers])
   end
 
   describe "remote user changeset" do

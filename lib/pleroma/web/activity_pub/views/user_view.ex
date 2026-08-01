@@ -92,7 +92,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
       "preferredUsername" => user.nickname,
       "name" => user.name,
       "summary" => user.bio,
-      "url" => user.ap_id,
+      "url" => user.uri || user.ap_id,
       "manuallyApprovesFollowers" => user.is_locked,
       "publicKey" => %{
         "id" => User.SigningKey.local_key_id(user.ap_id),

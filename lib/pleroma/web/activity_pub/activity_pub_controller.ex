@@ -60,47 +60,63 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  @doc """
-  Render the user's AP data
-  WARNING: we cannot actually check if the request has a fragment! so let's play defensively
-  - IF we have a valid signature, serve full user
-  - IF we do not, and authorized_fetch_mode is enabled, serve only the key and bare minimum info
-  - OTHERWISE, serve the full actor (since we don't need to worry about the signature)
-  """
-  def user(%{assigns: %{valid_signature: true}} = conn, params) do
-    render_full_user(conn, params)
+  def user(conn, %{"user_id" => id}) do
+    with_new_ap_user(
+      id,
+      fn user -> render_user(conn, user) end,
+      fn user -> redirect_to_ap_id(conn, user) end
+    )
   end
 
-  def user(conn, params) do
+  # legacy AP path
+  def user(conn, %{"nickname" => nickname}) do
+    with_legacy_ap_user(
+      nickname,
+      fn user -> render_user(conn, user) end,
+      fn user -> redirect_to_ap_id(conn, user) end
+    )
+  end
+
+  defp redirect_to_ap_id(conn, %User{ap_id: ap_id}) do
+    conn
+    |> put_status(301)
+    |> redirect(external: ap_id)
+    |> halt()
+  end
+
+  # Render the user's AP data IF it’s a local user.
+  # We are not the authoriative source on remote users and thus won't render them.
+  #
+  # WARNING: we cannot actually check if the request has a fragment! so let's play defensively
+  #  - IF we have a valid signature, serve full user
+  #  - IF we do not, and authorized_fetch_mode is enabled, serve only the key and bare minimum info
+  #  - OTHERWISE, serve the full actor (since we don't need to worry about the signature)
+  defp render_user(_conn, %User{local: false}), do: {:error, :not_found}
+
+  defp render_user(%{assigns: %{valid_signature: true}} = conn, user) do
+    render_full_user(conn, user)
+  end
+
+  defp render_user(conn, user) do
     if Pleroma.Config.get([:activitypub, :authorized_fetch_mode], false) do
-      render_key_only_user(conn, params)
+      render_key_only_user(conn, user)
     else
-      render_full_user(conn, params)
+      render_full_user(conn, user)
     end
   end
 
-  defp render_full_user(conn, %{"nickname" => nickname}) do
-    with %User{local: true} = user <- User.get_cached_by_nickname(nickname) do
-      conn
-      |> put_resp_content_type("application/activity+json")
-      |> put_view(UserView)
-      |> render("user.json", %{user: user})
-    else
-      nil -> {:error, :not_found}
-      %{local: false} -> {:error, :not_found}
-    end
+  defp render_full_user(conn, user) do
+    conn
+    |> put_resp_content_type("application/activity+json")
+    |> put_view(UserView)
+    |> render("user.json", %{user: user})
   end
 
-  def render_key_only_user(conn, %{"nickname" => nickname}) do
-    with %User{local: true} = user <- User.get_cached_by_nickname(nickname) do
-      conn
-      |> put_resp_content_type("application/activity+json")
-      |> put_view(UserView)
-      |> render("stripped_user.json", %{user: user})
-    else
-      nil -> {:error, :not_found}
-      %{local: false} -> {:error, :not_found}
-    end
+  def render_key_only_user(conn, user) do
+    conn
+    |> put_resp_content_type("application/activity+json")
+    |> put_view(UserView)
+    |> render("stripped_user.json", %{user: user})
   end
 
   def object(%{assigns: assigns} = conn, _) do
@@ -228,11 +244,25 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def following(%{assigns: assigns} = conn, %{"nickname" => nickname, "page" => page}) do
+  def following(conn, %{"user_id" => id} = params) do
+    with_new_ap_user(id, fn user ->
+      params = Map.delete(params, "user_id")
+      render_following(conn, params, user)
+    end)
+  end
+
+  # legacy AP path
+  def following(conn, %{"nickname" => nickname} = params) do
+    with_legacy_ap_user(nickname, fn user ->
+      params = Map.delete(params, "nickname")
+      render_following(conn, params, user)
+    end)
+  end
+
+  defp render_following(%{assigns: assigns} = conn, %{"page" => page}, user) do
     for_user = assigns[:user]
 
-    with %User{} = user <- User.get_cached_by_nickname(nickname),
-         {:show_follows, true} <-
+    with {:show_follows, true} <-
            {:show_follows, (for_user && for_user == user) || !user.hide_follows} do
       {page, _} = Integer.parse(page)
 
@@ -248,15 +278,13 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def following(%{assigns: assigns} = conn, %{"nickname" => nickname}) do
+  defp render_following(%{assigns: assigns} = conn, _params, user) do
     for_user = assigns[:user]
 
-    with %User{} = user <- User.get_cached_by_nickname(nickname) do
-      conn
-      |> put_resp_content_type("application/activity+json")
-      |> put_view(UserView)
-      |> render("following.json", %{user: user, for: for_user})
-    end
+    conn
+    |> put_resp_content_type("application/activity+json")
+    |> put_view(UserView)
+    |> render("following.json", %{user: user, for: for_user})
   end
 
   @doc """
@@ -271,11 +299,25 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def followers(%{assigns: assigns} = conn, %{"nickname" => nickname, "page" => page}) do
+  def followers(conn, %{"user_id" => id} = params) do
+    with_new_ap_user(id, fn user ->
+      params = Map.delete(params, "user_id")
+      render_followers(conn, params, user)
+    end)
+  end
+
+  # legacy AP path
+  def followers(conn, %{"nickname" => nickname} = params) do
+    with_legacy_ap_user(nickname, fn user ->
+      params = Map.delete(params, "nickname")
+      render_followers(conn, params, user)
+    end)
+  end
+
+  defp render_followers(%{assigns: assigns} = conn, %{"page" => page}, user) do
     for_user = assigns[:user]
 
-    with %User{} = user <- User.get_cached_by_nickname(nickname),
-         {:show_followers, true} <-
+    with {:show_followers, true} <-
            {:show_followers, (for_user && for_user == user) || !user.hide_followers} do
       {page, _} = Integer.parse(page)
 
@@ -291,61 +333,72 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def followers(%{assigns: assigns} = conn, %{"nickname" => nickname}) do
+  defp render_followers(%{assigns: assigns} = conn, _params, user) do
     for_user = assigns[:user]
 
-    with %User{} = user <- User.get_cached_by_nickname(nickname) do
-      conn
-      |> put_resp_content_type("application/activity+json")
-      |> put_view(UserView)
-      |> render("followers.json", %{user: user, for: for_user})
-    end
+    conn
+    |> put_resp_content_type("application/activity+json")
+    |> put_view(UserView)
+    |> render("followers.json", %{user: user, for: for_user})
   end
 
-  def outbox(
-        %{assigns: %{user: for_user}} = conn,
-        %{"nickname" => nickname, "page" => page?} = params
-      )
-      when page? in [true, "true"] do
-    with %User{} = user <- User.get_cached_by_nickname(nickname) do
-      # "include_poll_votes" is a hack because postgres generates inefficient
-      # queries when filtering by 'Answer', poll votes will be hidden by the
-      # visibility filter in this case anyway
-      params =
-        params
-        |> Map.drop(["nickname", "page"])
-        |> Map.put("include_poll_votes", true)
-        |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
-
-      activities = ActivityPub.fetch_user_activities(user, for_user, params)
-
-      conn
-      |> put_resp_content_type("application/activity+json")
-      |> put_view(UserView)
-      |> render("activity_collection_page.json", %{
-        activities: activities,
-        pagination: ControllerHelper.get_pagination_fields(conn, activities)
-      })
-    end
+  def outbox(conn, %{"user_id" => id} = params) do
+    with_new_ap_user(id, fn user ->
+      do_outbox(conn, Map.delete(params, "user_id"), user)
+    end)
   end
 
-  def outbox(conn, %{"nickname" => nickname}) do
-    with %User{} = user <- User.get_cached_by_nickname(nickname) do
-      conn
-      |> put_resp_content_type("application/activity+json")
-      |> put_view(UserView)
-      |> render("activity_collection.json", %{iri: "#{user.ap_id}/outbox"})
-    end
+  # legacy AP path
+  def outbox(conn, %{"nickname" => nickname} = params) do
+    with_legacy_ap_user(nickname, fn user ->
+      do_outbox(conn, Map.delete(params, "nickname"), user)
+    end)
   end
 
+  defp do_outbox(
+         %{assigns: %{user: for_user}} = conn,
+         %{"page" => page?} = params,
+         user
+       )
+       when page? in [true, "true"] do
+    # "include_poll_votes" is a hack because postgres generates inefficient
+    # queries when filtering by 'Answer', poll votes will be hidden by the
+    # visibility filter in this case anyway
+    params =
+      params
+      |> Map.drop(["nickname", "page"])
+      |> Map.put("include_poll_votes", true)
+      |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
+
+    activities = ActivityPub.fetch_user_activities(user, for_user, params)
+
+    conn
+    |> put_resp_content_type("application/activity+json")
+    |> put_view(UserView)
+    |> render("activity_collection_page.json", %{
+      activities: activities,
+      pagination: ControllerHelper.get_pagination_fields(conn, activities)
+    })
+  end
+
+  defp do_outbox(conn, _params, user) do
+    conn
+    |> put_resp_content_type("application/activity+json")
+    |> put_view(UserView)
+    |> render("activity_collection.json", %{iri: user.outbox})
+  end
+
+  # personal inbox
+  def inbox(%{assigns: %{valid_signature: true}} = conn, %{"user_id" => id} = params) do
+    with_new_ap_user(id, fn user -> do_user_inbox(conn, params, user) end)
+  end
+
+  # personal inbox via legacy AP path
   def inbox(%{assigns: %{valid_signature: true}} = conn, %{"nickname" => nickname} = params) do
-    with %User{} = recipient <- User.get_cached_by_nickname(nickname),
-         params <- Utils.maybe_splice_recipient(recipient.ap_id, params) do
-      Federator.incoming_ap_doc(params)
-      json(conn, "ok")
-    end
+    with_legacy_ap_user(nickname, fn user -> do_user_inbox(conn, params, user) end)
   end
 
+  # shared inbox
   def inbox(%{assigns: %{valid_signature: true}} = conn, params) do
     Federator.incoming_ap_doc(params)
     json(conn, "ok")
@@ -362,6 +415,14 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     |> put_status(:bad_request)
     |> json("error, missing HTTP Signature")
   end
+
+  defp do_user_inbox(conn, params, %User{local: true} = recipient) do
+    params = Utils.maybe_splice_recipient(recipient.ap_id, params)
+    Federator.incoming_ap_doc(params)
+    json(conn, "ok")
+  end
+
+  defp do_user_inbox(_conn, _params, _user), do: {:error, :not_found}
 
   defp represent_service_actor(%User{} = user, conn) do
     conn
@@ -382,14 +443,49 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     |> represent_service_actor(conn)
   end
 
+  # only owner may read inbox
+  def read_inbox(
+        %{assigns: %{user: %User{id: id} = user}} = conn,
+        %{"user_id" => id} = params
+      ) do
+    if User.legacy_ap_id?(user) do
+      {:error, :not_found}
+    else
+      do_read_inbox(conn, Map.delete(params, "user_id"))
+    end
+  end
+
+  # same for legacy AP path
   def read_inbox(
         %{assigns: %{user: %User{nickname: nickname} = user}} = conn,
-        %{"nickname" => nickname, "page" => page?} = params
+        %{"nickname" => nickname} = params
+      ) do
+    if User.legacy_ap_id?(user) do
+      do_read_inbox(conn, Map.delete(params, "nickname"))
+    else
+      {:error, :not_found}
+    end
+  end
+
+  def read_inbox(%{assigns: %{user: %User{nickname: as_nickname}}} = conn, params) do
+    target = params["user_id"] || params["nickname"] || "<no target user>"
+
+    err =
+      dgettext("errors", "can't read inbox of %{target} as %{as_nickname}",
+        target: target,
+        as_nickname: as_nickname
       )
-      when page? in [true, "true"] do
+
+    conn
+    |> put_status(:forbidden)
+    |> json(err)
+  end
+
+  defp do_read_inbox(%{assigns: %{user: %User{} = user}} = conn, %{"page" => page?} = params)
+       when page? in [true, "true"] do
     params =
       params
-      |> Map.drop(["nickname", "page"])
+      |> Map.delete("page")
       |> Map.put("blocking_user", user)
       |> Map.put("user", user)
       |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
@@ -408,27 +504,11 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     })
   end
 
-  def read_inbox(%{assigns: %{user: %User{nickname: nickname} = user}} = conn, %{
-        "nickname" => nickname
-      }) do
+  defp do_read_inbox(%{assigns: %{user: %User{} = user}} = conn, _params) do
     conn
     |> put_resp_content_type("application/activity+json")
     |> put_view(UserView)
-    |> render("activity_collection.json", %{iri: "#{user.ap_id}/inbox"})
-  end
-
-  def read_inbox(%{assigns: %{user: %User{nickname: as_nickname}}} = conn, %{
-        "nickname" => nickname
-      }) do
-    err =
-      dgettext("errors", "can't read inbox of %{nickname} as %{as_nickname}",
-        nickname: nickname,
-        as_nickname: as_nickname
-      )
-
-    conn
-    |> put_status(:forbidden)
-    |> json(err)
+    |> render("activity_collection.json", %{iri: user.inbox})
   end
 
   defp errors(conn, {:error, :not_found}) do
@@ -452,11 +532,46 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     conn
   end
 
+  def pinned(conn, %{"user_id" => id}) do
+    with_new_ap_user(id, fn u -> render_pinned(conn, u) end)
+  end
+
+  # legacy AP path
   def pinned(conn, %{"nickname" => nickname}) do
-    with %User{} = user <- User.get_cached_by_nickname(nickname) do
-      conn
-      |> put_resp_header("content-type", "application/activity+json")
-      |> json(UserView.render("featured.json", %{user: user}))
+    with_legacy_ap_user(nickname, fn u -> render_pinned(conn, u) end)
+  end
+
+  defp render_pinned(conn, %User{} = user) do
+    conn
+    |> put_resp_header("content-type", "application/activity+json")
+    |> json(UserView.render("featured.json", %{user: user}))
+  end
+
+  defp with_new_ap_user(user_id, action, era_fallback_action \\ fn _ -> {:error, :not_found} end) do
+    User.get_cached_by_id(user_id)
+    |> with_local_user_era(false, action, era_fallback_action)
+  end
+
+  defp with_legacy_ap_user(
+         nickname,
+         action,
+         era_fallback_action \\ fn _ -> {:error, :not_found} end
+       ) do
+    User.get_cached_by_nickname(nickname)
+    |> with_local_user_era(true, action, era_fallback_action)
+  end
+
+  defp with_local_user_era(user, legacy, action, era_fallback_action)
+
+  defp with_local_user_era(%User{} = user, legacy, action, era_fallback_action) do
+    with %User{local: true} <- user,
+         true <- User.legacy_ap_id?(user) == legacy do
+      action.(user)
+    else
+      false -> era_fallback_action.(user)
+      _ -> {:error, :not_found}
     end
   end
+
+  defp with_local_user_era(_not_a_user, _, _, _), do: {:error, :not_found}
 end

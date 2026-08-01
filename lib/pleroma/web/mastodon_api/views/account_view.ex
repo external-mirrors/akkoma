@@ -277,6 +277,14 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
     last_status_at =
       if is_nil(user.last_status_at), do: nil, else: NaiveDateTime.to_date(user.last_status_at)
 
+    # some cursed code paths pass an ad-hoc fake "error user" here with a nil id
+    feed_url =
+      if user.local && user.id do
+        Pleroma.Web.Endpoint.url() <> ~p"/users/by-id/#{user.id}/feed"
+      else
+        nil
+      end
+
     %{
       id: to_string(user.id),
       username: username_from_nickname(user.nickname),
@@ -311,7 +319,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
       akkoma: %{
         instance: render("instance.json", %{instance: instance}),
         status_ttl_days: user.status_ttl_days,
-        permit_followback: user.permit_followback
+        permit_followback: user.permit_followback,
+        web_feed: feed_url
       },
       # Pleroma extensions
       # Note: it's insecure to output :email but fully-qualified nickname may serve as safe stub
