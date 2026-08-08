@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fixed new-AP-ID users not having field URL’s verified if the target links back to the display URL isntead of AP ID
 
 ### Changed
+- verified field URLs in local user accounts now set a rel="me" attribute itself (in the API response at least) to allow (if the FE cooperates) also links _to_ the profile page getting verified
 
 ## 2026.08 (3.20)
 

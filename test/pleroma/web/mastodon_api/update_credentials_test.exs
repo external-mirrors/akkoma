@@ -719,7 +719,7 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
                %{
                  "name" => "Website",
                  "value" =>
-                   ~s[<a href="http://example.com/rel_me/ap_id" rel="ugc">http://example.com/rel_me/ap_id</a>],
+                   ~s[<a rel="me" href="http://example.com/rel_me/ap_id">http://example.com/rel_me/ap_id</a>],
                  "verified_at" => verified_at
                }
              ] = account_data["fields"]

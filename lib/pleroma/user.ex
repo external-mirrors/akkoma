@@ -2550,7 +2550,8 @@ defmodule Pleroma.User do
   defp validate_rel_me_field(changeset, fields, raw_fields, %User{
          nickname: nickname,
          ap_id: ap_id,
-         uri: uri
+         uri: uri,
+         local: local
        }) do
     fields =
       fields
@@ -2569,9 +2570,16 @@ defmodule Pleroma.User do
           possible_urls = Enum.uniq([ap_id, uri, legacy_frontend_url])
 
           with "me" <- RelMe.maybe_put_rel_me(raw_value, possible_urls) do
+            # presence of rel=me also works to verify links from other places to the current page.
+            # We don’t want to bless remote user pages in our local frontends.
+            verified_value =
+              if local,
+                do: create_rel_me_link(raw_value),
+                else: value
+
             %{
               "name" => name,
-              "value" => value,
+              "value" => verified_value,
               "verified_at" => DateTime.to_iso8601(DateTime.utc_now())
             }
           else
@@ -2585,6 +2593,11 @@ defmodule Pleroma.User do
       end)
 
     put_change(changeset, :fields, fields)
+  end
+
+  defp create_rel_me_link(raw_link) do
+    escaped_link = Plug.HTML.html_escape(raw_link)
+    ~s|<a rel="me" href="#{escaped_link}">#{escaped_link}</a>|
   end
 
   defp truncate_field(%{"name" => name, "value" => value}) do
