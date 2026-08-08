@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+
+### Fixed
+
+### Changed
+
+## 2026.08 (3.20)
+
 ### Update note
 - If you are using database search with a non-default RUM index,
   you _MUST_ apply the new optional RUM migration before upgrading.  
