@@ -285,6 +285,10 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
         nil
       end
 
+    # we only store verified_at when a verification actuallly succeeded,
+    # but Masto API always wants the field to be present at least with an explicit null
+    fields = Enum.map(user.fields, &Map.put_new(&1, "verified_at", nil))
+
     %{
       id: to_string(user.id),
       username: username_from_nickname(user.nickname),
@@ -304,7 +308,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
       header_static: header_static,
       header_description: header_description,
       emojis: emojis,
-      fields: user.fields,
+      fields: fields,
       bot: bot,
       source: %{
         note: user.raw_bio || "",
