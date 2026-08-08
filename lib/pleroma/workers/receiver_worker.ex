@@ -12,7 +12,7 @@ defmodule Pleroma.Workers.ReceiverWorker do
     unique: [
       keys: [:op, :id],
       # all states except :discarded
-      states: [:scheduled, :available, :executing, :retryable, :completed, :cancelled]
+      states: [:scheduled, :suspended, :available, :executing, :retryable, :completed, :cancelled]
     ]
 
   def enqueue(op, %{"id" => _} = params, worker_args), do: do_enqueue(op, params, worker_args)

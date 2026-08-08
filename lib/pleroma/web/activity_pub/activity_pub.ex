@@ -39,8 +39,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     to = Map.get(data, "to", [])
     cc = Map.get(data, "cc", [])
     bcc = Map.get(data, "bcc", [])
-    actor = Map.get(data, "actor", [])
-    recipients = [to, cc, bcc, [actor]] |> Enum.concat() |> Enum.uniq()
+    actor = Map.get(data, "actor", nil)
+    recipients = [to, cc, bcc, [actor]] |> Enum.concat() |> Enum.filter(& &1) |> Enum.uniq()
     {recipients, to, cc}
   end
 

@@ -3115,6 +3115,29 @@ config :pleroma, :config_description, [
             description: "Disallow viewing remote posts."
           }
         ]
+      },
+      %{
+        key: :search,
+        type: :map,
+        description: "Settings for search endpoints.",
+        children: [
+          %{
+            key: :all,
+            type: :boolean,
+            description: "Disallow search access entirely."
+          },
+          %{
+            key: :resolve,
+            type: :boolean,
+            description: "Disallow fetching not-yet-known remote content via search."
+          },
+          %{
+            key: :paginate,
+            type: :boolean,
+            description:
+              "Disallow traversing past the first page of results (search pagination can be inefficient)."
+          }
+        ]
       }
     ]
   },
@@ -3355,6 +3378,12 @@ config :pleroma, :config_description, [
         type: :module,
         description: "Selected search module.",
         suggestions: {:list_behaviour_implementations, Pleroma.Search.SearchBackend}
+      },
+      %{
+        key: :task_timeout,
+        type: :integer,
+        description: "Timeout for individual search tasks.",
+        suggestions: [45_000]
       }
     ]
   },

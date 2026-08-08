@@ -366,6 +366,7 @@ config :pleroma, :activitypub,
   follow_handshake_timeout: 500,
   note_replies_output_limit: 5,
   sign_object_fetches: true,
+  sign_query_part: true,
   authorized_fetch_mode: false,
   min_key_refetch_interval: 86_400,
   max_collection_objects: 50
@@ -834,10 +835,10 @@ config :pleroma, :frontends,
       "name" => "pleroma-fe-vanilla",
       "git" => "https://git.pleroma.social/pleroma/pleroma-fe/",
       "build_url" =>
-        "https://git.pleroma.social/pleroma/pleroma-fe/-/jobs/artifacts/${ref}/download?job=build",
+        "https://git.pleroma.social/api/packages/pleroma/generic/pleroma-fe-builds/${ref}/latest.zip",
       "ref" => "develop",
       "build_dir" => "dist",
-      "bugtracker" => "https://git.pleroma.social/pleroma/pleroma-fe/-/issues"
+      "bugtracker" => "https://git.pleroma.social/pleroma/pleroma-fe/issues"
     },
     "pl-fe" => %{
       "name" => "pl-fe",
@@ -869,7 +870,8 @@ private_instance? = :if_instance_is_private
 config :pleroma, :restrict_unauthenticated,
   timelines: %{local: private_instance?, federated: private_instance?, bubble: true},
   profiles: %{local: private_instance?, remote: private_instance?},
-  activities: %{local: private_instance?, remote: private_instance?}
+  activities: %{local: private_instance?, remote: private_instance?},
+  search: %{all: private_instance?, resolve: true, paginate: true}
 
 config :pleroma, Pleroma.Web.ApiSpec.CastAndValidate, strict: false
 
@@ -907,7 +909,10 @@ config :pleroma, Pleroma.Web.WebFinger,
   # TODO: default this to false after the fallout from recent WebFinger bugs is healed
   update_nickname_on_user_fetch: true
 
-config :pleroma, Pleroma.Search, module: Pleroma.Search.DatabaseSearch
+config :pleroma, Pleroma.Search,
+  module: Pleroma.Search.DatabaseSearch,
+  # note this + pre- & postprocessing needs to fit into Phoenix/Cowboy’s timeout too (default: 60s)
+  task_timeout: 45_000
 
 config :pleroma, Pleroma.Search.DatabaseSearch, gin_fuzzy_search_limit: nil
 

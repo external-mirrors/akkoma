@@ -4,7 +4,71 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 2026.05
+## Unreleased
+
+### Update note
+- If you are using database search with a non-default RUM index,
+  you _MUST_ apply the new optional RUM migration before upgrading.  
+  Then after upgrading you wil need to refresh your RUM index setup
+  to also get the new search behaviour. This can be done by "changing"
+  your text search config to your current value (or something else, like `simple` if you so wish)
+  via the `database set_text_search_config <value>` mix task
+
+### Removed
+- vestige C2S access to follow* collections was dropped
+
+### Added
+- federated voter count of polls is now parsed and federated out too;
+    this fixes vote percetanges for new and refreshed remote multi-selection polls
+- new config options to restrict unauthenticated search API access under `:pleroma, :restrict_unauthenticated, :search`
+- extended MFM support further
+- `GET /api/v1/accounts/lookup` now supports the \*oma-specific `with_relationships` query parameter like many other account endpoints
+- Account responses in Mastodon API include a new property `akkoma.web_feed`
+    indicating the preferred URL for RSS and/or Atom feeds if one is known
+- `:pleroma, :mrf, :transparency` now accepts a value of `:authenticated` to only reveal MRF details
+    to logged-in viewers via Masto API like `/api/v1/instance`; nodeinfo is always unauthenticated
+
+### Fixed
+- fixed status search not respecting `resolve=false`
+- fixed later search result pages again fetching remote content
+- handle reports referring to a single plain id as their object;
+    affected e.g. JSON-LD compacted reports without status references from Iceshrimp.NET
+- fixed several issues parsing remote Question objects
+- fixed signatures from blocked or deleted actors still being accepted
+- fixed follow* collections being readable without signature even if authorized_fetch mode is enabled
+- fixed one’s own follow* counts sometimes being redacted in API if hiding count for others
+- fixed delete&redraft still deleting attachment files most oft the time once the initial redraft delay elapsed
+- fixed fetched objects not normalising various valid forms of the public addressing URI
+- fixed searches for an already known statuses with resolve=true sometimes failing
+    if searching by a display URL instead of canonical AP ID.
+    With resolve=false no display URL lookups are possible.
+- fixed single-selection poll states not updating when receiving an Update activity for the status
+- fixed fetched updates of statuses with a poll or rediscovered pruned objects not being passed through MRFs
+- fixed potential data inconsistencies and API ordering for rediscovered partially pruned objects
+- fixed tagged (mentioned) but not addressed users receiving notifications about
+    statuses they are not actually allowed to access
+- fixed tranlator service being queried for supported languages even if not enabled
+- fixed explicitly static media proxy previews pointing to a broken redirect for non-animated files
+- fixed ElastiSearch/OpenSearch provider bailing out of remote URL fetches too quickly
+
+### Changed
+- New installations (not existing instances) now default to the `simple` full-text-search config
+- Unauthenticated search requests now by default force-disable remote fetches and pagination
+- Post search can now match text in the content warning with the database provider
+- prefixing a user search query with `@` will limit results to matching nicknames only, if the query contains no enclosed whitespace
+- newly created users will no longer include their nickname in AP IDs of and related to the actor;
+    this prepares for (sensible) future renaming support
+- `/users/:nickname` and subpages no longer accept ID arguments instead of a nickname.
+    ID arguments being accepted here too was never advertised anywhere.
+    For URLs stable across renames the recently added `/users/by-id/:id` versions can be used instead.
+    This fixes some pathological nicknames not having working display URLs since id matches were preferred.
+- `/api/v1/accounts/lookup` is now allowed to be used without authentication on private instances.
+    The finer-grained restrict_unauthenticated settings are still/instead enforced here.
+- HTTP Signatues now include the query part of the request target.
+    Temporarily, it’s possible to set `:activitypub, sign_query_part: true` to omit it matching previous versions.
+
+
+## 2026.05 (3.19.0)
 
 ### General note
 - backup restore instructions very slightly changed but in an important way.  
@@ -24,8 +88,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `{POST,PUT} api/v1/lists` now accepts the `exclusive` parameter from Mastodon allowing followed users in the list to be removed from the home timeline
 - User profile media now (can) have federated alt text; to this end:
   - Mastodon-compatible `avatar_description` and `header_description` parameters are added to account API responses and as input for `PATCH /api/v1/accounts/update_credentials`
-  - `pleroma.background_image_descripption` is added to account API responses
-  - `pleroma_background_image_descripption` is added as a new parameter to `PATCH /api/v1/accounts/update_credentials`
+  - `pleroma.background_image_description` is added to account API responses
+  - `pleroma_background_image_description` is added as a new parameter to `PATCH /api/v1/accounts/update_credentials`
 - `GET /api/v1/statuses/:id` contains the new `poll.akkoma.anonymous` parameter if `poll` is non-null.  
     It relays if and whether the source instance promised to keep votes anonymous or disclose votes with voter identity.
     There are no plans to enable creating non-anonymous polls in Akkoma, but some implementations do.
@@ -46,7 +110,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add reasonable defaults for `:database_config_whitelist`
 
 
-## 2026.03.1
+## 2026.03.1 (3.18.1)
 
 ### Update notes
 - If you experience degraded performance of database queries after upgrading,
@@ -60,7 +124,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - fix posts being federated to us with explicit zero extents crashing the status renderer
 - fix pagination parameters being ignored on hashtag timelines
 
-## 2026.03
+## 2026.03 (3.18.0)
 
 ### BREAKING
 - Elixir 1.14 is no longer suported, and it's EOL! Upgrade to Elixir 1.15+
@@ -110,7 +174,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     this avoids spurious error logs and better matches the intent of implementations serving fallback HTML responses on the AP collection endpoints
 
 
-## 2025.12
+## 2025.12 (3.17.0)
 
 ### REMOVED
 - DEPRECATE `/api/v1/timelines/direct`.  
@@ -169,7 +233,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - slightly improve index overhead for the users table
 
 
-## 2025.10
+## 2025.10 (3.16.0)
 
 ### REMOVED
 - Dropped `accepts_chat_messages` column from users table in database;
@@ -245,7 +309,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - follow requests are now ordered reverse chronologically
 
 
-## 2025.03
+## 2025.03 (3.15.0, 3.15.1, 3.15.2)
 
 ### Added
 - Oban (worker) dashboard at `/akkoma/oban`
@@ -264,11 +328,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The HTML content for new posts (both Client-to-Server as well as Server-to-Server communication) will now use a different formatting to represent MFM. See [FEP-c16b](https://codeberg.org/fediverse/fep/src/branch/main/fep/c16b/fep-c16b.md) for more details.
 - HTTP signatures now test the most likely request-target alias first cutting down on overhead
 
-## 2025.01.01
+## 2025.01.01 (3.14.1)
 
 Hotfix: Federation could break if a null value found its way into `should_federate?\1`
 
-## 2025.01
+## 2025.01 (3.14.0)
 
 ### Added
 - New config option `:instance, :cleanup_attachments_delay`
@@ -289,7 +353,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
   adopting a proposed AP spec errata and restoring federation
   with e.g. IceShrimp.NET and fedify-based implementations
 
-## 3.13.3 
+## 2024.11 (3.13.3)
 
 ### BREAKING
 - Minimum PostgreSQL version is raised to 12
@@ -312,14 +376,14 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 ### Changed
 - Refactored Rich Media to cache the content in the database. Fetching operations that could block status rendering have been eliminated.
 
-## 2024.04.1 (Security)
+## 2024.04.1 (Security) (3.13.2)
 
 ### Fixed
 - Issue allowing non-owners to use media objects in posts
 - Issue allowing use of non-media objects as attachments and crashing timeline rendering
 - Issue allowing webfinger spoofing in certain situations
 
-## 2024.04
+## 2024.04 (3.13.0, 3.13.1)
 
 ### Added
 - Support for [FEP-fffd](https://codeberg.org/fediverse/fep/src/branch/main/fep/fffd/fep-fffd.md) (proxy objects)
@@ -356,7 +420,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 - ActivityPub Client-To-Server write API endpoints have been disabled;
   read endpoints are planned to be removed next release unless a clear need is demonstrated
 
-## 2024.03
+## 2024.03 (3.12.0, 3.12.1, 3.12.3)
 
 ### Added
 - CLI tasks best-effort checking for past abuse of the recent spoofing exploit
@@ -397,7 +461,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
   - Akkoma will refuse to start if this is not set.
 - Same with media proxy.
 
-## 2024.02
+## 2024.02 (3.11.0)
 
 ### Added
 - Full compatibility with Erlang OTP26
@@ -414,11 +478,15 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 
 ### Fixed
 - Documentation issue in which a non-existing nginx file was referenced
-- Issue where a bad inbox URL could break federation
 - Issue where hashtag rel values would be scrubbed
 - Issue where short domains listed in `transparency_obfuscate_domains` were not actually obfuscated
 
-## 2023.08
+## 2023.08.1 (3.10.4)
+
+### Fixed
+- Issue where a bad inbox URL could break federation
+
+## 2023.08 (3.10.0, 3.10.1, 3.10.3)
 
 ### Added
 
@@ -462,7 +530,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
   - If you are on oldstable you should NOT attempt to update OTP builds without
     first updating your machine.
 
-## 2023.05
+## 2023.05 (3.9.0, 3.9.1, 3.9.2, 3.9.3)
 
 ### Added
 - Custom options for users to accept/reject private messages
@@ -479,7 +547,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 ### Security
 - Fixed mediaproxy being a bit of a silly billy
 
-## 2023.04
+## 2023.04 (3.8.0)
 
 ### Added
 - Nodeinfo keys for unauthenticated timeline visibility
@@ -493,7 +561,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
   use [asdf](https://asdf-vm.com/). At time of writing, elixir 1.14.3 / erlang 25.3
   is confirmed to work.
 
-## 2023.03
+## 2023.03 (3.7.0, 3.7.1)
 
 ### Fixed
 - Allowed contentMap to be updated on edit
@@ -510,7 +578,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 - Possibility of using the `style` parameter on `span` elements. This will break certain MFM parameters.
 - Option for "default" image description.
 
-## 2023.02
+## 2023.02 (3.6.0)
 
 ### Added
 - Prometheus metrics exporting from `/api/v1/akkoma/metrics`
@@ -553,7 +621,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 - Ensure `config :tesla, :adapter` is either unset, or set to `{Tesla.Adapter.Finch, name: MyFinch}` in your .exs config
 - Pleroma-FE will need to be updated to handle the new /api/v1/pleroma endpoints for  custom emoji
 
-## 2022.12
+## 2022.12 (3.5.0)
 
 ### Added
 - Config: HTTP timeout options, :pool\_timeout and :receive\_timeout
@@ -581,7 +649,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 ### Upgrade Notes
 - If you have an old instance, you will probably want to run `mix pleroma.database prune_task` in the foreground to catch it up with the history of your instance.
 
-## 2022.11
+## 2022.11 (3.4.0)
 
 ### Added
 - Officially supported docker release
@@ -590,8 +658,6 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 - `requested_by` in relationships when the user has requested to follow you
 
 ### Changed
-- Follows no longer override domain blocks, a domain block is final
-- Deletes are now the lowest priority to publish and will be handled after creates
 - Domain blocks are now subdomain-matches by default
 
 ### Fixed
@@ -602,7 +668,14 @@ Hotfix: Federation could break if a null value found its way into `should_federa
   to the latest. The changes in OTP24.3 are breaking.
 - You can now remove the leading `*.` from domain blocks, but you do not have to.
 
-## 2022.10
+## 2022.10.1 (3.3.1)
+
+### Changed
+- Follows no longer override domain blocks, a domain block is final
+- Deletes are now the lowest priority to publish and will be handled after creates
+- Verify that the signature on posts is not domain blocked, and belongs to the correct user
+
+## 2022.10 (3.3.0)
 
 ### Added
 - Ability to sync frontend profiles between clients, with a name attached
@@ -611,14 +684,13 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 ### Changed
 - Emoji updated to latest 15.0 draft
 - **Breaking**: `/api/v1/pleroma/backups` endpoints now requires `read:backups` scope instead of `read:accounts`
-- Verify that the signature on posts is not domain blocked, and belongs to the correct user
 
 ### Fixed
 - OAuthPlug no longer joins with the database every call and uses the user cache
 - Undo activities no longer try to look up by ID, and render correctly
 - prevent false-errors from meilisearch
 
-## 2022.09
+## 2022.09 (3.2.0)
 
 ### Added
 - support for fedibird-fe, and non-breaking API parity for it to function
@@ -645,7 +717,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 ### Removed
 - Non-finch HTTP adapters. `:tesla, :adapter` is now highly recommended to be set to the default.
 
-## 2022.08
+## 2022.08 (3.1.0)
 
 ### Removed
 - Non-finch HTTP adapters. `:tesla, :adapter` is now highly recommended to be set to the default.
@@ -680,7 +752,7 @@ Hotfix: Federation could break if a null value found its way into `should_federa
 - Chats, they were half-baked. Just use PMs.
 - Prometheus, it causes massive slowdown
 
-## 2022.07
+## 2022.07 (3.0.0)
 
 ### Added
 - Added move account API

@@ -32,6 +32,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   def fix_object(object, options \\ []) do
     object
     |> strip_internal_fields()
+    |> normalise_addressing_public()
     |> fix_actor()
     |> fix_url()
     |> fix_attachments()
@@ -479,6 +480,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
        ) do
     with context <- data["context"] || Utils.generate_context_id(),
          content <- data["content"] || "",
+         objects <- List.wrap(objects),
          %User{} = actor <- User.get_cached_by_ap_id(actor),
          # Reduce the object list to find the reported user.
          %User{} = account <- get_reported(objects),
@@ -811,6 +813,16 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     end
   end
 
+  defp set_voters_count(%{"votersCount" => n} = obj) when is_integer(n) do
+    obj
+  end
+
+  defp set_voters_count(%{"voters" => voters} = obj) when is_list(voters) do
+    Map.put_new(obj, "votersCount", length(voters))
+  end
+
+  defp set_voters_count(obj), do: obj
+
   # Prepares the object of an outgoing create activity.
   def prepare_object(object) do
     object
@@ -823,6 +835,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     |> set_reply_to_uri
     |> set_quote_url()
     |> set_replies
+    |> set_voters_count()
     |> strip_internal_fields
     |> strip_internal_tags
     |> set_type

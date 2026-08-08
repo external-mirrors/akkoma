@@ -35,6 +35,7 @@ defmodule Pleroma.Formatter do
 
   def mention_tag(%User{id: id} = user, nickname, opts \\ []) do
     user_url = user.uri || user.ap_id
+
     nickname_text = get_nickname_text(nickname, opts)
 
     :span

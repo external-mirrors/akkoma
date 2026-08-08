@@ -134,7 +134,7 @@ defmodule Pleroma.Web.CommonAPI.UtilsTest do
       assert output == expected
 
       text = "[b]hello world![/b]\n\nsecond paragraph!"
-      expected = "<strong>hello world!</strong><br><br>second paragraph!"
+      expected = "<strong>hello world!</strong><br/><br/>second paragraph!"
 
       {output, [], []} = Utils.format_input(text, "text/bbcode")
 
@@ -143,7 +143,7 @@ defmodule Pleroma.Web.CommonAPI.UtilsTest do
       text = "[b]hello world![/b]\n\n<strong>second paragraph!</strong>"
 
       expected =
-        "<strong>hello world!</strong><br><br>&lt;strong&gt;second paragraph!&lt;/strong&gt;"
+        "<strong>hello world!</strong><br/><br/>&lt;strong&gt;second paragraph!&lt;/strong&gt;"
 
       {output, [], []} = Utils.format_input(text, "text/bbcode")
 
@@ -196,7 +196,7 @@ defmodule Pleroma.Web.CommonAPI.UtilsTest do
       {result, _, []} = Utils.format_input(code, "text/markdown")
 
       assert result ==
-               ~s[<p><span class="h-card"><a class="u-url mention" data-user="#{mario.id}" href="#{mario.ap_id}" rel="ugc">@<span>mario</span></a></span> <span class="h-card"><a class="u-url mention" data-user="#{luigi.id}" href="#{luigi.ap_id}" rel="ugc">@<span>luigi</span></a></span> yo what’s up?</p>]
+               ~s[<p><span class="h-card"><a class="u-url mention" data-user="#{mario.id}" href="#{mario.uri}" rel="ugc">@<span>mario</span></a></span> <span class="h-card"><a class="u-url mention" data-user="#{luigi.id}" href="#{luigi.uri}" rel="ugc">@<span>luigi</span></a></span> yo what’s up?</p>]
     end
 
     test "remote mentions" do

@@ -34,7 +34,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
 
   plug(:skip_auth when action in [:create])
 
-  plug(:skip_public_check when action in [:show, :statuses])
+  plug(:skip_public_check when action in [:show, :statuses, :lookup])
 
   plug(
     OAuthScopesPlug,
@@ -597,12 +597,14 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
   end
 
   @doc "GET /api/v1/accounts/lookup"
-  def lookup(%{assigns: %{user: for_user}} = conn, %{acct: nickname} = _params) do
+  def lookup(%{assigns: %{user: for_user}} = conn, %{acct: nickname} = params) do
     with %User{} = user <- User.get_by_nickname(nickname),
          :visible <- User.visible_for(user, for_user) do
       render(conn, "show.json",
         user: user,
-        skip_visibility_check: true
+        for: for_user,
+        skip_visibility_check: true,
+        embed_relationships: embed_relationships?(params)
       )
     else
       error -> user_visibility_error(conn, error)

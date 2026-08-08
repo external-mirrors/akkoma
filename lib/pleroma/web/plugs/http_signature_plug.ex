@@ -39,7 +39,10 @@ defmodule Pleroma.Web.Plugs.HTTPSignaturePlug do
     [
       fn ->
         with %Activity{} = activity <- Activity.get_by_object_ap_id_with_object(ap_id) do
-          ["#{method} /notice/#{activity.id}", "#{method} /notice/#{activity.id}?#{query_string}"]
+          with_and_without_query(
+            "#{method} /notice/#{activity.id}",
+            query_string
+          )
         else
           _ -> []
         end
@@ -140,10 +143,10 @@ defmodule Pleroma.Web.Plugs.HTTPSignaturePlug do
       method = String.downcase(conn.method)
 
       request_targets =
-        [
+        with_and_without_query(
           "#{method} " <> conn.request_path,
-          "#{method} " <> conn.request_path <> "?#{conn.query_string}" | route_aliases(conn)
-        ]
+          conn.query_string
+        ) ++ route_aliases(conn)
 
       conn =
         case conn do
@@ -161,4 +164,9 @@ defmodule Pleroma.Web.Plugs.HTTPSignaturePlug do
   defp has_signature_header?(conn) do
     conn |> get_req_header("signature") |> Enum.at(0, false)
   end
+
+  defp with_and_without_query(base_target, query) when is_binary(query),
+    do: [base_target <> "?" <> query, base_target]
+
+  defp with_and_without_query(base_target, _), do: [base_target]
 end

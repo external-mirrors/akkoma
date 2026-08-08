@@ -137,7 +137,7 @@ defmodule Pleroma.Web.Plugs.HTTPSignaturePlugTest do
           acc ++ add
       end)
 
-    assert ["get /notice/#{act.id}", "get /notice/#{act.id}?actor=someparam"] == aliases
+    assert ["get /notice/#{act.id}?actor=someparam", "get /notice/#{act.id}"] == aliases
   end
 
   test "fakes success on gone key when receiving Delete" do

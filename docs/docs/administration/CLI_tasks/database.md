@@ -120,22 +120,6 @@ when all orphaned activities have been deleted.
 - `--no-singles` - Do not delete activites referencing single objects
 - `--no-arrays` - Do not delete activites referencing an array of objects
 
-## Create a conversation for all existing DMs
-
-Can be safely re-run
-
-=== "OTP"
-
-    ```sh
-    ./bin/pleroma_ctl database bump_all_conversations
-    ```
-
-=== "From Source"
-
-    ```sh
-    mix pleroma.database bump_all_conversations
-    ```
-
 ## Remove duplicated items from following and update followers count for all users
 
 === "OTP"

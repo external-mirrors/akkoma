@@ -179,7 +179,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.ArticleNotePageValidator do
 
   defp fix_content_map_languages(object), do: object
 
-  defp fix(data) do
+  def fix(data) do
     data
     |> CommonFixes.fix_actor()
     |> CommonFixes.fix_object_defaults()

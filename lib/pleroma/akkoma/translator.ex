@@ -5,9 +5,11 @@ defmodule Pleroma.Akkoma.Translator do
     module = Pleroma.Config.get([:translator, :module])
 
     @cachex.fetch!(:translations_cache, "languages:#{module}}", fn _ ->
-      with {:ok, source_languages, dest_languages} <- module.languages() do
+      with {_, true} <- {:enabled, Pleroma.Config.get([:translator, :enabled])},
+           {:ok, source_languages, dest_languages} <- module.languages() do
         {:commit, {:ok, source_languages, dest_languages}}
       else
+        {:enabled, _} -> {:commit, {:enabled, false}}
         {:error, err} -> {:ignore, {:error, err}}
       end
     end)

@@ -151,6 +151,7 @@ defmodule Pleroma.User do
     field(:allow_following_move, :boolean, default: true)
     field(:actor_type, :string, default: "Person")
     field(:also_known_as, {:array, ObjectValidators.ObjectID}, default: [])
+    field(:outbox, :string)
     field(:inbox, :string)
     field(:shared_inbox, :string)
     field(:last_active_at, :naive_datetime)
@@ -289,8 +290,6 @@ defmodule Pleroma.User do
   defdelegate following_ap_ids(user), to: FollowingRelationship
   defdelegate get_follow_requests_query(user), to: FollowingRelationship
 
-  defdelegate search(query, opts \\ []), to: User.Search
-
   @doc """
   Dumps Flake Id to SQL-compatible format (16-byte UUID).
   E.g. "9pQtDGXuq4p3VlcJEm" -> <<0, 0, 1, 110, 179, 218, 42, 92, 213, 41, 44, 227, 95, 213, 0, 0>>
@@ -403,22 +402,29 @@ defmodule Pleroma.User do
   def image_description(%{"name" => name}, _default), do: name
   def image_description(_, default), do: default
 
-  # Should probably be renamed or removed
-  @spec ap_id(User.t()) :: String.t()
-  def ap_id(%User{nickname: nickname}), do: "#{Endpoint.url()}/users/#{nickname}"
+  # generate_* functions are public to allow usage in test helper factory
+  @spec generate_ap_id(%{id: String.t()}) :: String.t()
+  def generate_ap_id(%{id: id}) when id != nil, do: "#{Endpoint.url()}/users/by-id/#{id}"
 
-  @spec ap_followers(User.t()) :: String.t()
-  def ap_followers(%User{follower_address: fa}) when is_binary(fa), do: fa
-  def ap_followers(%User{} = user), do: "#{ap_id(user)}/followers"
+  @spec generate_ap_inbox(%{ap_id: String.t()}) :: String.t()
+  def generate_ap_inbox(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/inbox"
 
-  @spec ap_following(User.t()) :: String.t()
-  def ap_following(%User{following_address: fa}) when is_binary(fa), do: fa
-  def ap_following(%User{} = user), do: "#{ap_id(user)}/following"
+  @spec generate_ap_outbox(%{ap_id: String.t()}) :: String.t()
+  def generate_ap_outbox(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/outbox"
 
-  @spec ap_featured_collection(User.t()) :: String.t()
-  def ap_featured_collection(%User{featured_address: fa}) when is_binary(fa), do: fa
+  @spec generate_ap_followers(%{ap_id: String.t()}) :: String.t()
+  def generate_ap_followers(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/followers"
 
-  def ap_featured_collection(%User{} = user), do: "#{ap_id(user)}/collections/featured"
+  @spec generate_ap_following(%{ap_id: String.t()}) :: String.t()
+  def generate_ap_following(%{ap_id: ap_id}) when ap_id != nil, do: "#{ap_id}/following"
+
+  @spec generate_ap_featured_collection(%{ap_id: String.t()}) :: String.t()
+  def generate_ap_featured_collection(%{ap_id: ap_id}) when ap_id != nil,
+    do: "#{ap_id}/collections/featured"
+
+  @spec generate_display_uri(%{id: String.t()}) :: String.t()
+  def generate_display_uri(%{nickname: nick}) when nick != nil,
+    do: "#{Endpoint.url()}/users/#{nick}"
 
   defp truncate_fields_param(params) do
     if Map.has_key?(params, :fields) do
@@ -436,13 +442,6 @@ defmodule Pleroma.User do
       params
     end
   end
-
-  defp fix_follower_address(%{follower_address: _, following_address: _} = params), do: params
-
-  defp fix_follower_address(%{nickname: nickname} = params),
-    do: Map.put(params, :follower_address, ap_followers(%User{nickname: nickname}))
-
-  defp fix_follower_address(params), do: params
 
   def remote_user_changeset(struct \\ %User{local: false}, params) do
     bio_limit = Config.get([:instance, :user_bio_length], 5000)
@@ -463,7 +462,6 @@ defmodule Pleroma.User do
       |> truncate_if_exists(:bio, bio_limit)
       |> Map.update(:fields, [], &Enum.take(&1, fields_limit))
       |> truncate_fields_param()
-      |> fix_follower_address()
 
     struct
     |> Repo.preload(:signing_key)
@@ -473,6 +471,7 @@ defmodule Pleroma.User do
         :bio,
         :emoji,
         :ap_id,
+        :outbox,
         :inbox,
         :shared_inbox,
         :nickname,
@@ -502,7 +501,7 @@ defmodule Pleroma.User do
     |> cast(params, [:name], empty_values: [])
     |> validate_required([:ap_id])
     |> validate_required([:name], trim: false)
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> cast_assoc(:signing_key, with: &SigningKey.remote_changeset/2, required: false)
     |> validate_format(:nickname, @email_regex)
     |> validate_length(:bio, max: bio_limit)
@@ -535,6 +534,7 @@ defmodule Pleroma.User do
         :name,
         :emoji,
         :avatar,
+        :outbox,
         :inbox,
         :shared_inbox,
         :is_locked,
@@ -561,7 +561,7 @@ defmodule Pleroma.User do
         :accepts_direct_messages_from
       ]
     )
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_format(:nickname, local_nickname_regex())
     |> validate_length(:bio, max: bio_limit)
     |> validate_length(:name, min: 1, max: name_limit)
@@ -793,11 +793,13 @@ defmodule Pleroma.User do
       :email
     ])
     |> validate_required([:name, :nickname])
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_exclusion(:nickname, Config.get([User, :restricted_nicknames]))
     |> validate_format(:nickname, local_nickname_regex())
-    |> put_ap_id()
+    |> put_id()
+    |> put_ap_id_and_display_uri()
     |> unique_constraint(:ap_id)
+    |> put_in_and_outbox()
     |> put_following_and_follower_and_featured_address()
     |> put_private_key()
   end
@@ -850,7 +852,7 @@ defmodule Pleroma.User do
 
       if valid?, do: [], else: [email: "Invalid email"]
     end)
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> validate_exclusion(:nickname, Config.get([User, :restricted_nicknames]))
     |> validate_format(:nickname, local_nickname_regex())
     |> validate_length(:bio, max: bio_limit)
@@ -858,8 +860,10 @@ defmodule Pleroma.User do
     |> validate_length(:registration_reason, max: reason_limit)
     |> maybe_validate_required_email(opts[:external])
     |> put_password_hash
-    |> put_ap_id()
+    |> put_id()
+    |> put_ap_id_and_display_uri()
     |> unique_constraint(:ap_id)
+    |> put_in_and_outbox()
     |> put_following_and_follower_and_featured_address()
     |> put_private_key()
   end
@@ -874,16 +878,38 @@ defmodule Pleroma.User do
     end
   end
 
-  def put_ap_id(changeset) do
-    ap_id = ap_id(%User{nickname: get_field(changeset, :nickname)})
-    put_change(changeset, :ap_id, ap_id)
+  defp put_id(%{valid?: true} = changeset) do
+    id = FlakeId.get()
+    put_change(changeset, :id, id)
   end
 
-  def put_following_and_follower_and_featured_address(changeset) do
-    user = %User{nickname: get_field(changeset, :nickname)}
-    followers = ap_followers(user)
-    following = ap_following(user)
-    featured = ap_featured_collection(user)
+  defp put_id(changeset), do: changeset
+
+  defp put_ap_id_and_display_uri(%{valid?: true, changes: initdata} = changeset) do
+    changeset
+    |> put_change(:ap_id, generate_ap_id(initdata))
+    |> put_change(:uri, generate_display_uri(initdata))
+  end
+
+  defp put_ap_id_and_display_uri(%{valid?: false} = changeset), do: changeset
+
+  defp put_in_and_outbox(%{valid?: true, changes: initdata} = changeset) do
+    inbox = generate_ap_inbox(initdata)
+    outbox = generate_ap_outbox(initdata)
+
+    changeset
+    |> put_change(:inbox, inbox)
+    |> put_change(:outbox, outbox)
+  end
+
+  defp put_in_and_outbox(%{valid?: false} = changeset), do: changeset
+
+  defp put_following_and_follower_and_featured_address(
+         %{valid?: true, changes: initdata} = changeset
+       ) do
+    followers = generate_ap_followers(initdata)
+    following = generate_ap_following(initdata)
+    featured = generate_ap_featured_collection(initdata)
 
     changeset
     |> put_change(:follower_address, followers)
@@ -891,12 +917,17 @@ defmodule Pleroma.User do
     |> put_change(:featured_address, featured)
   end
 
-  defp put_private_key(changeset) do
+  defp put_following_and_follower_and_featured_address(%{valid?: false} = changeset),
+    do: changeset
+
+  defp put_private_key(%{valid?: true} = changeset) do
     ap_id = get_field(changeset, :ap_id)
 
     changeset
     |> put_assoc(:signing_key, SigningKey.generate_local_keys(ap_id))
   end
+
+  defp put_private_key(%{valid?: false} = changeset), do: changeset
 
   defp autofollow_users(user) do
     candidates = Config.get([:instance, :autofollowed_nicknames])
@@ -1268,6 +1299,10 @@ defmodule Pleroma.User do
     get_cached_by_ap_id(ap_id)
   end
 
+  @doc """
+  Loads matching cached user. If not found will fallback to database lookup.
+  If not locally known yet at all, the handle will be looked up on the network via WebFinger.
+  """
   def get_cached_by_nickname(nickname) do
     if String.valid?(nickname) do
       key = "nickname:#{nickname}"
@@ -1304,10 +1339,15 @@ defmodule Pleroma.User do
   @spec get_by_nickname(String.t()) :: User.t() | nil
   def get_by_nickname(nickname) do
     if String.valid?(nickname) do
-      Repo.get_by(User, nickname: nickname) ||
+      search_nick =
         if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
-          Repo.get_by(User, nickname: local_nickname(nickname))
+          local_nickname(nickname)
+        else
+          nickname
         end
+
+      User.Query.build(%{internal: :allowed, nickname: search_nick})
+      |> Repo.one()
     else
       nil
     end
@@ -2117,7 +2157,7 @@ defmodule Pleroma.User do
     }
     |> change
     |> put_private_key()
-    |> unique_constraint(:nickname)
+    |> unique_constraint(:nickname, name: :users_casefolded_nickname_index)
     |> Repo.insert()
     |> set_cache()
   end
@@ -2365,10 +2405,8 @@ defmodule Pleroma.User do
   end
 
   def get_ap_ids_by_nicknames(nicknames) do
-    from(u in User,
-      where: u.nickname in ^nicknames,
-      select: u.ap_id
-    )
+    User.Query.build(%{internal: :allowed, nickname: nicknames})
+    |> select([u], u.ap_id)
     |> Repo.all()
   end
 
@@ -2816,4 +2854,11 @@ defmodule Pleroma.User do
 
   def accepts_direct_messages?(%User{accepts_direct_messages_from: :nobody}, _),
     do: false
+
+  def legacy_ap_id?(%User{local: true, ap_id: ap_id, nickname: nick})
+      when is_binary(ap_id) and is_binary(nick) do
+    String.ends_with?(ap_id, "/users/" <> nick)
+  end
+
+  def legacy_ap_id?(%User{}), do: false
 end

@@ -157,6 +157,7 @@ defmodule Pleroma.Web.CommonAPI.Utils do
         "type" => "Question",
         key => option_notes,
         "closed" => end_time,
+        "votersCount" => 0,
         "nonAnonymous" => false
       }
 
@@ -265,6 +266,9 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     |> (fn {text, mentions, tags} ->
           {String.replace(text, ~r/\r?\n/, "<br>"), mentions, tags}
         end).()
+
+    # XXX: breaks rel=me links in bios, thus for now omitted.
+    # |> Formatter.html_escape("text/html")
   end
 
   def format_input(text, "text/bbcode", options) do
@@ -274,19 +278,21 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     |> BBCode.to_html()
     |> (fn {:ok, html} -> html end).()
     |> Formatter.linkify(options)
+    |> Formatter.html_escape("text/html")
   end
 
   def format_input(text, "text/html", options) do
     text
-    |> Formatter.html_escape("text/html")
     |> Formatter.linkify(options)
+    |> Formatter.html_escape("text/html")
   end
 
   def format_input(text, "text/x.misskeymarkdown", options) do
     text
     |> Formatter.markdown_to_html(%{breaks: true})
     |> MfmParser.Parser.parse()
-    |> MfmParser.Encoder.to_html()
+    # Must preserve HTML tags from markdown parser (last step removes dangerous bits)
+    |> MfmParser.Encoder.to_html(escape_text: false)
     |> Formatter.linkify(options)
     |> Formatter.html_escape("text/html")
   end
@@ -393,12 +399,53 @@ defmodule Pleroma.Web.CommonAPI.Utils do
           %{}
       end
 
-    tagged_mentions = maybe_extract_mentions(object_data)
+    tagged_mentions =
+      maybe_extract_mentions(object_data)
+      |> filter_tags_to_qualified(activity)
 
     recipients ++ tagged_mentions
   end
 
   def maybe_notify_mentioned_recipients(recipients, _), do: recipients
+
+  # Filter tagged mentions to ensure they can actually access the status
+  defp filter_tags_to_qualified(tagged_mentions, %Activity{
+         recipients: recipients,
+         data: data,
+         actor: actor
+       }) do
+    recipients =
+      if recipients && recipients != [],
+        do: recipients,
+        else:
+          (data["to"] || []) ++ (data["cc"] || []) ++ (data["bto"] || []) ++ (data["bcc"] || [])
+
+    cond do
+      recipients == [] ->
+        []
+
+      Pleroma.Constants.as_public() in recipients ->
+        tagged_mentions
+
+      true ->
+        author = User.get_cached_by_ap_id(actor)
+        to_followers = author.follower_address in recipients
+
+        Enum.filter(tagged_mentions, fn tagged ->
+          cond do
+            tagged in recipients ->
+              true
+
+            to_followers ->
+              tagged_user = User.get_cached_by_ap_id(tagged)
+              User.following?(tagged_user, author)
+
+            true ->
+              false
+          end
+        end)
+    end
+  end
 
   def maybe_notify_subscribers(
         recipients,

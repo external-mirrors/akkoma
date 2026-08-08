@@ -114,6 +114,7 @@ To add configuration to your config file, you can copy it from the base config. 
 
 ### :mrf
 * `transparency`: Make the content of your Message Rewrite Facility settings public (via nodeinfo).
+    Can be set to `true`, `:authenticated` or `false`
 * `transparency_exclusions`: Exclude specific instance names from MRF transparency.  The use of the exclusions feature will be disclosed in nodeinfo as a boolean value.
 * `transparency_obfuscate_domains`: Show domains with `*` in the middle, to censor them if needed. For example, `ridingho.me` will show as `rid*****.me`
 * `policies`: Message Rewrite Policy, either one or a list. Here are the ones available by default:
@@ -858,25 +859,6 @@ config :logger, :ex_syslogger,
   ident: "pleroma",
   format: "$metadata[$level] $message"
 ```
-
-## Database options
-
-### RUM indexing for full text search
-
-!!! warning
-    It is recommended to use PostgreSQL v11 or newer. We have seen some minor issues with lower PostgreSQL versions.
-
-* `rum_enabled`: If RUM indexes should be used. Defaults to `false`.
-
-RUM indexes are an alternative indexing scheme that is not included in PostgreSQL by default. While they may eventually be mainlined, for now they have to be installed as a PostgreSQL extension from https://github.com/postgrespro/rum.
-
-Their advantage over the standard GIN indexes is that they allow efficient ordering of search results by timestamp, which makes search queries a lot faster on larger servers, by one or two orders of magnitude. They take up around 3 times as much space as GIN indexes.
-
-To enable them, both the `rum_enabled` flag has to be set and the following special migration has to be run:
-
-`mix ecto.migrate --migrations-path priv/repo/optional_migrations/rum_indexing/`
-
-This will probably take a long time.
 
 ## Authentication
 

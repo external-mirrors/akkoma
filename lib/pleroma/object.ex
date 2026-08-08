@@ -336,12 +336,21 @@ defmodule Pleroma.Object do
             option
         end)
 
-      voters = [actor | object.data["voters"] || []] |> Enum.uniq()
+      old_voters = object.data["voters"] || []
+      old_voters_count = object.data["votersCount"] || length(old_voters)
+
+      {voters, voters_count} =
+        if actor in old_voters do
+          {old_voters, old_voters_count}
+        else
+          {[actor | old_voters], old_voters_count + 1}
+        end
 
       data =
         object.data
         |> Map.put(key, options)
         |> Map.put("voters", voters)
+        |> Map.put("votersCount", voters_count)
 
       object
       |> Object.change(%{data: data})
