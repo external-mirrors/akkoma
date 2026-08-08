@@ -699,12 +699,12 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
              ]
     end
 
-    test "update fields with a link to content with rel=me, with ap id", %{user: user, conn: conn} do
+    defp rel_me_test(conn, backlink_href) do
       Tesla.Mock.mock(fn
         %{url: "http://example.com/rel_me/ap_id"} ->
           %Tesla.Env{
             status: 200,
-            body: ~s[<html><head><link rel="me" href="#{user.ap_id}"></head></html>]
+            body: ~s[<html><head><link rel="me" href="#{backlink_href}"></head></html>]
           }
       end)
 
@@ -728,38 +728,23 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
       assert DateTime.diff(DateTime.utc_now(), verified_at) < 10
     end
 
-    test "update fields with a link to content with rel=me, with frontend path", %{
+    test "update fields with a link to content with rel=me, with ap id", %{user: user, conn: conn} do
+      rel_me_test(conn, user.ap_id)
+    end
+
+    test "update fields with a link to content with rel=me, with display URL", %{
       user: user,
       conn: conn
     } do
-      fe_url = url(~p[/#{user.nickname}])
+      rel_me_test(conn, user.uri)
+    end
 
-      Tesla.Mock.mock(fn
-        %{url: "http://example.com/rel_me/fe_path"} ->
-          %Tesla.Env{
-            status: 200,
-            body: ~s[<html><head><link rel="me" href="#{fe_url}"></head></html>]
-          }
-      end)
-
-      field = %{name: "Website", value: "http://example.com/rel_me/fe_path"}
-
-      account_data =
-        conn
-        |> patch("/api/v1/accounts/update_credentials", %{fields_attributes: [field]})
-        |> json_response_and_validate_schema(200)
-
-      assert [
-               %{
-                 "name" => "Website",
-                 "value" =>
-                   ~s[<a href="http://example.com/rel_me/fe_path" rel="ugc">http://example.com/rel_me/fe_path</a>],
-                 "verified_at" => verified_at
-               }
-             ] = account_data["fields"]
-
-      {:ok, verified_at, _} = DateTime.from_iso8601(verified_at)
-      assert DateTime.diff(DateTime.utc_now(), verified_at) < 10
+    test "update fields with a link to content with rel=me, with legacy frontend path", %{
+      user: user,
+      conn: conn
+    } do
+      legacy_fe_url = url(~p[/#{user.nickname}])
+      rel_me_test(conn, legacy_fe_url)
     end
 
     test "emojis in fields labels", %{conn: conn} do

@@ -2549,7 +2549,8 @@ defmodule Pleroma.User do
   @spec validate_rel_me_field(Changeset.t(), [Map.t()], [Map.t()], User.t()) :: Changeset.t()
   defp validate_rel_me_field(changeset, fields, raw_fields, %User{
          nickname: nickname,
-         ap_id: ap_id
+         ap_id: ap_id,
+         uri: uri
        }) do
     fields =
       fields
@@ -2563,9 +2564,9 @@ defmodule Pleroma.User do
           end
 
         if is_url(raw_value) do
-          frontend_url = url(~p[/#{nickname}])
+          legacy_frontend_url = url(~p[/#{nickname}])
 
-          possible_urls = [ap_id, frontend_url]
+          possible_urls = Enum.uniq([ap_id, uri, legacy_frontend_url])
 
           with "me" <- RelMe.maybe_put_rel_me(raw_value, possible_urls) do
             %{

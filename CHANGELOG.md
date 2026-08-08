@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - fixed the `verified_at` key in field entries of Masto API account responses being absent rather than explicitly `null`, technically violating the API schema
+- fixed new-AP-ID users not having field URL’s verified if the target links back to the display URL isntead of AP ID
 
 ### Changed
 
