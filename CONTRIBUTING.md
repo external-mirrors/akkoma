@@ -3,6 +3,8 @@
 Akkoma is a community project, contributed to by all sorts of people.
 Hence, our contribution guidelines are quite simple - but we do ask a few things of potential contributors.
 
+All contributions should follow the `CODE_OF_CONDUCT.md`
+
 ## AI Usage
 
 On a project with a requirement to be safe for everyone to use, and one with a generally exposed attack surface,
