@@ -6,7 +6,12 @@ defmodule Pleroma.Web.Preload.Providers.InstanceTest do
   use Pleroma.DataCase
   alias Pleroma.Web.Preload.Providers.Instance
 
-  setup do: {:ok, Instance.generate_terms(nil)}
+  setup do
+    config = %{background: "/images/city.jpg", logo: "/static/logo.svg"}
+    clear_config([:frontend_configurations, :pleroma_fe], config)
+
+    {:ok, Instance.generate_terms(nil)}
+  end
 
   test "it renders the info", %{"/api/v1/instance" => info} do
     assert %{

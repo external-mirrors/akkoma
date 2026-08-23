@@ -318,8 +318,6 @@ config :pleroma, :frontend_configurations,
   }
 ```
 
-These settings **need to be complete**, they will override the defaults.
-
 ### :frontends
 
 These settings tell akkoma which frontend files to serve the user.

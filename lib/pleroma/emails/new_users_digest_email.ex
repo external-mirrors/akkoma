@@ -15,7 +15,7 @@ defmodule Pleroma.Emails.NewUsersDigestEmail do
 
     logo_url =
       Pleroma.Helpers.UriHelper.maybe_add_base(
-        Pleroma.Config.get([:frontend_configurations, :pleroma_fe, :logo]),
+        Pleroma.Config.get([:frontend_configurations, :pleroma_fe, :logo], "/static/logo.svg"),
         Pleroma.Web.Endpoint.url()
       )
 
