@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## 2026.08 (3.20)
 
 ### Update note
+- Minimum supported OTP version was bumped from 25 to 26;
+  both are already EOL so you should be using newer releases anyway
 - If you are using database search with a non-default RUM index,
   you _MUST_ apply the new optional RUM migration before upgrading.  
   Then after upgrading you wil need to refresh your RUM index setup
