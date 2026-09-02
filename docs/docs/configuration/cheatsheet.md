@@ -1101,18 +1101,24 @@ config :pleroma, :database_config_whitelist, [
 Restrict access for unauthenticated users to timelines (public and federated), user profiles and posts.
 
 * `timelines`: public and federated timelines
-  * `local`: public timeline
-  * `federated`: federated timeline (includes public timeline)
+    * `local`: public timeline
+    * `federated`: federated timeline (includes public timeline)
+    * `bubble`: bubble timeline
 * `profiles`: user profiles
-  * `local`
-  * `remote`
+    * `local`
+    * `remote`
 * `activities`: posts
-  * `local`
-  * `remote`
+    * `local`
+    * `remote`
+* `search`
+    * `all`: whether search is allowed at all without authentication
+    * `resolve`: whether new remote content can be fetched via a search request
+    * `paginate`: whether search results past the first page can be requested *(later pages have increasing resource cost)*
 
 #### When :instance, :public is `true`
 
-When your instance is in "public" mode, all public resources (users, posts, timelines) are accessible to unauthenticated users.
+When your instance is in "public" mode, almost all public resources (users, posts, timelines) are accessible to unauthenticated users.
+Only the bubble timeline, search pagination and search remote resolving are still disabled for unauthenticated users by default.
 
 Turning any of the `:restrict_unauthenticated` options to `true` will restrict access to the corresponding resources.
 
