@@ -6,5 +6,5 @@ defmodule Pleroma.Repo.Migrations.UpgradeObanToV11 do
     Oban.Migrations.up(version: 11)
   end
 
-  def down, do: Oban.Migrations.down(version: 11)
+  def down, do: Oban.Migrations.down(version: 10)
 end
