@@ -678,10 +678,15 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
         |> json_response_and_validate_schema(200)
 
       assert account_data["fields"] == [
-               %{"name" => "<a href=\"http://google.com\">foo</a>", "value" => "bar"},
+               %{
+                 "name" => "<a href=\"http://google.com\">foo</a>",
+                 "value" => "bar",
+                 "verified_at" => nil
+               },
                %{
                  "name" => "link.io",
-                 "value" => ~S(<a href="http://cofe.io" rel="ugc">cofe.io</a>)
+                 "value" => ~S(<a href="http://cofe.io" rel="ugc">cofe.io</a>),
+                 "verified_at" => nil
                }
              ]
 
@@ -694,12 +699,12 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
              ]
     end
 
-    test "update fields with a link to content with rel=me, with ap id", %{user: user, conn: conn} do
+    defp rel_me_test(conn, backlink_href) do
       Tesla.Mock.mock(fn
         %{url: "http://example.com/rel_me/ap_id"} ->
           %Tesla.Env{
             status: 200,
-            body: ~s[<html><head><link rel="me" href="#{user.ap_id}"></head></html>]
+            body: ~s[<html><head><link rel="me" href="#{backlink_href}"></head></html>]
           }
       end)
 
@@ -714,7 +719,7 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
                %{
                  "name" => "Website",
                  "value" =>
-                   ~s[<a href="http://example.com/rel_me/ap_id" rel="ugc">http://example.com/rel_me/ap_id</a>],
+                   ~s[<a rel="me" href="http://example.com/rel_me/ap_id">http://example.com/rel_me/ap_id</a>],
                  "verified_at" => verified_at
                }
              ] = account_data["fields"]
@@ -723,38 +728,23 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
       assert DateTime.diff(DateTime.utc_now(), verified_at) < 10
     end
 
-    test "update fields with a link to content with rel=me, with frontend path", %{
+    test "update fields with a link to content with rel=me, with ap id", %{user: user, conn: conn} do
+      rel_me_test(conn, user.ap_id)
+    end
+
+    test "update fields with a link to content with rel=me, with display URL", %{
       user: user,
       conn: conn
     } do
-      fe_url = url(~p[/#{user.nickname}])
+      rel_me_test(conn, user.uri)
+    end
 
-      Tesla.Mock.mock(fn
-        %{url: "http://example.com/rel_me/fe_path"} ->
-          %Tesla.Env{
-            status: 200,
-            body: ~s[<html><head><link rel="me" href="#{fe_url}"></head></html>]
-          }
-      end)
-
-      field = %{name: "Website", value: "http://example.com/rel_me/fe_path"}
-
-      account_data =
-        conn
-        |> patch("/api/v1/accounts/update_credentials", %{fields_attributes: [field]})
-        |> json_response_and_validate_schema(200)
-
-      assert [
-               %{
-                 "name" => "Website",
-                 "value" =>
-                   ~s[<a href="http://example.com/rel_me/fe_path" rel="ugc">http://example.com/rel_me/fe_path</a>],
-                 "verified_at" => verified_at
-               }
-             ] = account_data["fields"]
-
-      {:ok, verified_at, _} = DateTime.from_iso8601(verified_at)
-      assert DateTime.diff(DateTime.utc_now(), verified_at) < 10
+    test "update fields with a link to content with rel=me, with legacy frontend path", %{
+      user: user,
+      conn: conn
+    } do
+      legacy_fe_url = url(~p[/#{user.nickname}])
+      rel_me_test(conn, legacy_fe_url)
     end
 
     test "emojis in fields labels", %{conn: conn} do
@@ -769,8 +759,8 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
         |> json_response_and_validate_schema(200)
 
       assert account_data["fields"] == [
-               %{"name" => ":firefox:", "value" => "is best 2hu"},
-               %{"name" => "they wins", "value" => ":blank:"}
+               %{"name" => ":firefox:", "value" => "is best 2hu", "verified_at" => nil},
+               %{"name" => "they wins", "value" => ":blank:", "verified_at" => nil}
              ]
 
       assert account_data["source"]["fields"] == [
@@ -798,10 +788,11 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
         |> json_response_and_validate_schema(200)
 
       assert account["fields"] == [
-               %{"name" => "foo", "value" => "bar"},
+               %{"name" => "foo", "value" => "bar", "verified_at" => nil},
                %{
                  "name" => "link",
-                 "value" => ~S(<a href="http://cofe.io" rel="ugc">http://cofe.io</a>)
+                 "value" => ~S(<a href="http://cofe.io" rel="ugc">http://cofe.io</a>),
+                 "verified_at" => nil
                }
              ]
 
@@ -823,7 +814,7 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
         |> json_response_and_validate_schema(200)
 
       assert account["fields"] == [
-               %{"name" => "foo", "value" => ""}
+               %{"name" => "foo", "value" => "", "verified_at" => nil}
              ]
     end
 
@@ -852,7 +843,7 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
 
       fields = [
         %{name: "foo", value: "bar"},
-        %{"name" => "link", "value" => "cofe.io"}
+        %{"name" => "link", "value" => "cofe.io", "verified_at" => nil}
       ]
 
       assert %{"error" => "Invalid request"} ==
