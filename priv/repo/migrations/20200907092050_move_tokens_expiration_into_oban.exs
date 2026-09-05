@@ -4,37 +4,31 @@ defmodule Pleroma.Repo.Migrations.MoveTokensExpirationIntoOban do
   import Ecto.Query, only: [from: 2]
 
   def change do
-    Pleroma.Config.Oban.warn()
-
-    Application.ensure_all_started(:oban)
-
-    Supervisor.start_link([{Oban, Pleroma.Config.get(Oban)}],
-      strategy: :one_for_one,
-      name: Pleroma.Supervisor
-    )
+    # This runs against Oban table schema version 8.
+    # See 20200825061316_move_activity_expirations_to_oban.exs for a general layout.
+    # For this specifically:
+    #  queue = 'token_expiration'
+    #  worker = 'Pleroma.Workers.PurgeExpiredToken'
+    #  args = jsonb('{"token_id": …, "mod": "Pleroma.Web.OAuth.Token"}')
 
     if Pleroma.Config.get([:oauth2, :clean_expired_tokens]) do
-      from(t in Pleroma.Web.OAuth.Token, where: t.valid_until > ^NaiveDateTime.utc_now())
-      |> Pleroma.Repo.stream()
-      |> Stream.each(fn token ->
-        Pleroma.Workers.PurgeExpiredToken.enqueue(%{
-          token_id: token.id,
-          valid_until: DateTime.from_naive!(token.valid_until, "Etc/UTC"),
-          mod: Pleroma.Web.OAuth.Token
-        })
-      end)
-      |> Stream.run()
-    end
+      source =
+        from(t in Pleroma.Web.OAuth.Token,
+          where: t.valid_until > ^NaiveDateTime.utc_now(),
+          select: %{
+            state: "scheduled",
+            queue: "token_expiration",
+            worker: "Pleroma.Workers.PurgeExpiredToken",
+            max_attempts: 1,
+            scheduled_at: fragment("? AT TIME ZONE 'UTC'", t.valid_until),
+            args: %{
+              mod: "Pleroma.Workers.PurgeExpiredToken",
+              token_id: t.id
+            }
+          }
+        )
 
-    from(t in Pleroma.MFA.Token, where: t.valid_until > ^NaiveDateTime.utc_now())
-    |> Pleroma.Repo.stream()
-    |> Stream.each(fn token ->
-      Pleroma.Workers.PurgeExpiredToken.enqueue(%{
-        token_id: token.id,
-        valid_until: DateTime.from_naive!(token.valid_until, "Etc/UTC"),
-        mod: Pleroma.MFA.Token
-      })
-    end)
-    |> Stream.run()
+      Pleroma.Repo.insert_all(Oban.Job, source)
+    end
   end
 end
