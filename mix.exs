@@ -4,7 +4,7 @@ defmodule Pleroma.Mixfile do
   def project do
     [
       app: :pleroma,
-      version: version("3.20.0"),
+      version: version("3.20.1"),
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
@@ -208,7 +208,7 @@ defmodule Pleroma.Mixfile do
       {:websockex, "~> 0.5.1", only: :test},
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
       {:elixir_xml_to_map, "~> 3.0", only: :test},
-      {:mint, "~> 1.9.3", override: true},
+      {:mint, "~> 1.10.1", override: true},
       {:nimble_pool, "~> 1.0", override: true},
       {:mneme, "~> 0.10.2", only: [:dev, :test]}
     ] ++ oauth_deps()

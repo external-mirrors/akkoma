@@ -314,34 +314,8 @@ config :pleroma, :markup,
   ]
 
 config :pleroma, :frontend_configurations,
-  pleroma_fe: %{
-    alwaysShowSubjectInput: true,
-    background: "/images/city.jpg",
-    collapseMessageWithSubject: false,
-    greentext: false,
-    hideFilteredStatuses: false,
-    hideMutedPosts: false,
-    hidePostStats: false,
-    hideSitename: false,
-    hideUserStats: false,
-    loginMethod: "password",
-    logo: "/static/logo.svg",
-    logoMargin: ".1em",
-    logoMask: true,
-    noAttachmentLinks: false,
-    nsfwCensorImage: "",
-    postContentType: "text/plain",
-    redirectRootLogin: "/main/friends",
-    redirectRootNoLogin: "/main/public",
-    scopeCopy: true,
-    sidebarRight: false,
-    showFeaturesPanel: true,
-    showInstanceSpecificPanel: false,
-    subjectLineBehavior: "email",
-    theme: "pleroma-dark",
-    webPushNotifications: false,
-    conversationDisplay: "linear"
-  },
+  # akkoma-fe already bundles its own defaults for everything
+  pleroma_fe: %{},
   masto_fe: %{
     showInstanceSpecificPanel: true
   }

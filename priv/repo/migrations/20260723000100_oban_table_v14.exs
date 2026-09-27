@@ -3,5 +3,5 @@ defmodule Pleroma.Repo.Migrations.ObanTableV14 do
 
   def up, do: Oban.Migrations.up(version: 14)
 
-  def down, do: Oban.Migrations.down(version: 12)
+  def down, do: Oban.Migrations.down(version: 13)
 end

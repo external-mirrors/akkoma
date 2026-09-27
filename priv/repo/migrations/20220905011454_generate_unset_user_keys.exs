@@ -5,7 +5,7 @@
 defmodule Pleroma.Repo.Migrations.GenerateUnsetUserKeys do
   use Ecto.Migration
   import Ecto.Query
-  alias Pleroma.Keys
+  alias Pleroma.User.SigningKey
   alias Pleroma.Repo
   alias Pleroma.User
 
@@ -19,7 +19,7 @@ defmodule Pleroma.Repo.Migrations.GenerateUnsetUserKeys do
 
     Repo.stream(query)
     |> Enum.each(fn user ->
-      with {:ok, pem} <- Keys.generate_rsa_pem() do
+      with {:ok, pem} <- SigningKey.generate_rsa_pem() do
         Ecto.Changeset.cast(%User{id: user}, %{keys: pem}, [:keys])
         |> Repo.update(returning: false)
       end
