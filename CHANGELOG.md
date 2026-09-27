@@ -4,13 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 2026.09 (3.21)
 
 ### Added
 
 ### Fixed
 - fixed the `verified_at` key in field entries of Masto API account responses being absent rather than explicitly `null`, technically violating the API schema
 - fixed new-AP-ID users not having field URL’s verified if the target links back to the display URL isntead of AP ID
+- updated the version of mint
 
 ### Changed
 - verified field URLs in local user accounts now set a rel="me" attribute itself (in the API response at least) to allow (if the FE cooperates) also links _to_ the profile page getting verified
