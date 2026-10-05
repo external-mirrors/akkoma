@@ -15,11 +15,6 @@ matrix:
       IMG_VAR: debian-bookworm-20260610
       UBUNTU_EXPORT: YES
 
-    # old debian variant of amd64
-    - ARCH: amd64
-      SUFFIX: -debian-bullseye
-      IMG_VAR: debian-bullseye-20260610
-
     # Canonical amd64-musl
     - ARCH: amd64
       SUFFIX: -musl
