@@ -1,6 +1,4 @@
 defmodule Pleroma.Web.ActivityPub.MRF.TrackingLinkPolicy do
-  alias Pleroma.Object
-
   @moduledoc "Rewrite tracking links to exclude their tracking parameters"
   @behaviour Pleroma.Web.ActivityPub.MRF.Policy
 
@@ -13,8 +11,10 @@ defmodule Pleroma.Web.ActivityPub.MRF.TrackingLinkPolicy do
     domains: ["youtube.com", "youtu.be"]
   }
 
+  @impl true
   def history_awareness, do: :auto
 
+  @impl true
   def filter(%{"type" => type, "object" => %{"content" => content} = object} = activity)
       when type in ["Create", "Update"] do
     # find all links
@@ -34,10 +34,11 @@ defmodule Pleroma.Web.ActivityPub.MRF.TrackingLinkPolicy do
 
   defp maybe_rewrite_link(link) do
     url = URI.parse(link)
-    maybe_rewrite_link(url, @youtube)
+    maybe_rewrite_link(url, @youtube, Pleroma.Config.get([:mrf_tracking_link, :youtube]))
   end
 
-  def maybe_rewrite_link(link, policy) do
+  def maybe_rewrite_link(link, _policy, false), do: URI.to_string(link)
+  def maybe_rewrite_link(link, policy, true) do
     # either the exact domain or an exact subdomain
     if Enum.any?(policy.domains, fn domain ->
          link.host == domain || String.ends_with?(link.host, ".#{domain}")
@@ -63,6 +64,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.TrackingLinkPolicy do
     |> URI.to_string()
   end
 
+  @impl true
   def describe, do: {:ok, %{}}
 
   @impl true
