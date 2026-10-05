@@ -33,11 +33,13 @@ defmodule Pleroma.Web.ActivityPub.MRF.TrackingLinkPolicy do
   def filter(object), do: {:ok, object}
 
   defp maybe_rewrite_link(link) do
-    url = URI.parse(link)
-    maybe_rewrite_link(url, @youtube, Pleroma.Config.get([:mrf_tracking_link, :youtube]))
+    link
+    |> URI.parse()
+    |> maybe_rewrite_link(@youtube, Pleroma.Config.get([:mrf_tracking_link, :youtube]))
+    |> URI.to_string()
   end
 
-  def maybe_rewrite_link(link, _policy, false), do: URI.to_string(link)
+  def maybe_rewrite_link(link, _policy, false), do: link
   def maybe_rewrite_link(link, policy, true) do
     # either the exact domain or an exact subdomain
     if Enum.any?(policy.domains, fn domain ->
@@ -61,7 +63,6 @@ defmodule Pleroma.Web.ActivityPub.MRF.TrackingLinkPolicy do
     else
       link
     end
-    |> URI.to_string()
   end
 
   @impl true
