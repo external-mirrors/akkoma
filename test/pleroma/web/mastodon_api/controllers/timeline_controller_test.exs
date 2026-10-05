@@ -1043,7 +1043,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
         data: %{
           "to" => [
             "https://www.w3.org/ns/activitystreams#Public",
-            User.ap_followers(user)
+            user.follower_address
           ]
         },
         user: user
@@ -1053,7 +1053,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
       note: obj,
       recipients: [
         "https://www.w3.org/ns/activitystreams#Public",
-        User.ap_followers(user)
+        user.follower_address
       ],
       user: user,
       local: false
@@ -1065,7 +1065,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
 
     insert(:note_activity, %{
       note: obj,
-      recipients: ["https://www.w3.org/ns/activitystreams#Public", User.ap_followers(user)],
+      recipients: ["https://www.w3.org/ns/activitystreams#Public", user.follower_address],
       user: user
     })
   end

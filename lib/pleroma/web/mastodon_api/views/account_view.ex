@@ -221,13 +221,15 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
     header_static = User.banner_url(user) |> MediaProxy.preview_url(static: true)
     header_description = User.image_description(user.banner, "")
 
+    self_view? = opts[:for] && opts[:for].id == user.id
+
     following_count =
-      if !user.hide_follows_count or !user.hide_follows or opts[:for] == user,
+      if !user.hide_follows_count or !user.hide_follows or self_view?,
         do: user.following_count,
         else: 0
 
     followers_count =
-      if !user.hide_followers_count or !user.hide_followers or opts[:for] == user,
+      if !user.hide_followers_count or !user.hide_followers or self_view?,
         do: user.follower_count,
         else: 0
 
@@ -275,6 +277,18 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
     last_status_at =
       if is_nil(user.last_status_at), do: nil, else: NaiveDateTime.to_date(user.last_status_at)
 
+    # some cursed code paths pass an ad-hoc fake "error user" here with a nil id
+    feed_url =
+      if user.local && user.id do
+        Pleroma.Web.Endpoint.url() <> ~p"/users/by-id/#{user.id}/feed"
+      else
+        nil
+      end
+
+    # we only store verified_at when a verification actuallly succeeded,
+    # but Masto API always wants the field to be present at least with an explicit null
+    fields = Enum.map(user.fields, &Map.put_new(&1, "verified_at", nil))
+
     %{
       id: to_string(user.id),
       username: username_from_nickname(user.nickname),
@@ -294,7 +308,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
       header_static: header_static,
       header_description: header_description,
       emojis: emojis,
-      fields: user.fields,
+      fields: fields,
       bot: bot,
       source: %{
         note: user.raw_bio || "",
@@ -309,7 +323,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
       akkoma: %{
         instance: render("instance.json", %{instance: instance}),
         status_ttl_days: user.status_ttl_days,
-        permit_followback: user.permit_followback
+        permit_followback: user.permit_followback,
+        web_feed: feed_url
       },
       # Pleroma extensions
       # Note: it's insecure to output :email but fully-qualified nickname may serve as safe stub

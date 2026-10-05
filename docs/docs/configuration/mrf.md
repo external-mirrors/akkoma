@@ -74,6 +74,13 @@ config :pleroma, :mrf,
   transparency: false,
 ```
 
+To hide everything to logged-out viewers, but show details to logged-in local users set:
+```elixir
+config :pleroma, :mrf,
+  ...
+  transparency: :authenticated,
+```
+
 To hide or obfuscate only select entries, use:
 
 ```elixir

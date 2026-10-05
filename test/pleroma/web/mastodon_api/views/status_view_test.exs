@@ -543,13 +543,13 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
   end
 
   test "create mentions from the 'to' field" do
-    %User{ap_id: recipient_ap_id} = insert(:user)
+    recipient = insert(:user)
     cc = insert_pair(:user) |> Enum.map(& &1.ap_id)
 
     object =
       insert(:note, %{
         data: %{
-          "to" => [recipient_ap_id],
+          "to" => [recipient.ap_id],
           "cc" => cc
         }
       })
@@ -557,7 +557,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     activity =
       insert(:note_activity, %{
         note: object,
-        recipients: [recipient_ap_id | cc]
+        recipients: [recipient.ap_id | cc]
       })
 
     assert length(activity.recipients) == 3
@@ -565,7 +565,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     %{mentions: [mention] = mentions} = StatusView.render("show.json", %{activity: activity})
 
     assert length(mentions) == 1
-    assert mention.url == recipient_ap_id
+    assert mention.url == recipient.uri
+    assert mention.id == recipient.id
   end
 
   test "inlined images are media proxied" do
@@ -640,7 +641,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     %{mentions: [mention] = mentions} = StatusView.render("show.json", %{activity: activity})
 
     assert length(mentions) == 1
-    assert mention.url == recipient.ap_id
+    assert mention.url == recipient.uri
+    assert mention.id == recipient.id
   end
 
   test "attachments" do

@@ -104,6 +104,7 @@ Endpoints which accept `with_relationships` parameter:
 - `/api/v1/accounts/:id`
 - `/api/v1/accounts/:id/followers`
 - `/api/v1/accounts/:id/following`
+- `/api/v1/accounts/lookup`
 - `/api/v1/mutes`
 
 Has these additional fields under the `pleroma` object:
@@ -133,6 +134,8 @@ Has these additional fields under the `akkoma` object:
 - `instance`: nullable object with metadata about the user’s instance
 - `status_ttl_days`: nullable int, default time after which statuses are deleted
 - `permit_followback`: boolean, whether follows from followed accounts are auto-approved
+- `web_feed`: nullable string, if known, the preferred URL for retrieving an
+    Atom and/or RSS feed with an appropriate `Accept` header
 
 ### Source
 

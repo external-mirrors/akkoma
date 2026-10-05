@@ -378,7 +378,7 @@ defmodule Pleroma.Web.ActivityPub.Builder do
     {:ok,
      %{
        "id" => Utils.generate_activity_id(),
-       "target" => pinned_url(user.nickname),
+       "target" => user.featured_address,
        "object" => object.data["id"],
        "actor" => user.ap_id,
        "type" => "Add",
@@ -392,16 +392,12 @@ defmodule Pleroma.Web.ActivityPub.Builder do
     {:ok,
      %{
        "id" => Utils.generate_activity_id(),
-       "target" => pinned_url(user.nickname),
+       "target" => user.featured_address,
        "object" => object.data["id"],
        "actor" => user.ap_id,
        "type" => "Remove",
        "to" => [Pleroma.Constants.as_public()],
        "cc" => [user.follower_address]
      }, []}
-  end
-
-  defp pinned_url(nickname) when is_binary(nickname) do
-    url(~p[/users/#{nickname}/collections/featured])
   end
 end

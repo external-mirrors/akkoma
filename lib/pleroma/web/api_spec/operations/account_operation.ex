@@ -429,7 +429,8 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
           :query,
           :string,
           "User nickname"
-        )
+        ),
+        with_relationships_param()
       ],
       responses: %{
         200 => Operation.response("Account", "application/json", Account),

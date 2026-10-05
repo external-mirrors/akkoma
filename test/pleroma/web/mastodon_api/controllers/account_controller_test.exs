@@ -1970,6 +1970,21 @@ defmodule Pleroma.Web.MastodonAPI.AccountControllerTest do
       |> json_response_and_validate_schema(404)
   end
 
+  test "account lookup supports with_relationship" do
+    %{conn: conn, user: user} = oauth_access(["read"])
+    %{nickname: acct_two} = user_two = insert(:user, %{nickname: "nickname@notlocaldoma.in"})
+
+    CommonAPI.follow(user_two, user)
+
+    result =
+      conn
+      |> get("/api/v1/accounts/lookup?acct=#{acct_two}&with_relationships=true")
+      |> json_response_and_validate_schema(200)
+
+    assert %{"pleroma" => %{"relationship" => %{"following" => false, "followed_by" => true}}} =
+             result
+  end
+
   test "account lookup with restrict unauthenticated profiles for local" do
     clear_config([:restrict_unauthenticated, :profiles, :local], true)
 

@@ -10,6 +10,8 @@ defmodule Pleroma.Search.Elasticsearch do
   alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Search.Elasticsearch.Parsers
 
+  require Logger
+
   def es_query(:activity, query, offset, limit) do
     must = Parsers.Activity.parse(query)
 
@@ -42,6 +44,24 @@ defmodule Pleroma.Search.Elasticsearch do
     end
   end
 
+  defp await_fetch_task(task) do
+    # Multiplier for following redirect and id mismatch refetch (without redirect)
+    timeout = 3 * Pleroma.Config.get!([:http, :receive_timeout])
+
+    case Task.yield(task, timeout) || Task.shutdown(task, 250) do
+      {:ok, result} ->
+        result
+
+      {:exit, reason} ->
+        Logger.debug("Search fetch task exited: #{inspect(reason)}")
+        nil
+
+      nil ->
+        Logger.debug("Search fetch task timed out after #{timeout}ms")
+        nil
+    end
+  end
+
   def search(user, query, options) do
     limit = Enum.min([Keyword.get(options, :limit), 40])
     offset = Keyword.get(options, :offset, 0)
@@ -69,7 +89,7 @@ defmodule Pleroma.Search.Elasticsearch do
       end)
 
     activity_results = Task.await(activity_task)
-    direct_activity = Task.await(activity_fetch_task)
+    direct_activity = await_fetch_task(activity_fetch_task)
 
     activity_results =
       if direct_activity == nil do

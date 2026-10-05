@@ -3,12 +3,15 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Object.Fetcher do
+  alias Pleroma.Activity
   alias Pleroma.HTTP
   alias Pleroma.Instances
   alias Pleroma.Maps
   alias Pleroma.Object
   alias Pleroma.Object.Containment
+  alias Pleroma.Object.Updater
   alias Pleroma.Repo
+  alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.InternalFetchActor
   alias Pleroma.Web.ActivityPub.MRF
   alias Pleroma.Web.ActivityPub.ObjectValidator
@@ -36,79 +39,85 @@ defmodule Pleroma.Object.Fetcher do
     Ecto.Changeset.put_change(changeset, :updated_at, updated_at)
   end
 
-  defp maybe_reinject_internal_fields(%{data: %{} = old_data}, new_data) do
-    has_history? = fn
-      %{"formerRepresentations" => %{"orderedItems" => list}} when is_list(list) -> true
-      _ -> false
-    end
-
-    internal_fields = Map.take(old_data, Pleroma.Constants.object_internal_fields())
-
-    remote_history_exists? = has_history?.(new_data)
-
-    # If the remote history exists, we treat that as the only source of truth.
-    new_data =
-      if has_history?.(old_data) and not remote_history_exists? do
-        Map.put(new_data, "formerRepresentations", old_data["formerRepresentations"])
-      else
-        new_data
+  defp persist_revived_data(old_activity, activity_data, object_changeset) do
+    Repo.transact(fn ->
+      with {:ok, _} <- Repo.delete(old_activity),
+           {:ok, _, _} <- ActivityPub.persist(activity_data, local: false) do
+        Repo.insert_or_update(object_changeset)
       end
-
-    # If the remote does not have history information, we need to manage it ourselves
-    new_data =
-      if not remote_history_exists? do
-        changed? =
-          Pleroma.Constants.status_updatable_fields()
-          |> Enum.any?(fn field -> Map.get(old_data, field) != Map.get(new_data, field) end)
-
-        %{updated_object: updated_object} =
-          new_data
-          |> Object.Updater.maybe_update_history(old_data,
-            updated: changed?,
-            use_history_in_new_object?: false
-          )
-
-        updated_object
-      else
-        new_data
-      end
-
-    Map.merge(new_data, internal_fields)
+    end)
   end
 
-  defp maybe_reinject_internal_fields(_, new_data), do: new_data
+  defp revive_pruned_object(activity, new_data) do
+    object_changeset = fn data ->
+      %Object{}
+      |> Object.change(%{data: data})
+      |> touch_changeset()
+    end
 
-  @spec reinject_object(struct(), map()) :: {:ok, Object.t()} | {:error, any()}
-  defp reinject_object(%Object{data: %{"type" => "Question"}} = object, new_data) do
-    Logger.debug("Reinjecting object #{new_data["id"]}")
+    # We don’t store the inlined object inside Create in db
+    activity_data_db = fn data ->
+      data
+      |> Pleroma.Maps.put_if_present("object", is_map(data["object"]) && data["object"]["id"])
+    end
 
-    with data <- maybe_reinject_internal_fields(object, new_data),
-         {:ok, data, _} <- ObjectValidator.validate(data, %{}),
-         changeset <- Object.change(object, %{data: data}),
-         changeset <- touch_changeset(changeset),
-         {:ok, object} <- Repo.insert_or_update(changeset),
+    # Before revivial pass through MRFs again
+    # and recreate activity in db to ensure data consistency (e.g. changed addressing)
+    fake_create =
+      prepare_create_activity_params(new_data)
+      |> Pleroma.Maps.put_if_present("id", activity.data && activity.data["id"])
+
+    with {_, {:ok, %{"object" => new_data_processed} = activity_data}} <-
+           {:mrf_check, MRF.filter(fake_create)},
+         object_changeset <- object_changeset.(new_data_processed),
+         activity_data_db <- activity_data_db.(activity_data),
+         {:ok, object} <- persist_revived_data(activity, activity_data_db, object_changeset),
          {:ok, object} <- Object.set_cache(object) do
       {:ok, object}
     else
+      {:mrf_check, error} ->
+        Logger.debug("Rejected fetched object revival due to MRF: #{inspect(error)}")
+        {:reject, :mrf}
+
       e ->
-        Logger.error("Error while processing object: #{inspect(e)}")
+        Logger.error(
+          "Error while processing object for reinjection after deletion: #{inspect(e)}"
+        )
+
         {:error, e}
     end
   end
 
-  defp reinject_object(%Object{} = object, new_data) do
+  @spec reinject_object(struct(), map()) :: {:ok, Object.t()} | {:error, any()}
+  defp reinject_object(old_ref, new_data) do
     Logger.debug("Reinjecting object #{new_data["id"]}")
 
-    with new_data <- Transmogrifier.fix_object(new_data),
-         data <- maybe_reinject_internal_fields(object, new_data),
-         changeset <- Object.change(object, %{data: data}),
+    # AP ID is checked early on in transmogrifier and assumed to hold later
+    with ap_id when is_binary(ap_id) <- new_data["id"],
+         new_data <- Transmogrifier.fix_object(new_data),
+         {:ok, new_data, _} <- ObjectValidator.validate(new_data, %{}),
+         {_, object = %Object{}, _} <- {:pruned_old, old_ref, new_data},
+         fake_update <- prepare_update_activity_params(new_data),
+         {_, {:ok, %{"object" => new_data}}} <- {:mrf_check, MRF.filter(fake_update)},
+         %{updated_data: new_data} <-
+           Updater.make_new_object_data_from_update_object(object.data, new_data, true),
+         changeset <- Object.change(object, %{data: new_data}),
          changeset <- touch_changeset(changeset),
          {:ok, object} <- Repo.insert_or_update(changeset),
          {:ok, object} <- Object.set_cache(object) do
       {:ok, object}
     else
+      {:pruned_old, %Activity{} = activity, new_data_fixed} ->
+        # we don't know the object anymore, but there’s already an orphaned Create pointing at it
+        # (can happen when running prune_objects without prune_orphaned_activities)
+        revive_pruned_object(activity, new_data_fixed)
+
+      {:mrf_check, error} ->
+        Logger.debug("Rejected fetched object update due to MRF: #{inspect(error)}")
+        {:reject, :mrf}
+
       e ->
-        Logger.error("Error while processing object: #{inspect(e)}")
+        Logger.error("Error while processing object for reinjection: #{inspect(e)}")
         {:error, e}
     end
   end
@@ -143,12 +152,14 @@ defmodule Pleroma.Object.Fetcher do
          {_, nil} <- {:fetch_object, Object.get_cached_by_ap_id(id)},
          {_, true} <- {:allowed_depth, Federator.allowed_thread_distance?(options[:depth])},
          {_, {:ok, data}} <- {:fetch, fetch_and_contain_remote_object_from_id(id)},
+         {_, unknown, _} when unknown in [false, nil] <-
+           {:cached_new_id, data["id"] != id && Object.get_cached_by_ap_id(data["id"]), data},
          {_, nil} <- {:normalize, Object.normalize(data, fetch: false)},
-         params <- prepare_activity_params(data),
+         params <- prepare_create_activity_params(data),
          {_, {:ok, activity}} <-
            {:transmogrifier, Transmogrifier.handle_incoming(params, options)},
-         {_, _data, %Object{} = object} <-
-           {:object, data, Object.normalize(activity, fetch: false)} do
+         {_, _data, _activity, %Object{} = object} <-
+           {:object, data, activity, Object.normalize(activity, fetch: false)} do
       {:ok, object}
     else
       {:allowed_depth, false} = e ->
@@ -183,14 +194,21 @@ defmodule Pleroma.Object.Fetcher do
         log_fetch_error(id, e)
         {:error, reason}
 
-      {:object, data, nil} ->
-        reinject_object(%Object{}, data)
+      {:object, data, %Activity{} = activity, nil} ->
+        reinject_object(activity, data)
 
       {:normalize, object = %Object{}} ->
         {:ok, object}
 
       {:fetch_object, %Object{} = object} ->
         {:ok, object}
+
+      {:cached_new_id, %Object{} = object, data} ->
+        # might as well make use of the fresh canonical source we now already fetched
+        case reinject_object(object, data) do
+          {:ok, _} = ok -> ok
+          _ -> {:ok, object}
+        end
 
       {:fetch, {:error, reason}} = e ->
         log_fetch_error(id, e)
@@ -218,9 +236,9 @@ defmodule Pleroma.Object.Fetcher do
     end
   end
 
-  defp prepare_activity_params(data) do
+  defp prepare_activity_params(data, type) do
     %{
-      "type" => "Create",
+      "type" => type,
       # Should we seriously keep this attributedTo thing?
       "actor" => data["actor"] || data["attributedTo"],
       "object" => data
@@ -230,6 +248,12 @@ defmodule Pleroma.Object.Fetcher do
     |> Maps.put_if_present("bto", data["bto"])
     |> Maps.put_if_present("bcc", data["bcc"])
   end
+
+  # We also need a Create activity for posts, but typically fetch Note objects directly
+  defp prepare_create_activity_params(data), do: prepare_activity_params(data, "Create")
+
+  # Only used to pass to MRFs when refetching an object
+  defp prepare_update_activity_params(data), do: prepare_activity_params(data, "Update")
 
   @doc """
   Fetches arbitrary remote object and performs basic safety and authenticity checks.

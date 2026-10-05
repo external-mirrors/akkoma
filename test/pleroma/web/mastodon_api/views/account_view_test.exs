@@ -15,6 +15,10 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
   import Tesla.Mock
   import Mock
 
+  defp base_url do
+    Pleroma.Web.Endpoint.url()
+  end
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     clear_config([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
@@ -57,7 +61,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       following_count: 0,
       statuses_count: 5,
       note: "<span>valid html</span>. a<br/>b<br/>c<br/>d<br/>f &#39;&amp;&lt;&gt;&quot;",
-      url: user.ap_id,
+      url: user.uri,
       akkoma: %{
         instance: %{
           name: "example.com",
@@ -67,7 +71,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
           favicon: nil
         },
         status_ttl_days: 5,
-        permit_followback: false
+        permit_followback: false,
+        web_feed: base_url() <> "/users/by-id/#{user.id}/feed"
       },
       avatar: "http://localhost:4001/images/avi.png",
       avatar_static: "http://localhost:4001/images/avi.png",
@@ -227,7 +232,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       following_count: 0,
       statuses_count: 5,
       note: user.bio,
-      url: user.ap_id,
+      url: user.uri,
       avatar: "http://localhost:4001/images/avi.png",
       avatar_static: "http://localhost:4001/images/avi.png",
       avatar_description: "",
@@ -255,7 +260,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
           nodeinfo: %{"version" => "2.0"}
         },
         status_ttl_days: nil,
-        permit_followback: false
+        permit_followback: false,
+        web_feed: base_url() <> "/users/by-id/#{user.id}/feed"
       },
       pleroma: %{
         ap_id: user.ap_id,
@@ -313,7 +319,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       id: to_string(user.id),
       acct: user.nickname,
       username: user.nickname,
-      url: user.ap_id
+      url: user.uri
     }
 
     assert expected == AccountView.render("mention.json", %{user: user})

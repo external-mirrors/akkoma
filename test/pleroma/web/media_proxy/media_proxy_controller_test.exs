@@ -234,7 +234,7 @@ defmodule Pleroma.Web.MediaProxy.MediaProxyControllerTest do
     end
 
     test "with `static` param and non-GIF image preview requested, " <>
-           "redirects to media preview proxy URI without `static` param",
+           "redirects to media proxy URI like any other non-aniated file",
          %{
            conn: conn,
            url: url,
@@ -248,7 +248,7 @@ defmodule Pleroma.Web.MediaProxy.MediaProxyControllerTest do
       response = get(conn, url <> "?static=true")
 
       assert response.status == 302
-      assert redirected_to(response) == url
+      assert redirected_to(response) == media_proxy_url
     end
 
     test "with :min_content_length setting not matched by Content-Length header, " <>

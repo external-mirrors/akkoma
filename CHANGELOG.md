@@ -4,9 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 2026.09 (3.21)
+
+### Added
+
+### Fixed
+- fixed the `verified_at` key in field entries of Masto API account responses being absent rather than explicitly `null`, technically violating the API schema
+- fixed new-AP-ID users not having field URL’s verified if the target links back to the display URL isntead of AP ID
+- updated the version of mint
+
+### Changed
+- verified field URLs in local user accounts now set a rel="me" attribute itself (in the API response at least) to allow (if the FE cooperates) also links _to_ the profile page getting verified
+
+## 2026.08 (3.20)
 
 ### Update note
+- Minimum supported OTP version was bumped from 25 to 26;
+  both are already EOL so you should be using newer releases anyway
 - If you are using database search with a non-default RUM index,
   you _MUST_ apply the new optional RUM migration before upgrading.  
   Then after upgrading you wil need to refresh your RUM index setup
@@ -14,11 +28,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   your text search config to your current value (or something else, like `simple` if you so wish)
   via the `database set_text_search_config <value>` mix task
 
+### Removed
+- vestige C2S access to follow* collections was dropped
+
 ### Added
 - federated voter count of polls is now parsed and federated out too;
     this fixes vote percetanges for new and refreshed remote multi-selection polls
 - new config options to restrict unauthenticated search API access under `:pleroma, :restrict_unauthenticated, :search`
 - extended MFM support further
+- `GET /api/v1/accounts/lookup` now supports the \*oma-specific `with_relationships` query parameter like many other account endpoints
+- Account responses in Mastodon API include a new property `akkoma.web_feed`
+    indicating the preferred URL for RSS and/or Atom feeds if one is known
+- `:pleroma, :mrf, :transparency` now accepts a value of `:authenticated` to only reveal MRF details
+    to logged-in viewers via Masto API like `/api/v1/instance`; nodeinfo is always unauthenticated
 
 ### Fixed
 - fixed status search not respecting `resolve=false`
@@ -26,12 +48,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - handle reports referring to a single plain id as their object;
     affected e.g. JSON-LD compacted reports without status references from Iceshrimp.NET
 - fixed several issues parsing remote Question objects
+- fixed signatures from blocked or deleted actors still being accepted
+- fixed follow* collections being readable without signature even if authorized_fetch mode is enabled
+- fixed one’s own follow* counts sometimes being redacted in API if hiding count for others
+- fixed delete&redraft still deleting attachment files most oft the time once the initial redraft delay elapsed
+- fixed fetched objects not normalising various valid forms of the public addressing URI
+- fixed searches for an already known statuses with resolve=true sometimes failing
+    if searching by a display URL instead of canonical AP ID.
+    With resolve=false no display URL lookups are possible.
+- fixed single-selection poll states not updating when receiving an Update activity for the status
+- fixed fetched updates of statuses with a poll or rediscovered pruned objects not being passed through MRFs
+- fixed potential data inconsistencies and API ordering for rediscovered partially pruned objects
+- fixed tagged (mentioned) but not addressed users receiving notifications about
+    statuses they are not actually allowed to access
+- fixed tranlator service being queried for supported languages even if not enabled
+- fixed explicitly static media proxy previews pointing to a broken redirect for non-animated files
+- fixed ElastiSearch/OpenSearch provider bailing out of remote URL fetches too quickly
 
 ### Changed
 - New installations (not existing instances) now default to the `simple` full-text-search config
 - Unauthenticated search requests now by default force-disable remote fetches and pagination
 - Post search can now match text in the content warning with the database provider
 - prefixing a user search query with `@` will limit results to matching nicknames only, if the query contains no enclosed whitespace
+- newly created users will no longer include their nickname in AP IDs of and related to the actor;
+    this prepares for (sensible) future renaming support
+- `/users/:nickname` and subpages no longer accept ID arguments instead of a nickname.
+    ID arguments being accepted here too was never advertised anywhere.
+    For URLs stable across renames the recently added `/users/by-id/:id` versions can be used instead.
+    This fixes some pathological nicknames not having working display URLs since id matches were preferred.
+- `/api/v1/accounts/lookup` is now allowed to be used without authentication on private instances.
+    The finer-grained restrict_unauthenticated settings are still/instead enforced here.
+- HTTP Signatues now include the query part of the request target.
+    Temporarily, it’s possible to set `:activitypub, sign_query_part: true` to omit it matching previous versions.
 
 
 ## 2026.05 (3.19.0)

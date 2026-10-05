@@ -34,7 +34,7 @@ Backwards-compatibility for admin API endpoints without version prefixes (`/api/
   "count": integer,
   "users": [
     {
-      "deactivated": bool,
+      "is_active": bool,
       "id": integer,
       "nickname": string,
       "roles": {
@@ -45,8 +45,8 @@ Backwards-compatibility for admin API endpoints without version prefixes (`/api/
       "tags": array,
       "avatar": string,
       "display_name": string,
-      "confirmation_pending": bool,
-      "approval_pending": bool,
+      "is_confirmed": bool,
+      "is_approved": bool,
       "registration_reason": string,
     },
     ...

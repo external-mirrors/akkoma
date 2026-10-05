@@ -62,7 +62,7 @@ defmodule Pleroma.Factory do
     user = %User{
       name: sequence(:name, &"Test テスト User #{&1}"),
       email: sequence(:email, &"user#{&1}@example.com"),
-      nickname: sequence(:nickname, &"nick#{&1}"),
+      nickname: attrs[:nickname] || sequence(:nickname, &"nick#{&1}"),
       password_hash: password_hash,
       bio: sequence(:bio, &"Tester Number #{&1}"),
       is_discoverable: true,
@@ -76,7 +76,7 @@ defmodule Pleroma.Factory do
       if attrs[:local] == false do
         base_domain = attrs[:domain] || Enum.random(["domain1.com", "domain2.com", "domain3.com"])
 
-        ap_id = "https://#{base_domain}/users/#{user.nickname}"
+        ap_id = attrs[:ap_id] || "https://#{base_domain}/users/#{user.nickname}"
 
         %{
           ap_id: ap_id,
@@ -86,16 +86,37 @@ defmodule Pleroma.Factory do
           featured_address: ap_id <> "/collections/featured"
         }
       else
+        id = FlakeId.get()
+        user = Map.put(user, :id, id)
+
+        ap_id =
+          cond do
+            is_binary(attrs[:ap_id]) ->
+              attrs[:ap_id]
+
+            attrs[:legacy_ap] == true ->
+              Pleroma.Web.Endpoint.url() <> "/users/" <> user.nickname
+
+            true ->
+              User.generate_ap_id(user)
+          end
+
+        user = Map.put(user, :ap_id, ap_id)
+
         %{
-          ap_id: User.ap_id(user),
-          inbox: User.ap_id(user) <> "/inbox",
-          follower_address: User.ap_followers(user),
-          following_address: User.ap_following(user),
-          featured_address: User.ap_featured_collection(user)
+          id: id,
+          ap_id: ap_id,
+          uri: User.generate_display_uri(user),
+          inbox: User.generate_ap_inbox(user),
+          outbox: User.generate_ap_outbox(user),
+          follower_address: User.generate_ap_followers(user),
+          following_address: User.generate_ap_following(user),
+          featured_address: User.generate_ap_featured_collection(user)
         }
       end
 
     attrs = Map.delete(attrs, :domain)
+    attrs = Map.delete(attrs, :legacy_ap)
 
     user
     |> Map.put(:raw_bio, user.bio)

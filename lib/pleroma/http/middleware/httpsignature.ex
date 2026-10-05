@@ -93,8 +93,18 @@ defmodule Pleroma.HTTP.Middleware.HTTPSignature do
 
   defp get_request_target_and_host(env) do
     uri = URI.parse(env.url)
-    rt = "#{env.method} #{uri.path}"
     host = host_from_uri(uri)
+
+    rt =
+      if Pleroma.Config.get!([:activitypub, :sign_query_part]) do
+        # correct behaviour as per cavage-12 RFC draft
+        suffix = if uri.query, do: "?#{uri.query}", else: ""
+        "#{env.method} #{uri.path}" <> suffix
+      else
+        # historically required for a long time by Mastodon
+        "#{env.method} #{uri.path}"
+      end
+
     {rt, host}
   end
 

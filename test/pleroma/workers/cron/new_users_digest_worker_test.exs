@@ -31,6 +31,25 @@ defmodule Pleroma.Workers.Cron.NewUsersDigestWorkerTest do
     assert email.html_body =~ "#{Pleroma.Web.Endpoint.url()}/static/logo.svg"
   end
 
+  test "it uses custom logo in new users digest emails" do
+    logo_path = "/static/my-fancy-custom-logo.png"
+    clear_config([:frontend_configurations, :pleroma_fe], %{logo: logo_path})
+
+    yesterday = NaiveDateTime.utc_now() |> Timex.shift(days: -1)
+    admin = insert(:user, %{is_admin: true})
+    user = insert(:user, %{inserted_at: yesterday})
+    CommonAPI.post(user, %{status: "tea"})
+
+    NewUsersDigestWorker.perform(%Oban.Job{})
+    ObanHelpers.perform_all()
+
+    assert_receive {:email, email}
+    assert email.to == [{admin.name, admin.email}]
+    assert email.subject == "#{Pleroma.Config.get([:instance, :name])} New Users"
+
+    assert email.html_body =~ "#{Pleroma.Web.Endpoint.url()}#{logo_path}"
+  end
+
   test "it doesn't fail when admin has no email" do
     yesterday = NaiveDateTime.utc_now() |> Timex.shift(days: -1)
     insert(:user, %{is_admin: true, email: nil})
