@@ -544,7 +544,7 @@ defmodule Pleroma.Web.CommonAPITest do
 
       # the exact output may change in the future, but when updating make sure it never turns into something fishy
       assert object.data["content"] ==
-               "<p><span class=\"mfm-twitch\" data-mfm-speed=\"5s\">”&gt;&lt;script&gt;alert(1);&lt;/script&gt;&lt;span&gt;” boo!</span></p>"
+               "<p><span class=\"mfm-twitch\" data-mfm-speed=\"5s\">&quot;&gt;&quot; boo!</span></p>"
     end
 
     test "it returns error when status is empty and no attachments" do

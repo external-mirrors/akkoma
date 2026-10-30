@@ -45,7 +45,7 @@ defmodule Pleroma.Mixfile do
 
   def cli() do
     [
-      preferred_cli_env: ["coveralls.html": :test, "mneme.test": :test, "mneme.watch": :test]
+      preferred_cli_env: ["coveralls.html": :test]
     ]
   end
 

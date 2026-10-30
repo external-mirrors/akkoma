@@ -127,8 +127,40 @@ defmodule Pleroma.Formatter do
   end
 
   def markdown_to_html(text, opts \\ []) do
-    # unsafe will allow MDEx to actually render HTML
-    MDEx.to_html!(text, render: Keyword.merge([unsafe: true, compact_html: true], opts))
+    MDEx.to_html!(text,
+      extension: [
+        autolink: false,
+        strikethrough: true,
+        inline_code_attributes: true
+      ],
+      sanitize: [
+        tags: [
+          "a",
+          "b",
+          "ul",
+          "ol",
+          "li",
+          "p",
+          "code",
+          "em",
+          "blockquote",
+          "strong",
+          "hr",
+          "br",
+          "del",
+          "pre"
+        ],
+        tag_attributes: %{
+          "a" => ["href"],
+        },
+        add_allowed_classes: %{
+          "code" => ["inline"]
+        }
+      ],  
+      render: Keyword.merge([
+        unsafe: true,
+        compact_html: true
+      ], opts))
   end
 
   def html_escape({text, mentions, hashtags}, type) do
