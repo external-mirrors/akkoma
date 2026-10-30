@@ -31,6 +31,7 @@ defmodule Pleroma.Web.RouterTest do
         "test",
         "user_exists",
         "check_password"
-      ] == Pleroma.Web.Router.get_api_routes())
+      ] == Pleroma.Web.Router.get_api_routes()
+    )
   end
 end

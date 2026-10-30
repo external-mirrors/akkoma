@@ -153,7 +153,7 @@ defmodule Pleroma.Mixfile do
       {:ex_aws, "~> 2.4"},
       {:ex_aws_s3, "~> 2.4"},
       {:sweet_xml, "~> 0.7"},
-      {:mdex, "~> 0.14.5"}, 
+      {:mdex, "~> 0.14.5"},
       {:bbcode_pleroma, "~> 0.2.0"},
       {:argon2_elixir, "~> 4.0"},
       {:cors_plug, "~> 3.0"},

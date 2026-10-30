@@ -130,8 +130,7 @@ defmodule Pleroma.Formatter do
     MDEx.to_html!(text,
       extension: [
         autolink: false,
-        strikethrough: true,
-        inline_code_attributes: true
+        strikethrough: true
       ],
       sanitize: [
         tags: [
@@ -151,16 +150,18 @@ defmodule Pleroma.Formatter do
           "pre"
         ],
         tag_attributes: %{
-          "a" => ["href"],
-        },
-        add_allowed_classes: %{
-          "code" => ["inline"]
+          "a" => ["href"]
         }
-      ],  
-      render: Keyword.merge([
-        unsafe: true,
-        compact_html: true
-      ], opts))
+      ],
+      render:
+        Keyword.merge(
+          [
+            unsafe: true,
+            compact_html: true
+          ],
+          opts
+        )
+    )
   end
 
   def html_escape({text, mentions, hashtags}, type) do
