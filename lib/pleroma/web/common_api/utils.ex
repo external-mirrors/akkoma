@@ -289,7 +289,7 @@ defmodule Pleroma.Web.CommonAPI.Utils do
 
   def format_input(text, "text/x.misskeymarkdown", options) do
     text
-    |> Formatter.markdown_to_html(%{breaks: true})
+    |> Formatter.markdown_to_html([hardbreaks: true])
     |> MfmParser.Parser.parse()
     # Must preserve HTML tags from markdown parser (last step removes dangerous bits)
     |> MfmParser.Encoder.to_html(escape_text: false)

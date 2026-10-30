@@ -126,7 +126,7 @@ defmodule Pleroma.Mixfile do
       {:phoenix_view, "~> 2.0"},
       {:phoenix_live_dashboard, "~> 0.8.6"},
       {:tzdata, "~> 1.1.1"},
-      {:plug_cowboy, "~> 2.6"},
+      {:plug_cowboy, "~> 2.9"},
       {:phoenix_pubsub, "~> 2.1"},
       {:phoenix_ecto, "~> 4.6"},
       {:inet_cidr, "~> 1.0.0"},
@@ -153,7 +153,7 @@ defmodule Pleroma.Mixfile do
       {:ex_aws, "~> 2.4"},
       {:ex_aws_s3, "~> 2.4"},
       {:sweet_xml, "~> 0.7"},
-      {:earmark, "1.4.46"},
+      {:mdex, "~> 0.14.5"}, 
       {:bbcode_pleroma, "~> 0.2.0"},
       {:argon2_elixir, "~> 4.0"},
       {:cors_plug, "~> 3.0"},
@@ -210,7 +210,9 @@ defmodule Pleroma.Mixfile do
       {:elixir_xml_to_map, "~> 3.0", only: :test},
       {:mint, "~> 1.10.1", override: true},
       {:nimble_pool, "~> 1.0", override: true},
-      {:mneme, "~> 0.10.2", only: [:dev, :test]}
+
+      # temporary overrides for vulnerable versions
+      {:hackney, "~> 4.9.1", override: true}
     ] ++ oauth_deps()
   end
 
