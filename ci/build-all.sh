@@ -1,2 +1,2 @@
-./build.sh 1.15-otp25 1.15.8-erlang-25.3.2.18-alpine-3.22.2
-./build.sh 1.19-otp28 1.19-erlang-28.0-alpine-3.23.2
+./build.sh 1.17-otp25 1.17.3-erlang-25.3.2.21-alpine-3.22.7
+./build.sh 1.20-otp29 1.20.5-erlang-29.0.6-alpine-3.22.7
