@@ -6,6 +6,7 @@ defmodule Pleroma.Formatter do
   alias PhoenixHTMLHelpers.Tag
   alias Pleroma.HTML
   alias Pleroma.User
+  alias Pleroma.Config
 
   @safe_mention_regex ~r/^(\s*(?<mentions>(@.+?\s+){1,})+)(?<rest>.*)/s
   @link_regex ~r"((?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~%:/?#[\]@!\$&'\(\)\*\+,;=.]+)|[0-9a-z+\-\.]+:[0-9a-z$-_.+!*'(),]+"ui
@@ -126,37 +127,65 @@ defmodule Pleroma.Formatter do
     end
   end
 
+  defp mdex_extensions() do
+    [
+      math_code: Config.get([:markup, :allow_math], false),
+      math_latex: Config.get([:markup, :allow_math], false),
+      table: Config.get([:markup, :allow_tables])
+    ]
+  end
+
+  defp maybe_with_inline_images(sanitize_config) do
+    if Config.get([:markup, :allow_inline_images]) do
+      # allowed by default config
+      sanitize_config
+    else
+      sanitize_config
+      |> Keyword.put(
+        :rm_tags,
+        Enum.concat(Keyword.get(sanitize_config, :rm_tags, []), ["img"])
+      )
+    end
+  end
+
+  def maybe_with_headings(sanitize_config) do
+    if Config.get([:markup, :allow_headings]) do
+      # allowed by default
+      sanitize_config
+    else
+      sanitize_config
+      |> Keyword.put(
+        :rm_tags,
+        Enum.concat(
+          Keyword.get(sanitize_config, :rm_tags, []),
+          ["h1", "h2", "h3", "h4", "h5", "h6"]
+        )
+      )
+    end
+  end
+
   def markdown_to_html(text, opts \\ []) do
-    MDEx.to_html!(text,
-      extension: [
-        autolink: false,
-        strikethrough: true
-      ],
-      sanitize: [
-        tags: [
-          "a",
-          "b",
-          "ul",
-          "ol",
-          "li",
-          "p",
-          "code",
-          "em",
-          "blockquote",
-          "strong",
-          "hr",
-          "br",
-          "del",
-          "pre"
+    extensions =
+      Keyword.merge(
+        [
+          strikethrough: true
         ],
-        tag_attributes: %{
-          "a" => ["href"]
-        }
-      ],
+        mdex_extensions()
+      )
+
+    sanitize_settings =
+      MDEx.Document.default_sanitize_options()
+      |> maybe_with_headings()
+      |> maybe_with_inline_images()
+
+    MDEx.to_html!(text,
+      extension: extensions,
+      sanitize: sanitize_settings,
       render:
         Keyword.merge(
           [
             unsafe: true,
+            escape: false,
             compact_html: true
           ],
           opts
