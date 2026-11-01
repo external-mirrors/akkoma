@@ -148,7 +148,7 @@ defmodule Pleroma.Formatter do
     end
   end
 
-  def maybe_with_headings(sanitize_config) do
+  defp maybe_with_headings(sanitize_config) do
     if Config.get([:markup, :allow_headings]) do
       # allowed by default
       sanitize_config
@@ -161,6 +161,22 @@ defmodule Pleroma.Formatter do
           ["h1", "h2", "h3", "h4", "h5", "h6"]
         )
       )
+    end
+  end
+
+  defp maybe_with_fonts(sanitize_config) do
+    if Config.get([:markup, :allow_fonts]) do
+      sanitize_config
+      |> Keyword.put(
+        :add_tag_attributes,
+        Map.put(
+          Keyword.get(sanitize_config, :add_tag_attributes, []),
+          "font",
+          ["face"]
+        )
+      )
+    else
+      sanitize_config
     end
   end
 
