@@ -85,7 +85,6 @@ defmodule Pleroma.Mixfile do
         :logger,
         :runtime_tools,
         :comeonin,
-        :fast_sanitize,
         :os_mon,
         :ssl,
         :recon
@@ -137,7 +136,6 @@ defmodule Pleroma.Mixfile do
       {:oban_web, "~> 2.12.6"},
       {:gettext, "~> 0.26 or ~> 1.0"},
       {:bcrypt_elixir, "~> 3.3.2"},
-      {:fast_sanitize, "~> 0.2.3"},
       {:html_entities, "~> 0.5"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_html_helpers, "~> 1.0"},
@@ -147,6 +145,7 @@ defmodule Pleroma.Mixfile do
       {:castore, "~> 1.0"},
       {:cowlib, "~> 2.12"},
       {:finch, "~> 0.21.0"},
+      {:fast_html, "~> 2.5.0"},
       {:jason, "~> 1.4"},
       {:trailing_format_plug, "~> 0.0.7"},
       {:mogrify, "~> 0.9"},

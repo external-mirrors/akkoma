@@ -68,7 +68,7 @@ defmodule Pleroma.Activity.HTML do
   def get_cached_stripped_html_for_activity(content, activity, key) do
     get_cached_scrubbed_html_for_activity(
       content,
-      FastSanitize.Sanitizer.StripTags,
+      Pleroma.HTML.Scrubbers.StripTags,
       activity,
       key,
       &HtmlEntities.decode/1

@@ -6,23 +6,9 @@ defmodule Pleroma.HTML do
   # Scrubbers are compiled on boot so they can be configured in OTP releases
   #  @on_load :compile_scrubbers
 
-  def compile_scrubbers do
-    dir = Path.join(:code.priv_dir(:pleroma), "scrubbers")
-
-    dir
-    |> Pleroma.Utils.compile_dir()
-    |> case do
-      {:error, _errors, _warnings} ->
-        raise "Compiling scrubbers failed"
-
-      {:ok, _modules, _warnings} ->
-        :ok
-    end
-  end
-
   defp get_scrubbers(scrubber) when is_atom(scrubber), do: [scrubber]
   defp get_scrubbers(scrubbers) when is_list(scrubbers), do: scrubbers
-  defp get_scrubbers(_), do: [Pleroma.HTML.Scrubber.Default]
+  defp get_scrubbers(_), do: [Pleroma.HTML.Scrubbers.Default]
 
   def get_scrubbers do
     Pleroma.Config.get([:markup, :scrub_policy])
@@ -40,12 +26,19 @@ defmodule Pleroma.HTML do
   end
 
   def filter_tags(html, scrubber) do
-    {:ok, content} = FastSanitize.Sanitizer.scrub(html, scrubber)
-    content
+    MDEx.safe_html(html, sanitize: scrubber.sanitize_config())
+    |> scrubber.transform()
   end
 
   def filter_tags(html), do: filter_tags(html, nil)
-  def strip_tags(html), do: filter_tags(html, FastSanitize.Sanitizer.StripTags)
+
+  def strip_tags(html) do
+    MDEx.safe_html(html,
+      sanitize: [
+        tags: []
+      ]
+    )
+  end
 
   def ensure_scrubbed_html(
         content,

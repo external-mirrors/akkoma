@@ -309,8 +309,8 @@ config :pleroma, :markup,
   allow_fonts: false,
   allow_math: true,
   scrub_policy: [
-    Pleroma.HTML.Scrubber.Default,
-    Pleroma.HTML.Transform.MediaProxy
+    Pleroma.HTML.Scrubbers.Default,
+    Pleroma.HTML.Scrubbers.MediaProxy
   ]
 
 config :pleroma, :frontend_configurations,
@@ -351,7 +351,7 @@ config :pleroma, :streamer,
 
 config :pleroma, :user, deny_follow_blocked: true
 
-config :pleroma, :mrf_normalize_markup, scrub_policy: Pleroma.HTML.Scrubber.Default
+config :pleroma, :mrf_normalize_markup, scrub_policy: Pleroma.HTML.Scrubbers.Default
 
 config :pleroma, :mrf_rejectnonpublic,
   allow_followersonly: false,

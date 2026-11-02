@@ -2799,7 +2799,7 @@ config :pleroma, :config_description, [
         type: {:list, :module},
         description:
           "Module names are shortened (removed leading `Pleroma.HTML.` part), but on adding custom module you need to use full name.",
-        suggestions: [Pleroma.HTML.Transform.MediaProxy, Pleroma.HTML.Scrubber.Default]
+        suggestions: [Pleroma.HTML.Scrubbers.MediaProxy, Pleroma.HTML.Scrubbers.Default]
       }
     ]
   },

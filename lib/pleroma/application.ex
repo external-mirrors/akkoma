@@ -45,7 +45,6 @@ defmodule Pleroma.Application do
     # conflicts at runtime
     Code.compiler_options(ignore_module_conflict: true)
     Config.Holder.save_default()
-    Pleroma.HTML.compile_scrubbers()
     Pleroma.Config.Oban.warn()
     Config.DeprecationWarnings.warn()
     Pleroma.Web.Plugs.HTTPSecurityPlug.warn_if_disabled()
