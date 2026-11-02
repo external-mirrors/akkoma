@@ -131,7 +131,9 @@ defmodule Pleroma.Formatter do
     [
       math_code: Config.get([:markup, :allow_math], false),
       math_latex: Config.get([:markup, :allow_math], false),
-      table: Config.get([:markup, :allow_tables])
+      table: Config.get([:markup, :allow_tables]),
+      footnotes: Config.get([:markup, :allow_headings]),
+      inline_footnotes: Config.get([:markup, :allow_headings])
     ]
   end
 
