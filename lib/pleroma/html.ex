@@ -15,6 +15,8 @@ defmodule Pleroma.HTML do
     |> get_scrubbers
   end
 
+  def filter_tags(nil, _), do: ""
+
   def filter_tags(html, nil) do
     filter_tags(html, get_scrubbers())
   end
@@ -26,18 +28,14 @@ defmodule Pleroma.HTML do
   end
 
   def filter_tags(html, scrubber) do
-    MDEx.safe_html(html, sanitize: scrubber.sanitize_config())
+    MDEx.safe_html(html, sanitize: scrubber.sanitize_config(), escape: [content: false])
     |> scrubber.transform()
   end
 
   def filter_tags(html), do: filter_tags(html, nil)
 
   def strip_tags(html) do
-    MDEx.safe_html(html,
-      sanitize: [
-        tags: []
-      ]
-    )
+    filter_tags(html, Pleroma.HTML.Scrubbers.StripTags)
   end
 
   def ensure_scrubbed_html(

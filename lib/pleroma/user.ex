@@ -2060,7 +2060,7 @@ defmodule Pleroma.User do
   end
 
   def html_filter_policy(%User{no_rich_text: true}) do
-    Pleroma.HTML.Scrubber.TwitterText
+    Pleroma.HTML.Scrubbers.TwitterText
   end
 
   def html_filter_policy(_), do: Config.get([:markup, :scrub_policy])
@@ -2768,7 +2768,7 @@ defmodule Pleroma.User do
   def sanitize_html(%User{} = user, filter) do
     fields =
       Enum.map(user.fields, fn %{"value" => value} = field ->
-        Map.put(field, "value", HTML.filter_tags(value, Pleroma.HTML.Scrubber.LinksOnly))
+        Map.put(field, "value", HTML.filter_tags(value, Pleroma.HTML.Scrubbers.LinksOnly))
       end)
 
     user

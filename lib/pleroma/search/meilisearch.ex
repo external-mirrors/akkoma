@@ -140,7 +140,7 @@ defmodule Pleroma.Search.Meilisearch do
         end
 
       content =
-        with {:ok, scrubbed} <- FastSanitize.strip_tags(content_str),
+        with {:ok, scrubbed} <- Pleroma.HTML.strip_tags(content_str),
              trimmed <- String.trim(scrubbed) do
           trimmed
         end

@@ -5,7 +5,7 @@ defmodule Pleroma.HTML.Scrubbers.MediaProxy do
   def extensions(), do: []
 
   def transform(html) do
-    {:ok, doc} = MDEx.parse_document(html)
+    {:ok, doc} = MDEx.parse_fragment(html)
 
     selector = fn
       %MDEx.Image{} -> true
@@ -17,8 +17,8 @@ defmodule Pleroma.HTML.Scrubbers.MediaProxy do
       [:document, Access.key!(:nodes), Access.all(), selector],
       fn %MDEx.Image{
            url: url
-} = node ->
-          Map.put(node, :url, Pleroma.Web.MediaProxy.url(url))
+         } = node ->
+        Map.put(node, :url, Pleroma.Web.MediaProxy.url(url))
       end
     )
     # this should already be safe
